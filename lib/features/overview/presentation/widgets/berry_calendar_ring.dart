@@ -23,8 +23,10 @@ List<PaymentOccurrence> _periodOccurrences(
     }
   }
   final periods = firstBySubscription.values.toList()
+    ..sort((left, right) => left.date.compareTo(right.date));
+  final nearest = periods.take(_maxPeriodArcs).toList()
     ..sort((left, right) => right.date.compareTo(left.date));
-  return periods.take(_maxPeriodArcs).toList(growable: false);
+  return nearest;
 }
 
 class BerryCalendarRing extends StatefulWidget {
@@ -50,8 +52,9 @@ class BerryCalendarRing extends StatefulWidget {
 }
 
 class _BerryCalendarRingState extends State<BerryCalendarRing>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _animationController;
+  late final AnimationController _pulseController;
 
   static const _monthNames = <String>[
     'январь',
@@ -75,21 +78,45 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    );
+    _syncPulseAnimation();
   }
 
   @override
   void didUpdateWidget(covariant BerryCalendarRing oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.occurrences != widget.occurrences) {
+    if (!_sameOccurrences(oldWidget.occurrences, widget.occurrences)) {
       _animationController
         ..reset()
         ..forward();
+    }
+    _syncPulseAnimation();
+  }
+
+  void _syncPulseAnimation() {
+    final today = DateTime(widget.now.year, widget.now.month, widget.now.day);
+    final hasSoonPayment =
+        widget.showPeriodArcs &&
+        widget.occurrences.any((occurrence) {
+          final days = occurrence.date.difference(today).inDays;
+          return days >= 0 && days <= 3;
+        });
+    if (hasSoonPayment && !_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    } else if (!hasSoonPayment && _pulseController.isAnimating) {
+      _pulseController
+        ..stop()
+        ..value = 0;
     }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -190,7 +217,26 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                       ),
                     ),
                   ),
-                  if (widget.showPeriodArcs) ..._buildPeriodIcons(size),
+                  if (widget.showPeriodArcs)
+                    Positioned.fill(
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge(<Listenable>[
+                          _animationController,
+                          _pulseController,
+                        ]),
+                        builder: (context, child) {
+                          return Stack(
+                            children: _buildPeriodIcons(
+                              size,
+                              Curves.easeOutCubic.transform(
+                                _animationController.value,
+                              ),
+                              _pulseController.value,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -200,7 +246,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     );
   }
 
-  List<Widget> _buildPeriodIcons(double size) {
+  List<Widget> _buildPeriodIcons(double size, double progress, double pulse) {
     final periods = _periodOccurrences(widget.occurrences, widget.now);
     if (periods.isEmpty) return const <Widget>[];
     final center = Offset(size / 2, size / 2);
@@ -221,6 +267,8 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
           center: center,
           radius: innermostRadius + spacing * index,
           daysInYear: daysInYear,
+          progress: progress,
+          pulse: pulse,
         ),
     ];
   }
@@ -230,27 +278,65 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     required Offset center,
     required double radius,
     required int daysInYear,
+    required double progress,
+    required double pulse,
   }) {
-    final day = occurrence.date
-        .difference(DateTime(widget.year))
+    final today = DateTime(widget.now.year, widget.now.month, widget.now.day);
+    final todayIndex = today.difference(DateTime(widget.year)).inDays;
+    final daysUntil = occurrence.date
+        .difference(today)
         .inDays
-        .clamp(0, daysInYear - 1);
-    final angle = -math.pi / 2 - day / daysInYear * math.pi * 2;
+        .clamp(0, daysInYear);
+    final arcStart = -math.pi / 2 - todayIndex / daysInYear * math.pi * 2;
+    final angle = arcStart - daysUntil / daysInYear * math.pi * 2 * progress;
     final point =
         center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
-    const iconSize = 22.0;
+    const iconSize = 18.0;
+    final isSoon = daysUntil <= 3;
+    final borderColor = isSoon
+        ? Color.lerp(const Color(0xFFFF8A80), const Color(0xFF8B1020), pulse)!
+        : Colors.white.withValues(alpha: 0.72);
     return Positioned(
       left: point.dx - iconSize / 2,
       top: point.dy - iconSize / 2,
       child: IgnorePointer(
-        child: ServiceLogo(
-          name: occurrence.subscription.name,
-          logoKey: occurrence.subscription.logo,
-          category: occurrence.subscription.category,
-          size: iconSize,
+        child: Opacity(
+          opacity: progress,
+          child: Transform.scale(
+            scale: 0.65 + progress * 0.35,
+            child: Container(
+              width: iconSize,
+              height: iconSize,
+              padding: const EdgeInsets.all(1.5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: borderColor, width: isSoon ? 1.8 : 1),
+              ),
+              child: ServiceLogo(
+                name: occurrence.subscription.name,
+                logoKey: occurrence.subscription.logo,
+                category: occurrence.subscription.category,
+                size: 13,
+              ),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  bool _sameOccurrences(
+    List<PaymentOccurrence> left,
+    List<PaymentOccurrence> right,
+  ) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (left[index].subscription.id != right[index].subscription.id ||
+          left[index].date != right[index].date) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static String _paymentWord(int count) {
@@ -432,11 +518,11 @@ class _CalendarRingPainter extends CustomPainter {
       final occurrence = periods[index];
       final periodRadius = innermostRadius + spacing * index;
       final rect = Rect.fromCircle(center: center, radius: periodRadius);
-      final endIndex = occurrence.date
-          .difference(DateTime(year))
+      final daysUntil = occurrence.date
+          .difference(today)
           .inDays
-          .clamp(todayIndex, daysInYear - 1);
-      final sweep = -(endIndex - todayIndex) / daysInYear * math.pi * 2;
+          .clamp(0, daysInYear);
+      final sweep = -daysUntil / daysInYear * math.pi * 2;
       final color = occurrence.subscription.category.color;
 
       canvas.drawArc(

@@ -82,7 +82,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
       now: now,
     );
     final visibleRingOccurrences = _ringPage == 0
-        ? metrics.upcomingYearOccurrences
+        ? metrics.upcomingPayments
         : metrics.yearOccurrences;
     final selectedOccurrences = visibleRingOccurrences
         .where((occurrence) => occurrence.date.month == _selectedMonth)
@@ -118,10 +118,10 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   children: <Widget>[
                     _RingGalleryPage(
                       title: 'Ближайшие платежи',
-                      subtitle: 'По одной дате на подписку',
+                      subtitle: '',
                       year: now.year,
                       now: now,
-                      occurrences: metrics.upcomingYearOccurrences,
+                      occurrences: metrics.upcomingPayments,
                       selectedMonth: _selectedMonth,
                       showPeriodArcs: true,
                       onMonthSelected: (month) {
@@ -244,13 +244,15 @@ class _RingGalleryPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    if (subtitle.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -478,7 +480,7 @@ class _SummaryCaption extends StatelessWidget {
   }
 }
 
-class _SelectedMonthPayments extends StatelessWidget {
+class _SelectedMonthPayments extends StatefulWidget {
   const _SelectedMonthPayments({
     required this.occurrences,
     required this.onTap,
@@ -489,8 +491,15 @@ class _SelectedMonthPayments extends StatelessWidget {
   final ValueChanged<Subscription> onTap;
 
   @override
+  State<_SelectedMonthPayments> createState() => _SelectedMonthPaymentsState();
+}
+
+class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (occurrences.isEmpty) {
+    if (widget.occurrences.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: Center(
@@ -504,9 +513,10 @@ class _SelectedMonthPayments extends StatelessWidget {
       );
     }
 
+    final visible = _expanded ? widget.occurrences : widget.occurrences.take(3);
     return Column(
       children: <Widget>[
-        for (final occurrence in occurrences.take(3))
+        for (final occurrence in visible)
           ListTile(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xs,
@@ -523,16 +533,18 @@ class _SelectedMonthPayments extends StatelessWidget {
               AppFormatters.money(occurrence.subscription.priceInCents),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            onTap: () => onTap(occurrence.subscription),
+            onTap: () => widget.onTap(occurrence.subscription),
           ),
-        if (occurrences.length > 3)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text(
-              'Ещё ${occurrences.length - 3}',
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: AppColors.coral),
+        if (widget.occurrences.length > 3)
+          TextButton.icon(
+            onPressed: () {
+              setState(() => _expanded = !_expanded);
+            },
+            icon: Icon(
+              _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+            ),
+            label: Text(
+              _expanded ? 'Свернуть' : 'Ещё ${widget.occurrences.length - 3}',
             ),
           ),
       ],
