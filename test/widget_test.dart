@@ -76,6 +76,46 @@ void main() {
 
     expect(find.text('Календарь платежей'), findsOneWidget);
   });
+
+  testWidgets('resets subscription filters after switching tabs', (
+    tester,
+  ) async {
+    final subscriptions = <Subscription>[
+      _subscription('Monthly', BillingCycle.monthly),
+      _subscription('Annual', BillingCycle.yearly),
+    ];
+    await tester.pumpWidget(_emptyApp(subscriptions: subscriptions));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Подписки'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Годовые'));
+    await tester.pumpAndSettle();
+    expect(find.text('Monthly'), findsNothing);
+    expect(find.text('Annual'), findsOneWidget);
+
+    await tester.tap(find.text('Обзор'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Подписки'));
+    await tester.pumpAndSettle();
+    expect(find.text('Monthly'), findsOneWidget);
+    expect(find.text('Annual'), findsOneWidget);
+  });
+}
+
+Subscription _subscription(String name, BillingCycle billingCycle) {
+  return Subscription(
+    id: name.toLowerCase(),
+    name: name,
+    category: SubscriptionCategory.other,
+    priceInCents: 10000,
+    billingCycle: billingCycle,
+    startDate: DateTime(2026, 1, 1),
+    nextPaymentDate: DateTime(2026, 8, 10),
+    status: SubscriptionStatus.active,
+    totalSpentInCents: 0,
+    reminderEnabled: true,
+  );
 }
 
 ProviderScope _emptyApp({

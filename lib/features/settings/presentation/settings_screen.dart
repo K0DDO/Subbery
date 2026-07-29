@@ -10,6 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../notifications/application/notification_settings_controller.dart';
+import '../../shell/application/tab_reset_provider.dart';
 import '../application/app_icon_controller.dart';
 import '../application/theme_mode_controller.dart';
 
@@ -56,6 +57,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
     final appIconState = ref.watch(appIconProvider);
+    final resetRevision = ref.watch(tabResetRevisionProvider(3));
 
     return SafeArea(
       bottom: false,
@@ -67,6 +69,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           Expanded(
             child: ListView(
+              key: ValueKey<String>('settings-$resetRevision'),
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
                 AppSpacing.sm,

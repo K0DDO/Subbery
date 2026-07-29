@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../profile/application/user_profile_controller.dart';
+import '../../shell/application/tab_reset_provider.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
@@ -32,6 +33,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   Widget build(BuildContext context) {
     final subscriptions = ref.watch(subscriptionsProvider);
     final payments = ref.watch(allPaymentsProvider);
+    final resetRevision = ref.watch(tabResetRevisionProvider(0));
     final userName = ref.watch(
       userProfileProvider.select((profile) => profile.name),
     );
@@ -47,7 +49,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           Expanded(
             child: subscriptions.when(
               data: (items) => payments.when(
-                data: (paymentItems) => _buildContent(items, paymentItems),
+                data: (paymentItems) =>
+                    _buildContent(items, paymentItems, resetRevision),
                 loading: _LoadingOverview.new,
                 error: (error, stackTrace) => const _OverviewError(),
               ),
@@ -63,6 +66,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   Widget _buildContent(
     List<Subscription> subscriptions,
     List<Payment> payments,
+    int resetRevision,
   ) {
     if (subscriptions.isEmpty) {
       return EmptyState(
@@ -89,6 +93,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         .toList(growable: false);
 
     return ListView(
+      key: ValueKey<String>('overview-$resetRevision'),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.xs,

@@ -3,28 +3,31 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/glass_theme.dart';
 import '../../../core/widgets/app_background.dart';
+import '../../subscriptions/presentation/subscriptions_screen.dart';
+import '../application/tab_reset_provider.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
-  void _openBranch(int index) {
+  void _openBranch(WidgetRef ref, int index) {
     unawaited(HapticFeedback.selectionClick());
-    navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
-    );
+    ref.read(subscriptionListFilterProvider.notifier).state =
+        SubscriptionListFilter.all;
+    ref.read(tabResetRevisionProvider(index).notifier).state++;
+    navigationShell.goBranch(index, initialLocation: true);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -38,7 +41,7 @@ class AppShell extends StatelessWidget {
               bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.sm,
               child: _GlassNavigationBar(
                 currentIndex: navigationShell.currentIndex,
-                onSelected: _openBranch,
+                onSelected: (index) => _openBranch(ref, index),
               ),
             ),
           ],

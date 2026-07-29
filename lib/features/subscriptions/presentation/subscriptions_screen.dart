@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../shell/application/tab_reset_provider.dart';
 import '../application/subscription_providers.dart';
 import '../domain/entities/subscription.dart';
 import 'subscription_ui_extensions.dart';
@@ -56,6 +57,7 @@ class SubscriptionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subscriptions = ref.watch(subscriptionsProvider);
     final selectedFilter = ref.watch(subscriptionListFilterProvider);
+    final resetRevision = ref.watch(tabResetRevisionProvider(1));
 
     return SafeArea(
       bottom: false,
@@ -120,6 +122,7 @@ class SubscriptionsScreen extends ConsumerWidget {
                 }
 
                 return ListView.separated(
+                  key: ValueKey<String>('subscriptions-$resetRevision'),
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     AppSpacing.xs,

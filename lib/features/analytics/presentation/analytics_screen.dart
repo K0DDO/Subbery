@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../overview/presentation/widgets/spending_bar_chart.dart';
+import '../../shell/application/tab_reset_provider.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
@@ -22,6 +23,7 @@ class AnalyticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subscriptions = ref.watch(subscriptionsProvider);
     final payments = ref.watch(allPaymentsProvider);
+    final resetRevision = ref.watch(tabResetRevisionProvider(2));
 
     return SafeArea(
       bottom: false,
@@ -37,6 +39,7 @@ class AnalyticsScreen extends ConsumerWidget {
                 data: (paymentItems) => _AnalyticsContent(
                   subscriptions: items,
                   payments: paymentItems,
+                  resetRevision: resetRevision,
                 ),
                 loading: _AnalyticsLoading.new,
                 error: (error, stackTrace) => const _AnalyticsError(),
@@ -55,10 +58,12 @@ class _AnalyticsContent extends StatelessWidget {
   const _AnalyticsContent({
     required this.subscriptions,
     required this.payments,
+    required this.resetRevision,
   });
 
   final List<Subscription> subscriptions;
   final List<Payment> payments;
+  final int resetRevision;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +86,7 @@ class _AnalyticsContent extends StatelessWidget {
     );
 
     return ListView(
+      key: ValueKey<String>('analytics-$resetRevision'),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.xs,
