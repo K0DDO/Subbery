@@ -270,6 +270,12 @@ class _DetailsContent extends StatelessWidget {
                   label: 'Категория',
                   value: subscription.category.label,
                   color: subscription.category.color,
+                  onTap: () => context.goNamed(
+                    'subscriptions',
+                    queryParameters: <String, String>{
+                      'category': subscription.category.name,
+                    },
+                  ),
                 ),
               ),
             ],
@@ -422,6 +428,7 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.color,
     this.horizontal = false,
+    this.onTap,
   });
 
   final IconData icon;
@@ -429,6 +436,7 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final Color color;
   final bool horizontal;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -465,6 +473,7 @@ class _MetricCard extends StatelessWidget {
     );
 
     return GlassCard(
+      onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: horizontal
           ? Row(

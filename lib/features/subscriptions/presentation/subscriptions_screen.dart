@@ -23,6 +23,7 @@ final subscriptionListFilterProvider = StateProvider<SubscriptionListFilter>(
 List<Subscription> filterSubscriptions(
   List<Subscription> subscriptions,
   SubscriptionListFilter filter, {
+  SubscriptionCategory? category,
   DateTime? now,
 }) {
   final today = now ?? DateTime.now();
@@ -30,6 +31,9 @@ List<Subscription> filterSubscriptions(
 
   return subscriptions
       .where((subscription) {
+        if (category != null && subscription.category != category) {
+          return false;
+        }
         return switch (filter) {
           SubscriptionListFilter.all => true,
           SubscriptionListFilter.upcoming =>
@@ -44,7 +48,9 @@ List<Subscription> filterSubscriptions(
 }
 
 class SubscriptionsScreen extends ConsumerWidget {
-  const SubscriptionsScreen({super.key});
+  const SubscriptionsScreen({this.initialCategory, super.key});
+
+  final SubscriptionCategory? initialCategory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,15 +63,34 @@ class SubscriptionsScreen extends ConsumerWidget {
         children: <Widget>[
           ScreenHeader(
             title: 'Подписки',
-            subtitle: 'Все сервисы в одном месте',
-            trailing: IconButton.filled(
-              tooltip: 'Добавить подписку',
-              onPressed: () => context.push('/subscriptions/add'),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.coral,
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.add_rounded),
+            subtitle: initialCategory == null
+                ? 'Все сервисы в одном месте'
+                : 'Категория: ${initialCategory!.label}',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _CategoryFilterButton(
+                  selected: initialCategory,
+                  onSelected: (category) {
+                    context.goNamed(
+                      'subscriptions',
+                      queryParameters: category == null
+                          ? const <String, String>{}
+                          : <String, String>{'category': category.name},
+                    );
+                  },
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                IconButton.filled(
+                  tooltip: 'Добавить подписку',
+                  onPressed: () => context.push('/subscriptions/add'),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.coral,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
             ),
           ),
           _FilterBar(
@@ -89,7 +114,11 @@ class SubscriptionsScreen extends ConsumerWidget {
                   );
                 }
 
-                final filtered = filterSubscriptions(items, selectedFilter);
+                final filtered = filterSubscriptions(
+                  items,
+                  selectedFilter,
+                  category: initialCategory,
+                );
                 if (filtered.isEmpty) {
                   return const EmptyState(
                     title: 'Ничего не найдено',
@@ -127,6 +156,59 @@ class SubscriptionsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CategoryFilterButton extends StatelessWidget {
+  const _CategoryFilterButton({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final SubscriptionCategory? selected;
+  final ValueChanged<SubscriptionCategory?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Фильтр по категории',
+      initialValue: selected?.name,
+      onSelected: (value) {
+        SubscriptionCategory? category;
+        for (final item in SubscriptionCategory.values) {
+          if (item.name == value) category = item;
+        }
+        onSelected(category);
+      },
+      itemBuilder: (context) => <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+          value: '',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.apps_rounded),
+            title: Text('Все категории'),
+          ),
+        ),
+        for (final category in SubscriptionCategory.values)
+          PopupMenuItem<String>(
+            value: category.name,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Text(category.emoji),
+              title: Text(category.label),
+            ),
+          ),
+      ],
+      icon: Badge(
+        isLabelVisible: selected != null,
+        smallSize: 8,
+        child: Icon(
+          selected == null
+              ? Icons.filter_alt_outlined
+              : Icons.filter_alt_rounded,
+        ),
       ),
     );
   }

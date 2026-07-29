@@ -40,6 +40,24 @@ void main() {
 
     expect(result, <Subscription>[annual]);
   });
+
+  test('combines category and list filters', () {
+    final music = _subscription(
+      id: 'music',
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 8, 4),
+      category: SubscriptionCategory.music,
+    );
+
+    final result = filterSubscriptions(
+      <Subscription>[monthly, music, annual],
+      SubscriptionListFilter.upcoming,
+      category: SubscriptionCategory.music,
+      now: today,
+    );
+
+    expect(result, <Subscription>[music]);
+  });
 }
 
 Subscription _subscription({
@@ -47,11 +65,12 @@ Subscription _subscription({
   required BillingCycle billingCycle,
   required DateTime nextPaymentDate,
   SubscriptionStatus status = SubscriptionStatus.active,
+  SubscriptionCategory category = SubscriptionCategory.other,
 }) {
   return Subscription(
     id: id,
     name: id,
-    category: SubscriptionCategory.other,
+    category: category,
     priceInCents: 10000,
     billingCycle: billingCycle,
     startDate: DateTime(2026),

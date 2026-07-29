@@ -5,6 +5,7 @@ import '../../features/analytics/presentation/analytics_screen.dart';
 import '../../features/overview/presentation/overview_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
+import '../../features/subscriptions/domain/entities/subscription.dart';
 import '../../features/subscriptions/presentation/add_subscription_screen.dart';
 import '../../features/subscriptions/presentation/subscription_details_screen.dart';
 import '../../features/subscriptions/presentation/subscriptions_screen.dart';
@@ -30,7 +31,11 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: '/subscriptions',
               name: 'subscriptions',
-              builder: (context, state) => const SubscriptionsScreen(),
+              builder: (context, state) {
+                final categoryName = state.uri.queryParameters['category'];
+                final category = _categoryFromName(categoryName);
+                return SubscriptionsScreen(initialCategory: category);
+              },
             ),
           ],
         ),
@@ -127,3 +132,10 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+
+SubscriptionCategory? _categoryFromName(String? name) {
+  for (final category in SubscriptionCategory.values) {
+    if (category.name == name) return category;
+  }
+  return null;
+}
