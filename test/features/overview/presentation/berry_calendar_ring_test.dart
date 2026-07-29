@@ -13,6 +13,7 @@ void main() {
               width: 340,
               child: BerryCalendarRing(
                 year: 2026,
+                now: DateTime(2026, 7, 29),
                 occurrences: const [],
                 selectedMonth: selectedMonth,
                 onMonthSelected: (month) => selectedMonth = month,

@@ -12,6 +12,8 @@ class BerryCalendarRing extends StatefulWidget {
     required this.occurrences,
     required this.selectedMonth,
     required this.onMonthSelected,
+    required this.now,
+    this.showPeriodArcs = false,
     super.key,
   });
 
@@ -19,6 +21,8 @@ class BerryCalendarRing extends StatefulWidget {
   final List<PaymentOccurrence> occurrences;
   final int selectedMonth;
   final ValueChanged<int> onMonthSelected;
+  final DateTime now;
+  final bool showPeriodArcs;
 
   @override
   State<BerryCalendarRing> createState() => _BerryCalendarRingState();
@@ -104,6 +108,8 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                       year: widget.year,
                       occurrences: widget.occurrences,
                       selectedMonth: widget.selectedMonth,
+                      now: widget.now,
+                      showPeriodArcs: widget.showPeriodArcs,
                       progress: Curves.easeOutCubic.transform(
                         _animationController.value,
                       ),
@@ -184,6 +190,8 @@ class _CalendarRingPainter extends CustomPainter {
     required this.year,
     required this.occurrences,
     required this.selectedMonth,
+    required this.now,
+    required this.showPeriodArcs,
     required this.progress,
     required this.textColor,
     required this.trackColor,
@@ -192,6 +200,8 @@ class _CalendarRingPainter extends CustomPainter {
   final int year;
   final List<PaymentOccurrence> occurrences;
   final int selectedMonth;
+  final DateTime now;
+  final bool showPeriodArcs;
   final double progress;
   final Color textColor;
   final Color trackColor;
@@ -224,7 +234,7 @@ class _CalendarRingPainter extends CustomPainter {
       final selected = index + 1 == selectedMonth;
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = selected ? 18 : 12
+        ..strokeWidth = selected ? 22 : 16
         ..strokeCap = StrokeCap.round
         ..color = selected
             ? AppColors.coral.withValues(alpha: 0.95)
@@ -262,6 +272,16 @@ class _CalendarRingPainter extends CustomPainter {
     }
 
     final daysInYear = DateTime(year + 1).difference(DateTime(year)).inDays;
+    if (showPeriodArcs) {
+      _paintPeriodArcs(
+        canvas: canvas,
+        size: size,
+        center: center,
+        outerRadius: radius,
+        start: start,
+        daysInYear: daysInYear,
+      );
+    }
     final sameDayCount = <int, int>{};
     for (final occurrence in occurrences) {
       final day = occurrence.date.difference(DateTime(year)).inDays;
@@ -293,11 +313,78 @@ class _CalendarRingPainter extends CustomPainter {
     }
   }
 
+  void _paintPeriodArcs({
+    required Canvas canvas,
+    required Size size,
+    required Offset center,
+    required double outerRadius,
+    required double start,
+    required int daysInYear,
+  }) {
+    final today = DateTime(now.year, now.month, now.day);
+    final firstOccurrenceBySubscription = <String, PaymentOccurrence>{};
+    for (final occurrence in occurrences) {
+      if (occurrence.date.isBefore(today)) continue;
+      firstOccurrenceBySubscription.putIfAbsent(
+        occurrence.subscription.id,
+        () => occurrence,
+      );
+    }
+    final periods = firstOccurrenceBySubscription.values.toList()
+      ..sort((left, right) => right.date.compareTo(left.date));
+    if (periods.isEmpty) return;
+
+    final innermostRadius = size.width * 0.205;
+    final outermostRadius = outerRadius - 24;
+    final spacing = periods.length == 1
+        ? 0.0
+        : (outermostRadius - innermostRadius) / (periods.length - 1);
+    final todayIndex = today
+        .difference(DateTime(year))
+        .inDays
+        .clamp(0, daysInYear - 1);
+    final arcStart = start - todayIndex / daysInYear * math.pi * 2;
+
+    for (var index = 0; index < periods.length; index++) {
+      final occurrence = periods[index];
+      final periodRadius = innermostRadius + spacing * index;
+      final rect = Rect.fromCircle(center: center, radius: periodRadius);
+      final endIndex = occurrence.date
+          .difference(DateTime(year))
+          .inDays
+          .clamp(todayIndex, daysInYear - 1);
+      final sweep = -(endIndex - todayIndex) / daysInYear * math.pi * 2;
+      final color = occurrence.subscription.category.color;
+
+      canvas.drawCircle(
+        center,
+        periodRadius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = trackColor.withValues(alpha: 0.32),
+      );
+      canvas.drawArc(
+        rect,
+        arcStart,
+        sweep * progress,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2
+          ..strokeCap = StrokeCap.round
+          ..color = color.withValues(alpha: 0.82 * progress),
+      );
+    }
+  }
+
   @override
   bool shouldRepaint(covariant _CalendarRingPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.selectedMonth != selectedMonth ||
         oldDelegate.occurrences != occurrences ||
+        oldDelegate.now != now ||
+        oldDelegate.showPeriodArcs != showPeriodArcs ||
         oldDelegate.textColor != textColor ||
         oldDelegate.trackColor != trackColor;
   }

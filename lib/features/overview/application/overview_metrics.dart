@@ -16,6 +16,7 @@ class OverviewMetrics {
     required this.upcomingPayments,
     required this.spendingByMonth,
     required this.yearOccurrences,
+    required this.upcomingYearOccurrences,
   });
 
   factory OverviewMetrics.calculate({
@@ -53,6 +54,7 @@ class OverviewMetrics {
       fallbackCurrentMonth: monthlyRecurring,
     );
 
+    final yearOccurrences = buildYearOccurrences(activeSubscriptions, now.year);
     return OverviewMetrics(
       monthlyRecurringInCents: monthlyRecurring,
       averageMonthlyInCents: _averageMonthly(
@@ -62,7 +64,16 @@ class OverviewMetrics {
       ),
       upcomingPayments: upcoming,
       spendingByMonth: spendingByMonth,
-      yearOccurrences: buildYearOccurrences(activeSubscriptions, now.year),
+      yearOccurrences: yearOccurrences,
+      upcomingYearOccurrences: yearOccurrences
+          .where(
+            (occurrence) =>
+                !occurrence.date.isBefore(
+                  DateTime(now.year, now.month, now.day),
+                ) &&
+                occurrence.date.year == now.year,
+          )
+          .toList(growable: false),
     );
   }
 
@@ -71,6 +82,7 @@ class OverviewMetrics {
   final List<PaymentOccurrence> upcomingPayments;
   final List<MonthlySpendPoint> spendingByMonth;
   final List<PaymentOccurrence> yearOccurrences;
+  final List<PaymentOccurrence> upcomingYearOccurrences;
 
   static DateTime nextOccurrence(Subscription subscription, DateTime now) {
     final today = DateTime(now.year, now.month, now.day);

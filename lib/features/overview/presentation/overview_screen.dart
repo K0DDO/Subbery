@@ -26,6 +26,7 @@ class OverviewScreen extends ConsumerStatefulWidget {
 
 class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   int _selectedMonth = DateTime.now().month;
+  int _ringPage = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +81,10 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
       payments: payments,
       now: now,
     );
-    final selectedOccurrences = metrics.yearOccurrences
+    final visibleRingOccurrences = _ringPage == 0
+        ? metrics.upcomingYearOccurrences
+        : metrics.yearOccurrences;
+    final selectedOccurrences = visibleRingOccurrences
         .where((occurrence) => occurrence.date.month == _selectedMonth)
         .toList(growable: false);
 
@@ -105,45 +109,59 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: Row(
+              SizedBox(
+                height: 406,
+                child: PageView(
+                  onPageChanged: (page) {
+                    setState(() => _ringPage = page);
+                  },
                   children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Календарь платежей на ${now.year} год',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                    _RingGalleryPage(
+                      title: 'Ближайшие платежи',
+                      subtitle: 'До конца ${now.year} года',
+                      year: now.year,
+                      now: now,
+                      occurrences: metrics.upcomingYearOccurrences,
+                      selectedMonth: _selectedMonth,
+                      showPeriodArcs: true,
+                      onMonthSelected: (month) {
+                        setState(() => _selectedMonth = month);
+                      },
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.coral.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Text(
-                        '${metrics.yearOccurrences.length}',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColors.coral,
-                        ),
-                      ),
+                    _RingGalleryPage(
+                      title: 'Календарь платежей',
+                      subtitle: 'Весь ${now.year} год',
+                      year: now.year,
+                      now: now,
+                      occurrences: metrics.yearOccurrences,
+                      selectedMonth: _selectedMonth,
+                      onMonthSelected: (month) {
+                        setState(() => _selectedMonth = month);
+                      },
                     ),
                   ],
                 ),
               ),
-              BerryCalendarRing(
-                year: now.year,
-                occurrences: metrics.yearOccurrences,
-                selectedMonth: _selectedMonth,
-                onMonthSelected: (month) {
-                  setState(() => _selectedMonth = month);
-                },
+              const SizedBox(height: AppSpacing.xs),
+              _GalleryPageIndicator(selectedPage: _ringPage),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  child: Text(
+                    _ringPage == 0
+                        ? 'Тонкие дуги показывают срок до следующего списания'
+                        : 'Свайпните вправо, чтобы вернуться к ближайшим',
+                    key: ValueKey<int>(_ringPage),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               ),
+              const SizedBox(height: AppSpacing.sm),
               AnimatedSize(
                 duration: const Duration(milliseconds: 320),
                 curve: Curves.easeOutCubic,
@@ -163,7 +181,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
         _SectionTitle(
-          title: 'Ближайшие платежи',
+          title: 'Следующие списания',
           subtitle: 'Сначала самые близкие',
           action: TextButton(
             onPressed: () => context.go('/subscriptions'),
@@ -187,6 +205,112 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         GlassCard(child: SpendingBarChart(points: metrics.spendingByMonth)),
+      ],
+    );
+  }
+}
+
+class _RingGalleryPage extends StatelessWidget {
+  const _RingGalleryPage({
+    required this.title,
+    required this.subtitle,
+    required this.year,
+    required this.now,
+    required this.occurrences,
+    required this.selectedMonth,
+    required this.onMonthSelected,
+    this.showPeriodArcs = false,
+  });
+
+  final String title;
+  final String subtitle;
+  final int year;
+  final DateTime now;
+  final List<PaymentOccurrence> occurrences;
+  final int selectedMonth;
+  final ValueChanged<int> onMonthSelected;
+  final bool showPeriodArcs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.coral.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  '${occurrences.length}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: AppColors.coral),
+                ),
+              ),
+            ],
+          ),
+        ),
+        BerryCalendarRing(
+          year: year,
+          now: now,
+          occurrences: occurrences,
+          selectedMonth: selectedMonth,
+          showPeriodArcs: showPeriodArcs,
+          onMonthSelected: onMonthSelected,
+        ),
+      ],
+    );
+  }
+}
+
+class _GalleryPageIndicator extends StatelessWidget {
+  const _GalleryPageIndicator({required this.selectedPage});
+
+  final int selectedPage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        for (var index = 0; index < 2; index++) ...<Widget>[
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width: selectedPage == index ? 22 : 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: selectedPage == index
+                  ? AppColors.coral
+                  : Theme.of(context).dividerColor,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+          if (index == 0) const SizedBox(width: AppSpacing.xs),
+        ],
       ],
     );
   }

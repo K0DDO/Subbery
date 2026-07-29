@@ -28,6 +28,13 @@ void main() {
     expect(metrics.averageMonthlyInCents, 89900);
     expect(metrics.upcomingPayments.first.subscription.id, 'annual');
     expect(metrics.spendingByMonth.last.amountInCents, 89900);
+    expect(metrics.upcomingYearOccurrences, hasLength(6));
+    expect(
+      metrics.upcomingYearOccurrences.every(
+        (occurrence) => !occurrence.date.isBefore(DateTime(2026, 7, 29)),
+      ),
+      isTrue,
+    );
   });
 
   test('creates monthly and yearly calendar occurrences', () {
