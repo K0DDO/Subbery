@@ -49,6 +49,8 @@ enum AppIconChoice {
   final String? alternateName;
 }
 
+enum AppIconSelectionResult { changed, unchanged, failed }
+
 abstract interface class AppIconGateway {
   Future<void> setIcon(String? alternateName);
 }
@@ -159,21 +161,22 @@ class AppIconController extends StateNotifier<AppIconState> {
     state = state.copyWith(selected: selected);
   }
 
-  Future<bool> selectIcon(AppIconChoice choice) async {
-    if (state.isBusy || state.selected == choice) return true;
+  Future<AppIconSelectionResult> selectIcon(AppIconChoice choice) async {
+    if (state.selected == choice) return AppIconSelectionResult.unchanged;
+    if (state.isBusy) return AppIconSelectionResult.failed;
     state = state.copyWith(isBusy: true, clearError: true);
     try {
       await _gateway.setIcon(choice.alternateName);
       final preferences = await SharedPreferences.getInstance();
       await preferences.setString(_storageKey, choice.name);
       state = state.copyWith(selected: choice, isBusy: false);
-      return true;
+      return AppIconSelectionResult.changed;
     } on Object {
       state = state.copyWith(
         isBusy: false,
         errorMessage: 'Не удалось сменить иконку',
       );
-      return false;
+      return AppIconSelectionResult.failed;
     }
   }
 }

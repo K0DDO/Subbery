@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -36,11 +38,16 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     AppIconChoice choice,
   ) async {
-    final changed = await ref.read(appIconProvider.notifier).selectIcon(choice);
-    if (!changed && context.mounted) {
+    final result = await ref.read(appIconProvider.notifier).selectIcon(choice);
+    if (result == AppIconSelectionResult.failed && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Не удалось сменить иконку')),
       );
+      return;
+    }
+    if (result == AppIconSelectionResult.changed && Platform.isAndroid) {
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      await SystemNavigator.pop();
     }
   }
 

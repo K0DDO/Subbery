@@ -12,7 +12,10 @@ void main() {
     final controller = AppIconController(gateway);
     await Future<void>.delayed(Duration.zero);
 
-    expect(await controller.selectIcon(AppIconChoice.lightMinimal), isTrue);
+    expect(
+      await controller.selectIcon(AppIconChoice.lightMinimal),
+      AppIconSelectionResult.changed,
+    );
     expect(gateway.lastIconName, 'light_minimal');
     expect(controller.state.selected, AppIconChoice.lightMinimal);
 
@@ -25,9 +28,24 @@ void main() {
     final controller = AppIconController(_FakeAppIconGateway(shouldFail: true));
     await Future<void>.delayed(Duration.zero);
 
-    expect(await controller.selectIcon(AppIconChoice.darkNeon), isFalse);
+    expect(
+      await controller.selectIcon(AppIconChoice.darkNeon),
+      AppIconSelectionResult.failed,
+    );
     expect(controller.state.selected, AppIconChoice.darkGlass);
     expect(controller.state.errorMessage, isNotNull);
+  });
+
+  test('does not report a change for the selected icon', () async {
+    final gateway = _FakeAppIconGateway();
+    final controller = AppIconController(gateway);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      await controller.selectIcon(AppIconChoice.darkGlass),
+      AppIconSelectionResult.unchanged,
+    );
+    expect(gateway.lastIconName, isNull);
   });
 }
 
