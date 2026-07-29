@@ -18,6 +18,11 @@ import '../application/overview_metrics.dart';
 import 'widgets/berry_calendar_ring.dart';
 import 'widgets/spending_bar_chart.dart';
 
+@visibleForTesting
+bool isDimaDateSimulator(String? name) {
+  return name?.trim().toLowerCase() == 'дима';
+}
+
 class OverviewScreen extends ConsumerStatefulWidget {
   const OverviewScreen({super.key});
 
@@ -28,6 +33,7 @@ class OverviewScreen extends ConsumerStatefulWidget {
 class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   int _selectedMonth = DateTime.now().month;
   int _ringPage = 0;
+  int _debugDayOffset = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -49,8 +55,12 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           Expanded(
             child: subscriptions.when(
               data: (items) => payments.when(
-                data: (paymentItems) =>
-                    _buildContent(items, paymentItems, resetRevision),
+                data: (paymentItems) => _buildContent(
+                  items,
+                  paymentItems,
+                  resetRevision,
+                  userName,
+                ),
                 loading: _LoadingOverview.new,
                 error: (error, stackTrace) => const _OverviewError(),
               ),
@@ -67,6 +77,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
     List<Subscription> subscriptions,
     List<Payment> payments,
     int resetRevision,
+    String? userName,
   ) {
     if (subscriptions.isEmpty) {
       return EmptyState(
@@ -79,7 +90,12 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
       );
     }
 
-    final now = DateTime.now();
+    final realNow = DateTime.now();
+    final now = DateTime(
+      realNow.year,
+      realNow.month,
+      realNow.day,
+    ).add(Duration(days: _debugDayOffset));
     final metrics = OverviewMetrics.calculate(
       subscriptions: subscriptions,
       payments: payments,
@@ -154,6 +170,16 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   ],
                 ),
               ),
+              if (isDimaDateSimulator(userName)) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                _DimaDateSimulator(
+                  dayOffset: _debugDayOffset,
+                  selectedDate: now,
+                  onChanged: (offset) {
+                    setState(() => _debugDayOffset = offset);
+                  },
+                ),
+              ],
               const SizedBox(height: AppSpacing.xs),
               _GalleryPageIndicator(selectedPage: _ringPage),
               const SizedBox(height: AppSpacing.sm),
@@ -217,6 +243,52 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         ),
         const SizedBox(height: AppSpacing.sm),
         GlassCard(child: SpendingBarChart(points: metrics.spendingByMonth)),
+      ],
+    );
+  }
+}
+
+class _DimaDateSimulator extends StatelessWidget {
+  const _DimaDateSimulator({
+    required this.dayOffset,
+    required this.selectedDate,
+    required this.onChanged,
+  });
+
+  final int dayOffset;
+  final DateTime selectedDate;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: <Widget>[
+        Text(
+          AppFormatters.fullDate(selectedDate),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: AppColors.coral,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 3,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            activeTrackColor: AppColors.coral,
+            inactiveTrackColor: AppColors.coral.withValues(alpha: 0.22),
+            thumbColor: AppColors.coral,
+            overlayColor: AppColors.coral.withValues(alpha: 0.16),
+          ),
+          child: Slider(
+            value: dayOffset.toDouble(),
+            min: -365,
+            max: 365,
+            divisions: 730,
+            onChanged: (value) => onChanged(value.round()),
+          ),
+        ),
       ],
     );
   }

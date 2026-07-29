@@ -47,6 +47,85 @@ void main() {
     expect(find.text('Привет, Анна 👋'), findsOneWidget);
   });
 
+  testWidgets('shows dima date simulator only for Дима', (tester) async {
+    final subscription = Subscription(
+      id: 'netflix',
+      name: 'Netflix',
+      logo: 'netflix',
+      category: SubscriptionCategory.entertainment,
+      priceInCents: 79900,
+      billingCycle: BillingCycle.monthly,
+      startDate: DateTime(2026, 1, 1),
+      nextPaymentDate: DateTime(2026, 8, 3),
+      status: SubscriptionStatus.active,
+      totalSpentInCents: 0,
+      reminderEnabled: true,
+    );
+
+    await tester.pumpWidget(
+      _emptyApp(
+        userName: 'Дима',
+        subscriptions: <Subscription>[subscription],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Обзор'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Slider), findsOneWidget);
+
+    await tester.pumpWidget(
+      _emptyApp(
+        userName: 'Анна',
+        subscriptions: <Subscription>[subscription],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Обзор'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Slider), findsNothing);
+  });
+
+  testWidgets('dima date simulator changes overview date', (tester) async {
+    final subscription = Subscription(
+      id: 'netflix',
+      name: 'Netflix',
+      logo: 'netflix',
+      category: SubscriptionCategory.entertainment,
+      priceInCents: 79900,
+      billingCycle: BillingCycle.monthly,
+      startDate: DateTime(2026, 1, 1),
+      nextPaymentDate: DateTime(2026, 8, 3),
+      status: SubscriptionStatus.active,
+      totalSpentInCents: 0,
+      reminderEnabled: true,
+    );
+
+    await tester.pumpWidget(
+      _emptyApp(
+        userName: 'дима',
+        subscriptions: <Subscription>[subscription],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Обзор'));
+    await tester.pumpAndSettle();
+
+    final slider = find.byType(Slider);
+    await tester.ensureVisible(slider);
+    await tester.pumpAndSettle();
+
+    final initialDate = tester.widget<Slider>(slider).value;
+    expect(initialDate, 0);
+
+    await tester.drag(slider, const Offset(180, 0));
+    await tester.pumpAndSettle();
+
+    final updatedSlider = tester.widget<Slider>(slider);
+    expect(updatedSlider.value, greaterThan(0));
+  });
+
   testWidgets('swipes from upcoming ring to yearly calendar', (tester) async {
     final subscription = Subscription(
       id: 'netflix',
