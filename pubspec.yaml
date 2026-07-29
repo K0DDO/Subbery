@@ -50,6 +50,7 @@ dependencies:
   equatable: ^2.1.0
   flutter_timezone: ^5.1.0
   dynamic_app_icon_flutter_plus: ^2.2.0
+  simple_icons: ^16.23.0
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:simple_icons/simple_icons.dart';
 
 import '../../data/catalog/known_services.dart';
 import '../../domain/entities/subscription.dart';
@@ -34,6 +35,7 @@ class ServiceLogo extends StatelessWidget {
     final monogram =
         knownService?.monogram ??
         (name.trim().isEmpty ? 'S' : name.trim().substring(0, 1).toUpperCase());
+    final brandIcon = _brandIconFor(knownService?.logoKey);
 
     return Semantics(
       image: true,
@@ -61,17 +63,35 @@ class ServiceLogo extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(
-          monogram,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: size * 0.42,
-            height: 1,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1,
-          ),
-        ),
+        child: brandIcon == null
+            ? Text(
+                monogram,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.42,
+                  height: 1,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                ),
+              )
+            : Icon(brandIcon, color: Colors.white, size: size * 0.48),
       ),
     );
   }
+
+  static IconData? _brandIconFor(String? logoKey) => switch (logoKey) {
+    'netflix' => SimpleIcons.netflix,
+    'spotify' => SimpleIcons.spotify,
+    'telegram' => SimpleIcons.telegram,
+    'discord' => SimpleIcons.discord,
+    'icloud' => SimpleIcons.icloud,
+    'youtube' => SimpleIcons.youtube,
+    'apple_music' => SimpleIcons.applemusic,
+    'google_one' => SimpleIcons.googlecloud,
+    'notion' => SimpleIcons.notion,
+    'figma' => SimpleIcons.figma,
+    'github' => SimpleIcons.github,
+    'playstation' => SimpleIcons.playstation,
+    _ => null,
+  };
 }
