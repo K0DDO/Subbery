@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_theme.dart';
+import '../features/profile/presentation/user_name_gate.dart';
 import '../features/settings/application/theme_mode_controller.dart';
 import 'router/app_router.dart';
 
@@ -36,7 +37,7 @@ class SubberryApp extends ConsumerWidget {
                 : Brightness.dark,
             systemNavigationBarDividerColor: Colors.transparent,
           ),
-          child: child!,
+          child: UserNameGate(child: child!),
         );
       },
       routerConfig: appRouter,

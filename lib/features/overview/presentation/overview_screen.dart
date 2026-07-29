@@ -8,6 +8,7 @@ import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../profile/application/user_profile_controller.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
@@ -30,13 +31,16 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   Widget build(BuildContext context) {
     final subscriptions = ref.watch(subscriptionsProvider);
     final payments = ref.watch(allPaymentsProvider);
+    final userName = ref.watch(
+      userProfileProvider.select((profile) => profile.name),
+    );
 
     return SafeArea(
       bottom: false,
       child: Column(
         children: <Widget>[
-          const ScreenHeader(
-            title: 'Привет, Дима 👋',
+          ScreenHeader(
+            title: 'Привет, ${userName ?? ''} 👋',
             subtitle: 'Ваши подписки под контролем',
           ),
           Expanded(
