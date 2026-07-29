@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -9,7 +10,22 @@ import '../../application/overview_metrics.dart';
 
 const _maxPeriodArcs = 4;
 
-List<PaymentOccurrence> _periodOccurrences(
+@visibleForTesting
+class PeriodArcGroup {
+  const PeriodArcGroup({
+    required this.date,
+    required this.occurrences,
+  });
+
+  final DateTime date;
+  final List<PaymentOccurrence> occurrences;
+
+  int get count => occurrences.length;
+  PaymentOccurrence get primary => occurrences.first;
+}
+
+@visibleForTesting
+List<PeriodArcGroup> buildPeriodArcGroups(
   List<PaymentOccurrence> occurrences,
   DateTime now,
 ) {
@@ -22,11 +38,30 @@ List<PaymentOccurrence> _periodOccurrences(
       firstBySubscription[occurrence.subscription.id] = occurrence;
     }
   }
-  final periods = firstBySubscription.values.toList()
-    ..sort((left, right) => left.date.compareTo(right.date));
-  final nearest = periods.take(_maxPeriodArcs).toList()
-    ..sort((left, right) => right.date.compareTo(left.date));
-  return nearest;
+
+  final byDate = <DateTime, List<PaymentOccurrence>>{};
+  for (final occurrence in firstBySubscription.values) {
+    final date = DateTime(
+      occurrence.date.year,
+      occurrence.date.month,
+      occurrence.date.day,
+    );
+    byDate.putIfAbsent(date, () => <PaymentOccurrence>[]).add(occurrence);
+  }
+
+  final groups =
+      byDate.entries
+          .map(
+            (entry) => PeriodArcGroup(
+              date: entry.key,
+              occurrences: entry.value,
+            ),
+          )
+          .toList()
+        ..sort((left, right) => left.date.compareTo(right.date));
+
+  // Nearest dates first so they stay on the inner radii; farthest stay outside.
+  return groups.take(_maxPeriodArcs).toList(growable: false);
 }
 
 class BerryCalendarRing extends StatefulWidget {
@@ -300,7 +335,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   }
 
   List<Widget> _buildPeriodIcons(double size, double progress, double pulse) {
-    final periods = _periodOccurrences(widget.occurrences, widget.now);
+    final periods = buildPeriodArcGroups(widget.occurrences, widget.now);
     if (periods.isEmpty) return const <Widget>[];
     final center = Offset(size / 2, size / 2);
     final outerRadius = size * 0.335;
@@ -316,7 +351,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     return <Widget>[
       for (var index = 0; index < periods.length; index++)
         _periodIcon(
-          occurrence: periods[index],
+          group: periods[index],
           center: center,
           radius: innermostRadius + spacing * index,
           daysInYear: daysInYear,
@@ -327,7 +362,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   }
 
   Widget _periodIcon({
-    required PaymentOccurrence occurrence,
+    required PeriodArcGroup group,
     required Offset center,
     required double radius,
     required int daysInYear,
@@ -336,10 +371,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   }) {
     final today = DateTime(widget.now.year, widget.now.month, widget.now.day);
     final todayIndex = today.difference(DateTime(widget.year)).inDays;
-    final daysUntil = occurrence.date
-        .difference(today)
-        .inDays
-        .clamp(0, daysInYear);
+    final daysUntil = group.date.difference(today).inDays.clamp(0, daysInYear);
     final arcStart = -math.pi / 2 - todayIndex / daysInYear * math.pi * 2;
     final angle = arcStart - daysUntil / daysInYear * math.pi * 2 * progress;
     final point =
@@ -349,6 +381,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     final borderColor = isSoon
         ? Color.lerp(const Color(0xFFFF8A80), const Color(0xFF8B1020), pulse)!
         : Colors.white.withValues(alpha: 0.72);
+    final subscription = group.primary.subscription;
     return Positioned(
       left: point.dx - iconSize / 2,
       top: point.dy - iconSize / 2,
@@ -364,13 +397,28 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: borderColor, width: isSoon ? 1.8 : 1),
+                color: group.count > 1
+                    ? AppColors.coral.withValues(alpha: 0.92)
+                    : null,
               ),
-              child: ServiceLogo(
-                name: occurrence.subscription.name,
-                logoKey: occurrence.subscription.logo,
-                category: occurrence.subscription.category,
-                size: 13,
-              ),
+              child: group.count > 1
+                  ? Center(
+                      child: Text(
+                        '${group.count}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
+                    )
+                  : ServiceLogo(
+                      name: subscription.name,
+                      logoKey: subscription.logo,
+                      category: subscription.category,
+                      size: 13,
+                    ),
             ),
           ),
         ),
@@ -519,7 +567,7 @@ class _CalendarRingPainter extends CustomPainter {
     required int daysInYear,
   }) {
     final today = DateTime(now.year, now.month, now.day);
-    final periods = _periodOccurrences(occurrences, now);
+    final periods = buildPeriodArcGroups(occurrences, now);
     if (periods.isEmpty) return;
 
     final innermostRadius = size.width * 0.205;
@@ -534,15 +582,14 @@ class _CalendarRingPainter extends CustomPainter {
     final arcStart = start - todayIndex / daysInYear * math.pi * 2;
 
     for (var index = 0; index < periods.length; index++) {
-      final occurrence = periods[index];
+      final group = periods[index];
       final periodRadius = innermostRadius + spacing * index;
       final rect = Rect.fromCircle(center: center, radius: periodRadius);
-      final daysUntil = occurrence.date
-          .difference(today)
-          .inDays
-          .clamp(0, daysInYear);
+      final daysUntil = group.date.difference(today).inDays.clamp(0, daysInYear);
       final sweep = -daysUntil / daysInYear * math.pi * 2;
-      final color = occurrence.subscription.category.color;
+      final color = group.count > 1
+          ? AppColors.coral
+          : group.primary.subscription.category.color;
 
       canvas.drawArc(
         rect,
