@@ -348,24 +348,33 @@ class _MonthlySummary extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'В этом месяце',
+                'Запланировано в этом месяце',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            AppFormatters.money(metrics.monthlyRecurringInCents),
+            AppFormatters.money(metrics.plannedThisMonthInCents),
             style: Theme.of(context).textTheme.displaySmall,
           ),
           const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Фактически потрачено: '
+            '${AppFormatters.money(metrics.actualThisMonthInCents)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
               Expanded(
                 child: _SummaryCaption(
-                  label: 'В среднем',
+                  label: 'Среднее по годовому плану',
                   value:
-                      '${AppFormatters.money(metrics.averageMonthlyInCents)} / мес',
+                      '${AppFormatters.money(metrics.averageMonthlyPlannedInCents)} / мес',
                 ),
               ),
               if (next != null) ...<Widget>[
@@ -375,19 +384,42 @@ class _MonthlySummary extends StatelessWidget {
                   color: Theme.of(context).dividerColor,
                 ),
                 const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _SummaryCaption(
-                    label: 'Следующий',
-                    value:
-                        '${next.subscription.name} · '
-                        '${AppFormatters.shortDate(next.date)}',
-                  ),
-                ),
+                Expanded(child: _NextPaymentCaption(occurrence: next)),
               ],
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NextPaymentCaption extends StatelessWidget {
+  const _NextPaymentCaption({required this.occurrence});
+
+  final PaymentOccurrence occurrence;
+
+  @override
+  Widget build(BuildContext context) {
+    final subscription = occurrence.subscription;
+    return Row(
+      children: <Widget>[
+        ServiceLogo(
+          name: subscription.name,
+          logoKey: subscription.logo,
+          category: subscription.category,
+          size: 30,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: _SummaryCaption(
+            label: 'Следующее списание',
+            value:
+                '${subscription.name} · '
+                '${AppFormatters.shortDate(occurrence.date)}',
+          ),
+        ),
+      ],
     );
   }
 }

@@ -12,8 +12,9 @@ class PaymentOccurrence {
 
 class OverviewMetrics {
   const OverviewMetrics({
-    required this.monthlyRecurringInCents,
-    required this.averageMonthlyInCents,
+    required this.plannedThisMonthInCents,
+    required this.actualThisMonthInCents,
+    required this.averageMonthlyPlannedInCents,
     required this.upcomingPayments,
     required this.spendingByMonth,
     required this.yearOccurrences,
@@ -28,15 +29,35 @@ class OverviewMetrics {
     final activeSubscriptions = subscriptions
         .where((item) => item.status == SubscriptionStatus.active)
         .toList(growable: false);
-    final monthlyRecurring = activeSubscriptions.fold<int>(
+    final annualPlan = activeSubscriptions.fold<int>(
       0,
       (total, item) =>
           total +
           switch (item.billingCycle) {
-            BillingCycle.monthly => item.priceInCents,
-            BillingCycle.yearly => (item.priceInCents / 12).round(),
+            BillingCycle.monthly => item.priceInCents * 12,
+            BillingCycle.yearly => item.priceInCents,
           },
     );
+    final currentMonth = DateTime(now.year, now.month);
+    final nextMonth = _addMonths(currentMonth, 1);
+    final plannedThisMonth = activeSubscriptions
+        .where(
+          (subscription) =>
+              subscription.startDate.isBefore(nextMonth) &&
+              (subscription.billingCycle == BillingCycle.monthly ||
+                  subscription.nextPaymentDate.month == now.month),
+        )
+        .fold<int>(
+          0,
+          (total, subscription) => total + subscription.priceInCents,
+        );
+    final actualThisMonth = payments
+        .where(
+          (payment) =>
+              !payment.date.isBefore(currentMonth) &&
+              payment.date.isBefore(nextMonth),
+        )
+        .fold<int>(0, (total, payment) => total + payment.amountInCents);
 
     final upcoming =
         activeSubscriptions
@@ -49,20 +70,13 @@ class OverviewMetrics {
             .toList()
           ..sort((left, right) => left.date.compareTo(right.date));
 
-    final spendingByMonth = _lastSixMonths(
-      payments: payments,
-      now: now,
-      fallbackCurrentMonth: monthlyRecurring,
-    );
+    final spendingByMonth = _lastSixMonths(payments: payments, now: now);
 
     final yearOccurrences = buildYearOccurrences(activeSubscriptions, now.year);
     return OverviewMetrics(
-      monthlyRecurringInCents: monthlyRecurring,
-      averageMonthlyInCents: _averageMonthly(
-        payments,
-        now,
-        fallback: monthlyRecurring,
-      ),
+      plannedThisMonthInCents: plannedThisMonth,
+      actualThisMonthInCents: actualThisMonth,
+      averageMonthlyPlannedInCents: (annualPlan / 12).round(),
       upcomingPayments: upcoming,
       spendingByMonth: spendingByMonth,
       yearOccurrences: yearOccurrences,
@@ -78,8 +92,9 @@ class OverviewMetrics {
     );
   }
 
-  final int monthlyRecurringInCents;
-  final int averageMonthlyInCents;
+  final int plannedThisMonthInCents;
+  final int actualThisMonthInCents;
+  final int averageMonthlyPlannedInCents;
   final List<PaymentOccurrence> upcomingPayments;
   final List<MonthlySpendPoint> spendingByMonth;
   final List<PaymentOccurrence> yearOccurrences;
@@ -129,7 +144,6 @@ class OverviewMetrics {
   static List<MonthlySpendPoint> _lastSixMonths({
     required List<Payment> payments,
     required DateTime now,
-    required int fallbackCurrentMonth,
   }) {
     final currentMonth = DateTime(now.year, now.month);
     final points = <MonthlySpendPoint>[];
@@ -143,40 +157,9 @@ class OverviewMetrics {
                 payment.date.isBefore(nextMonth),
           )
           .fold<int>(0, (total, payment) => total + payment.amountInCents);
-      points.add(
-        MonthlySpendPoint(
-          month: month,
-          amountInCents: amount == 0 && offset == 0
-              ? fallbackCurrentMonth
-              : amount,
-        ),
-      );
+      points.add(MonthlySpendPoint(month: month, amountInCents: amount));
     }
     return points;
-  }
-
-  static int _averageMonthly(
-    List<Payment> payments,
-    DateTime now, {
-    required int fallback,
-  }) {
-    if (payments.isEmpty) return fallback;
-    final twelveMonthsAgo = DateTime(now.year - 1, now.month + 1);
-    final relevant = payments
-        .where((payment) => !payment.date.isBefore(twelveMonthsAgo))
-        .toList();
-    if (relevant.isEmpty) return fallback;
-
-    final earliest = relevant
-        .map((payment) => DateTime(payment.date.year, payment.date.month))
-        .reduce((left, right) => left.isBefore(right) ? left : right);
-    final monthCount =
-        (now.year - earliest.year) * 12 + now.month - earliest.month + 1;
-    final total = relevant.fold<int>(
-      0,
-      (sum, payment) => sum + payment.amountInCents,
-    );
-    return (total / monthCount.clamp(1, 12)).round();
   }
 
   static DateTime _addMonths(DateTime source, int months) {

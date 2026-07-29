@@ -20,14 +20,22 @@ void main() {
 
     final metrics = OverviewMetrics.calculate(
       subscriptions: <Subscription>[monthly, annual],
-      payments: const <Payment>[],
+      payments: <Payment>[
+        Payment(
+          id: 'payment',
+          subscriptionId: monthly.id,
+          amountInCents: 79900,
+          date: DateTime(2026, 7, 3),
+        ),
+      ],
       now: DateTime(2026, 7, 29),
     );
 
-    expect(metrics.monthlyRecurringInCents, 89900);
-    expect(metrics.averageMonthlyInCents, 89900);
+    expect(metrics.plannedThisMonthInCents, 199900);
+    expect(metrics.actualThisMonthInCents, 79900);
+    expect(metrics.averageMonthlyPlannedInCents, 89900);
     expect(metrics.upcomingPayments.first.subscription.id, 'annual');
-    expect(metrics.spendingByMonth.last.amountInCents, 89900);
+    expect(metrics.spendingByMonth.last.amountInCents, 79900);
     expect(metrics.upcomingYearOccurrences, hasLength(6));
     expect(
       metrics.upcomingYearOccurrences.every(
