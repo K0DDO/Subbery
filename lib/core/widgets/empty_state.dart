@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_spacing.dart';
 import 'glass_button.dart';
 import 'glass_card.dart';
-import 'subberry_logo.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({
@@ -38,7 +37,15 @@ class EmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               if (icon == null)
-                const SubberryLogo(size: 82)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  child: Image.asset(
+                    'assets/icons/subberry_dark_glass.png',
+                    width: 82,
+                    height: 82,
+                    fit: BoxFit.cover,
+                  ),
+                )
               else
                 _EmptyIcon(icon: icon!),
               const SizedBox(height: AppSpacing.lg),
