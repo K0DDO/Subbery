@@ -6,17 +6,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../notifications/application/notification_settings_controller.dart';
 import '../application/theme_mode_controller.dart';
-
-final remindersEnabledProvider = StateProvider<bool>((ref) => true);
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
+  Future<void> _setNotifications(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    final result = await ref
+        .read(notificationSettingsProvider.notifier)
+        .setEnabled(enabled);
+    if (enabled && !result && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Разрешите уведомления в настройках устройства'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final remindersEnabled = ref.watch(remindersEnabledProvider);
+    final notificationSettings = ref.watch(notificationSettingsProvider);
 
     return SafeArea(
       bottom: false,
@@ -80,17 +96,84 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 GlassCard(
-                  child: _SettingsRow(
-                    icon: Icons.notifications_active_rounded,
-                    title: 'Напоминания',
-                    subtitle: 'Предупреждать о списаниях',
-                    trailing: Switch.adaptive(
-                      value: remindersEnabled,
-                      onChanged: (value) {
-                        ref.read(remindersEnabledProvider.notifier).state =
-                            value;
-                      },
-                    ),
+                  child: Column(
+                    children: <Widget>[
+                      _SettingsRow(
+                        icon: Icons.notifications_active_rounded,
+                        title: 'Напоминания',
+                        subtitle: 'Предупреждать о списаниях',
+                        trailing: Switch.adaptive(
+                          value: notificationSettings.enabled,
+                          onChanged: notificationSettings.isBusy
+                              ? null
+                              : (value) {
+                                  unawaited(
+                                    _setNotifications(context, ref, value),
+                                  );
+                                },
+                        ),
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        child: !notificationSettings.enabled
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                key: const ValueKey<String>('reminder-days'),
+                                padding: const EdgeInsets.only(
+                                  top: AppSpacing.md,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Divider(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Напомнить заранее',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: SegmentedButton<int>(
+                                        segments: const <ButtonSegment<int>>[
+                                          ButtonSegment(
+                                            value: 1,
+                                            label: Text('1 день'),
+                                          ),
+                                          ButtonSegment(
+                                            value: 3,
+                                            label: Text('3 дня'),
+                                          ),
+                                          ButtonSegment(
+                                            value: 7,
+                                            label: Text('7 дней'),
+                                          ),
+                                        ],
+                                        selected: <int>{
+                                          notificationSettings.daysBefore,
+                                        },
+                                        showSelectedIcon: false,
+                                        onSelectionChanged: (selection) {
+                                          unawaited(
+                                            ref
+                                                .read(
+                                                  notificationSettingsProvider
+                                                      .notifier,
+                                                )
+                                                .setDaysBefore(selection.first),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
