@@ -250,10 +250,13 @@ class _SubscriptionCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: <Widget>[
-            ServiceLogo(
-              name: subscription.name,
-              logoKey: subscription.logo,
-              category: subscription.category,
+            Hero(
+              tag: 'subscription-logo-${subscription.id}',
+              child: ServiceLogo(
+                name: subscription.name,
+                logoKey: subscription.logo,
+                category: subscription.category,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

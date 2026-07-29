@@ -209,11 +209,14 @@ class _DetailsContent extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               children: <Widget>[
-                ServiceLogo(
-                  name: subscription.name,
-                  logoKey: subscription.logo,
-                  category: subscription.category,
-                  size: 88,
+                Hero(
+                  tag: 'subscription-logo-${subscription.id}',
+                  child: ServiceLogo(
+                    name: subscription.name,
+                    logoKey: subscription.logo,
+                    category: subscription.category,
+                    size: 88,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(

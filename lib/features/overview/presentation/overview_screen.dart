@@ -153,11 +153,19 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   setState(() => _selectedMonth = month);
                 },
               ),
-              _SelectedMonthPayments(
-                occurrences: selectedOccurrences,
-                onTap: (subscription) {
-                  context.push('/subscriptions/${subscription.id}');
-                },
+              AnimatedSize(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutCubic,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  child: _SelectedMonthPayments(
+                    key: ValueKey<int>(_selectedMonth),
+                    occurrences: selectedOccurrences,
+                    onTap: (subscription) {
+                      context.push('/subscriptions/${subscription.id}');
+                    },
+                  ),
+                ),
               ),
             ],
           ),
@@ -304,6 +312,7 @@ class _SelectedMonthPayments extends StatelessWidget {
   const _SelectedMonthPayments({
     required this.occurrences,
     required this.onTap,
+    super.key,
   });
 
   final List<PaymentOccurrence> occurrences;

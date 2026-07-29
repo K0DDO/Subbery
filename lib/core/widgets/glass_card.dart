@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_spacing.dart';
 import '../theme/glass_theme.dart';
 
-class GlassCard extends StatelessWidget {
+class GlassCard extends StatefulWidget {
   const GlassCard({
     required this.child,
     this.padding = const EdgeInsets.all(20),
@@ -24,46 +26,74 @@ class GlassCard extends StatelessWidget {
   final bool strong;
 
   @override
+  State<GlassCard> createState() => _GlassCardState();
+}
+
+class _GlassCardState extends State<GlassCard> {
+  bool _isPressed = false;
+
+  void _setPressed(bool value) {
+    if (widget.onTap == null || _isPressed == value) return;
+    setState(() => _isPressed = value);
+  }
+
+  void _handleTap() {
+    unawaited(HapticFeedback.selectionClick());
+    widget.onTap?.call();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final glass = Theme.of(context).extension<GlassTheme>()!;
-    final borderRadius = BorderRadius.circular(radius);
+    final borderRadius = BorderRadius.circular(widget.radius);
 
-    return RepaintBoundary(
-      child: Container(
-        margin: margin,
-        decoration: BoxDecoration(
-          borderRadius: borderRadius,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: glass.shadow,
-              blurRadius: 32,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: glass.blur, sigmaY: glass.blur),
-            child: Material(
-              color: strong ? glass.strongSurface : glass.surface,
-              child: InkWell(
-                onTap: onTap,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: borderRadius,
-                    border: Border.all(color: glass.border),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: <Color>[
-                        glass.highlight.withValues(alpha: 0.22),
-                        Colors.transparent,
-                        glass.highlight.withValues(alpha: 0.06),
-                      ],
+    return AnimatedScale(
+      scale: _isPressed ? 0.985 : 1,
+      duration: const Duration(milliseconds: 130),
+      curve: Curves.easeOutCubic,
+      child: RepaintBoundary(
+        child: Container(
+          margin: widget.margin,
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: glass.shadow,
+                blurRadius: 32,
+                offset: const Offset(0, 16),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: glass.blur, sigmaY: glass.blur),
+              child: Material(
+                color: widget.strong ? glass.strongSurface : glass.surface,
+                child: InkWell(
+                  onTap: widget.onTap == null ? null : _handleTap,
+                  onTapDown: (_) => _setPressed(true),
+                  onTapUp: (_) => _setPressed(false),
+                  onTapCancel: () => _setPressed(false),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: borderRadius,
+                      border: Border.all(color: glass.border),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: <Color>[
+                          glass.highlight.withValues(alpha: 0.22),
+                          Colors.transparent,
+                          glass.highlight.withValues(alpha: 0.06),
+                        ],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: widget.padding,
+                      child: widget.child,
                     ),
                   ),
-                  child: Padding(padding: padding, child: child),
                 ),
               ),
             ),
