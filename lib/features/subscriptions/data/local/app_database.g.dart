@@ -92,6 +92,17 @@ class $SubscriptionsTable extends Subscriptions
         type: DriftSqlType.dateTime,
         requiredDuringInsert: true,
       );
+  static const VerificationMeta _billingAnchorDayMeta = const VerificationMeta(
+    'billingAnchorDay',
+  );
+  @override
+  late final GeneratedColumn<int> billingAnchorDay = GeneratedColumn<int>(
+    'billing_anchor_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -147,6 +158,7 @@ class $SubscriptionsTable extends Subscriptions
     billingCycle,
     startDate,
     nextPaymentDate,
+    billingAnchorDay,
     status,
     totalSpentInCents,
     reminderEnabled,
@@ -232,6 +244,15 @@ class $SubscriptionsTable extends Subscriptions
     } else if (isInserting) {
       context.missing(_nextPaymentDateMeta);
     }
+    if (data.containsKey('billing_anchor_day')) {
+      context.handle(
+        _billingAnchorDayMeta,
+        billingAnchorDay.isAcceptableOrUnknown(
+          data['billing_anchor_day']!,
+          _billingAnchorDayMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -305,6 +326,10 @@ class $SubscriptionsTable extends Subscriptions
         DriftSqlType.dateTime,
         data['${effectivePrefix}next_payment_date'],
       )!,
+      billingAnchorDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}billing_anchor_day'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -340,6 +365,7 @@ class SubscriptionRecord extends DataClass
   final String billingCycle;
   final DateTime startDate;
   final DateTime nextPaymentDate;
+  final int? billingAnchorDay;
   final String status;
   final int totalSpentInCents;
   final bool reminderEnabled;
@@ -353,6 +379,7 @@ class SubscriptionRecord extends DataClass
     required this.billingCycle,
     required this.startDate,
     required this.nextPaymentDate,
+    this.billingAnchorDay,
     required this.status,
     required this.totalSpentInCents,
     required this.reminderEnabled,
@@ -371,6 +398,9 @@ class SubscriptionRecord extends DataClass
     map['billing_cycle'] = Variable<String>(billingCycle);
     map['start_date'] = Variable<DateTime>(startDate);
     map['next_payment_date'] = Variable<DateTime>(nextPaymentDate);
+    if (!nullToAbsent || billingAnchorDay != null) {
+      map['billing_anchor_day'] = Variable<int>(billingAnchorDay);
+    }
     map['status'] = Variable<String>(status);
     map['total_spent_in_cents'] = Variable<int>(totalSpentInCents);
     map['reminder_enabled'] = Variable<bool>(reminderEnabled);
@@ -390,6 +420,9 @@ class SubscriptionRecord extends DataClass
       billingCycle: Value(billingCycle),
       startDate: Value(startDate),
       nextPaymentDate: Value(nextPaymentDate),
+      billingAnchorDay: billingAnchorDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(billingAnchorDay),
       status: Value(status),
       totalSpentInCents: Value(totalSpentInCents),
       reminderEnabled: Value(reminderEnabled),
@@ -413,6 +446,7 @@ class SubscriptionRecord extends DataClass
       billingCycle: serializer.fromJson<String>(json['billingCycle']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       nextPaymentDate: serializer.fromJson<DateTime>(json['nextPaymentDate']),
+      billingAnchorDay: serializer.fromJson<int?>(json['billingAnchorDay']),
       status: serializer.fromJson<String>(json['status']),
       totalSpentInCents: serializer.fromJson<int>(json['totalSpentInCents']),
       reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
@@ -431,6 +465,7 @@ class SubscriptionRecord extends DataClass
       'billingCycle': serializer.toJson<String>(billingCycle),
       'startDate': serializer.toJson<DateTime>(startDate),
       'nextPaymentDate': serializer.toJson<DateTime>(nextPaymentDate),
+      'billingAnchorDay': serializer.toJson<int?>(billingAnchorDay),
       'status': serializer.toJson<String>(status),
       'totalSpentInCents': serializer.toJson<int>(totalSpentInCents),
       'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
@@ -447,6 +482,7 @@ class SubscriptionRecord extends DataClass
     String? billingCycle,
     DateTime? startDate,
     DateTime? nextPaymentDate,
+    Value<int?> billingAnchorDay = const Value.absent(),
     String? status,
     int? totalSpentInCents,
     bool? reminderEnabled,
@@ -460,6 +496,9 @@ class SubscriptionRecord extends DataClass
     billingCycle: billingCycle ?? this.billingCycle,
     startDate: startDate ?? this.startDate,
     nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
+    billingAnchorDay: billingAnchorDay.present
+        ? billingAnchorDay.value
+        : this.billingAnchorDay,
     status: status ?? this.status,
     totalSpentInCents: totalSpentInCents ?? this.totalSpentInCents,
     reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -481,6 +520,9 @@ class SubscriptionRecord extends DataClass
       nextPaymentDate: data.nextPaymentDate.present
           ? data.nextPaymentDate.value
           : this.nextPaymentDate,
+      billingAnchorDay: data.billingAnchorDay.present
+          ? data.billingAnchorDay.value
+          : this.billingAnchorDay,
       status: data.status.present ? data.status.value : this.status,
       totalSpentInCents: data.totalSpentInCents.present
           ? data.totalSpentInCents.value
@@ -503,6 +545,7 @@ class SubscriptionRecord extends DataClass
           ..write('billingCycle: $billingCycle, ')
           ..write('startDate: $startDate, ')
           ..write('nextPaymentDate: $nextPaymentDate, ')
+          ..write('billingAnchorDay: $billingAnchorDay, ')
           ..write('status: $status, ')
           ..write('totalSpentInCents: $totalSpentInCents, ')
           ..write('reminderEnabled: $reminderEnabled, ')
@@ -521,6 +564,7 @@ class SubscriptionRecord extends DataClass
     billingCycle,
     startDate,
     nextPaymentDate,
+    billingAnchorDay,
     status,
     totalSpentInCents,
     reminderEnabled,
@@ -538,6 +582,7 @@ class SubscriptionRecord extends DataClass
           other.billingCycle == this.billingCycle &&
           other.startDate == this.startDate &&
           other.nextPaymentDate == this.nextPaymentDate &&
+          other.billingAnchorDay == this.billingAnchorDay &&
           other.status == this.status &&
           other.totalSpentInCents == this.totalSpentInCents &&
           other.reminderEnabled == this.reminderEnabled &&
@@ -553,6 +598,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
   final Value<String> billingCycle;
   final Value<DateTime> startDate;
   final Value<DateTime> nextPaymentDate;
+  final Value<int?> billingAnchorDay;
   final Value<String> status;
   final Value<int> totalSpentInCents;
   final Value<bool> reminderEnabled;
@@ -567,6 +613,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     this.billingCycle = const Value.absent(),
     this.startDate = const Value.absent(),
     this.nextPaymentDate = const Value.absent(),
+    this.billingAnchorDay = const Value.absent(),
     this.status = const Value.absent(),
     this.totalSpentInCents = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
@@ -582,6 +629,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     required String billingCycle,
     required DateTime startDate,
     required DateTime nextPaymentDate,
+    this.billingAnchorDay = const Value.absent(),
     required String status,
     this.totalSpentInCents = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
@@ -604,6 +652,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     Expression<String>? billingCycle,
     Expression<DateTime>? startDate,
     Expression<DateTime>? nextPaymentDate,
+    Expression<int>? billingAnchorDay,
     Expression<String>? status,
     Expression<int>? totalSpentInCents,
     Expression<bool>? reminderEnabled,
@@ -619,6 +668,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
       if (billingCycle != null) 'billing_cycle': billingCycle,
       if (startDate != null) 'start_date': startDate,
       if (nextPaymentDate != null) 'next_payment_date': nextPaymentDate,
+      if (billingAnchorDay != null) 'billing_anchor_day': billingAnchorDay,
       if (status != null) 'status': status,
       if (totalSpentInCents != null) 'total_spent_in_cents': totalSpentInCents,
       if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
@@ -636,6 +686,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     Value<String>? billingCycle,
     Value<DateTime>? startDate,
     Value<DateTime>? nextPaymentDate,
+    Value<int?>? billingAnchorDay,
     Value<String>? status,
     Value<int>? totalSpentInCents,
     Value<bool>? reminderEnabled,
@@ -651,6 +702,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
       billingCycle: billingCycle ?? this.billingCycle,
       startDate: startDate ?? this.startDate,
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
+      billingAnchorDay: billingAnchorDay ?? this.billingAnchorDay,
       status: status ?? this.status,
       totalSpentInCents: totalSpentInCents ?? this.totalSpentInCents,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -686,6 +738,9 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     if (nextPaymentDate.present) {
       map['next_payment_date'] = Variable<DateTime>(nextPaymentDate.value);
     }
+    if (billingAnchorDay.present) {
+      map['billing_anchor_day'] = Variable<int>(billingAnchorDay.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -715,6 +770,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
           ..write('billingCycle: $billingCycle, ')
           ..write('startDate: $startDate, ')
           ..write('nextPaymentDate: $nextPaymentDate, ')
+          ..write('billingAnchorDay: $billingAnchorDay, ')
           ..write('status: $status, ')
           ..write('totalSpentInCents: $totalSpentInCents, ')
           ..write('reminderEnabled: $reminderEnabled, ')
@@ -1083,6 +1139,7 @@ typedef $$SubscriptionsTableCreateCompanionBuilder =
       required String billingCycle,
       required DateTime startDate,
       required DateTime nextPaymentDate,
+      Value<int?> billingAnchorDay,
       required String status,
       Value<int> totalSpentInCents,
       Value<bool> reminderEnabled,
@@ -1099,6 +1156,7 @@ typedef $$SubscriptionsTableUpdateCompanionBuilder =
       Value<String> billingCycle,
       Value<DateTime> startDate,
       Value<DateTime> nextPaymentDate,
+      Value<int?> billingAnchorDay,
       Value<String> status,
       Value<int> totalSpentInCents,
       Value<bool> reminderEnabled,
@@ -1180,6 +1238,11 @@ class $$SubscriptionsTableFilterComposer
 
   ColumnFilters<DateTime> get nextPaymentDate => $composableBuilder(
     column: $table.nextPaymentDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get billingAnchorDay => $composableBuilder(
+    column: $table.billingAnchorDay,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1278,6 +1341,11 @@ class $$SubscriptionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get billingAnchorDay => $composableBuilder(
+    column: $table.billingAnchorDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -1335,6 +1403,11 @@ class $$SubscriptionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get nextPaymentDate => $composableBuilder(
     column: $table.nextPaymentDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get billingAnchorDay => $composableBuilder(
+    column: $table.billingAnchorDay,
     builder: (column) => column,
   );
 
@@ -1416,6 +1489,7 @@ class $$SubscriptionsTableTableManager
                 Value<String> billingCycle = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
                 Value<DateTime> nextPaymentDate = const Value.absent(),
+                Value<int?> billingAnchorDay = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> totalSpentInCents = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
@@ -1430,6 +1504,7 @@ class $$SubscriptionsTableTableManager
                 billingCycle: billingCycle,
                 startDate: startDate,
                 nextPaymentDate: nextPaymentDate,
+                billingAnchorDay: billingAnchorDay,
                 status: status,
                 totalSpentInCents: totalSpentInCents,
                 reminderEnabled: reminderEnabled,
@@ -1446,6 +1521,7 @@ class $$SubscriptionsTableTableManager
                 required String billingCycle,
                 required DateTime startDate,
                 required DateTime nextPaymentDate,
+                Value<int?> billingAnchorDay = const Value.absent(),
                 required String status,
                 Value<int> totalSpentInCents = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
@@ -1460,6 +1536,7 @@ class $$SubscriptionsTableTableManager
                 billingCycle: billingCycle,
                 startDate: startDate,
                 nextPaymentDate: nextPaymentDate,
+                billingAnchorDay: billingAnchorDay,
                 status: status,
                 totalSpentInCents: totalSpentInCents,
                 reminderEnabled: reminderEnabled,

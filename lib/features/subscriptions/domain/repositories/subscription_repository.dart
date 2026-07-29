@@ -22,7 +22,7 @@ abstract interface class SubscriptionRepository {
 
   Future<List<Payment>> getPayments(String subscriptionId);
 
-  Future<void> addPayment(Payment payment);
+  Future<void> addPayment(Payment payment, {Subscription? updatedSubscription});
 
   Future<void> deletePayment(String paymentId);
 }

@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/utils/app_formatters.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
+import '../../subscriptions/domain/subscription_schedule.dart';
 
 abstract interface class NotificationGateway {
   Future<void> initialize();
@@ -93,7 +94,10 @@ class LocalNotificationService implements NotificationGateway {
         continue;
       }
 
-      final paymentDate = _nextPaymentDate(subscription, now);
+      final paymentDate = SubscriptionSchedule.normalizedNextPayment(
+        subscription,
+        now,
+      );
       final reminderDate = tz.TZDateTime(
         tz.local,
         paymentDate.year,
@@ -129,36 +133,6 @@ class LocalNotificationService implements NotificationGateway {
         payload: subscription.id,
       );
     }
-  }
-
-  static DateTime _nextPaymentDate(Subscription subscription, DateTime now) {
-    var candidate = subscription.nextPaymentDate;
-    final today = DateTime(now.year, now.month, now.day);
-    while (candidate.isBefore(today)) {
-      candidate = switch (subscription.billingCycle) {
-        BillingCycle.monthly => _addMonth(candidate),
-        BillingCycle.yearly => _safeDate(
-          candidate.year + 1,
-          candidate.month,
-          candidate.day,
-        ),
-      };
-    }
-    return candidate;
-  }
-
-  static DateTime _addMonth(DateTime date) {
-    final nextMonth = date.month == 12 ? 1 : date.month + 1;
-    final nextYear = date.month == 12 ? date.year + 1 : date.year;
-    return _safeDate(nextYear, nextMonth, date.day);
-  }
-
-  static DateTime _safeDate(int year, int month, int day) {
-    return DateTime(
-      year,
-      month,
-      day.clamp(1, DateTime(year, month + 1, 0).day),
-    );
   }
 
   static int _stableNotificationId(String value) {

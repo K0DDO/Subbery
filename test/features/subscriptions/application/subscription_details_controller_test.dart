@@ -28,7 +28,11 @@ void main() {
       reminderEnabled: true,
     );
     await repository.createSubscription(subscription);
-    controller = SubscriptionDetailsController(repository, subscription.id);
+    controller = SubscriptionDetailsController(
+      repository,
+      subscription.id,
+      clock: () => DateTime(2026, 7, 29),
+    );
   });
 
   tearDown(() async {
@@ -48,6 +52,33 @@ void main() {
       79900,
     );
     expect(await repository.getPayments(subscription.id), hasLength(1));
+    expect(
+      (await repository.getSubscription(subscription.id))?.nextPaymentDate,
+      DateTime(2026, 8, 3),
+    );
+  });
+
+  test('advances schedule when recording the current due payment', () async {
+    final saved = await controller.recordPayment(
+      amountInCents: 79900,
+      date: DateTime(2026, 8, 3),
+    );
+
+    expect(saved, isTrue);
+    expect(
+      (await repository.getSubscription(subscription.id))?.nextPaymentDate,
+      DateTime(2026, 9, 3),
+    );
+  });
+
+  test('rejects payments after the next due date', () async {
+    final saved = await controller.recordPayment(
+      amountInCents: 79900,
+      date: DateTime(2026, 8, 4),
+    );
+
+    expect(saved, isFalse);
+    expect(await repository.getPayments(subscription.id), isEmpty);
   });
 
   test('changes status and deletes subscription', () async {

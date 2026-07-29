@@ -17,6 +17,7 @@ class Subscriptions extends Table {
   TextColumn get billingCycle => text()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get nextPaymentDate => dateTime()();
+  IntColumn get billingAnchorDay => integer().nullable()();
   TextColumn get status => text()();
   IntColumn get totalSpentInCents => integer().withDefault(const Constant(0))();
   BoolColumn get reminderEnabled =>
@@ -46,10 +47,15 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.addColumn(subscriptions, subscriptions.billingAnchorDay);
+      }
+    },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
@@ -123,9 +129,17 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  Future<void> recordPayment(PaymentsCompanion entry) {
+  Future<void> recordPayment(
+    PaymentsCompanion entry, {
+    SubscriptionsCompanion? updatedSubscription,
+  }) {
     return transaction(() async {
       await into(payments).insert(entry);
+      if (updatedSubscription != null) {
+        await (update(subscriptions)
+              ..where((table) => table.id.equals(updatedSubscription.id.value)))
+            .write(updatedSubscription);
+      }
       await _refreshTotalSpent(entry.subscriptionId.value);
     });
   }

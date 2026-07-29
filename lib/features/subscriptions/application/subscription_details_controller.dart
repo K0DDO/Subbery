@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../domain/entities/payment.dart';
 import '../domain/entities/subscription.dart';
 import '../domain/repositories/subscription_repository.dart';
+import '../domain/subscription_schedule.dart';
 import 'subscription_providers.dart';
 
 final subscriptionDetailsControllerProvider = StateNotifierProvider.autoDispose
@@ -22,11 +23,14 @@ class SubscriptionDetailsController extends StateNotifier<AsyncValue<void>> {
     this._repository,
     this._subscriptionId, {
     this._uuid = const Uuid(),
-  }) : super(const AsyncData<void>(null));
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now,
+       super(const AsyncData<void>(null));
 
   final SubscriptionRepository _repository;
   final String _subscriptionId;
   final Uuid _uuid;
+  final DateTime Function() _clock;
 
   Future<bool> recordPayment({
     required int amountInCents,
@@ -40,14 +44,46 @@ class SubscriptionDetailsController extends StateNotifier<AsyncValue<void>> {
       return Future<bool>.value(false);
     }
 
-    return _run(() {
-      return _repository.addPayment(
+    return _run(() async {
+      final subscription = await _repository.getSubscription(_subscriptionId);
+      if (subscription == null) {
+        throw StateError('Subscription $_subscriptionId does not exist.');
+      }
+      final paymentDate = SubscriptionSchedule.dateOnly(date);
+      final currentDueDate = SubscriptionSchedule.normalizedNextPayment(
+        subscription,
+        _clock(),
+      );
+      if (paymentDate.isAfter(currentDueDate)) {
+        throw ArgumentError.value(
+          date,
+          'date',
+          'Payment date cannot be after the next payment date.',
+        );
+      }
+
+      final anchorDay =
+          subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
+      final updatedNextPayment = paymentDate == currentDueDate
+          ? SubscriptionSchedule.nextAfter(
+              currentDueDate,
+              subscription.billingCycle,
+              anchorDay: anchorDay,
+            )
+          : currentDueDate;
+      final updatedSubscription = subscription.copyWith(
+        nextPaymentDate: updatedNextPayment,
+        billingAnchorDay: anchorDay,
+      );
+
+      await _repository.addPayment(
         Payment(
           id: _uuid.v4(),
           subscriptionId: _subscriptionId,
           amountInCents: amountInCents,
-          date: DateTime(date.year, date.month, date.day),
+          date: paymentDate,
         ),
+        updatedSubscription: updatedSubscription,
       );
     });
   }

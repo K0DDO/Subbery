@@ -14,6 +14,7 @@ import '../application/subscription_details_controller.dart';
 import '../application/subscription_providers.dart';
 import '../domain/entities/payment.dart';
 import '../domain/entities/subscription.dart';
+import '../domain/subscription_schedule.dart';
 import 'subscription_ui_extensions.dart';
 import 'widgets/service_logo.dart';
 
@@ -538,7 +539,7 @@ class _AddPaymentSheet extends StatefulWidget {
 
 class _AddPaymentSheetState extends State<_AddPaymentSheet> {
   late final TextEditingController _amountController;
-  DateTime _date = DateTime.now();
+  late DateTime _date;
   String? _error;
 
   @override
@@ -549,6 +550,12 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
         widget.subscription.priceInCents % 100 == 0 ? 0 : 2,
       ),
     );
+    final today = SubscriptionSchedule.dateOnly(DateTime.now());
+    final nextPayment = SubscriptionSchedule.normalizedNextPayment(
+      widget.subscription,
+      today,
+    );
+    _date = today.isAfter(nextPayment) ? nextPayment : today;
   }
 
   @override
@@ -558,11 +565,15 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
   }
 
   Future<void> _pickDate() async {
+    final lastDate = SubscriptionSchedule.normalizedNextPayment(
+      widget.subscription,
+      DateTime.now(),
+    );
     final selected = await showDatePicker(
       context: context,
       initialDate: _date,
-      firstDate: widget.subscription.startDate,
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime(1900),
+      lastDate: lastDate,
       helpText: 'Дата платежа',
       cancelText: 'Отмена',
       confirmText: 'Готово',

@@ -104,6 +104,7 @@ Subscription _subscription({
     billingCycle: BillingCycle.monthly,
     startDate: DateTime(2026),
     nextPaymentDate: nextPaymentDate,
+    billingAnchorDay: nextPaymentDate.day,
     status: SubscriptionStatus.active,
     totalSpentInCents: 0,
     reminderEnabled: true,

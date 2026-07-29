@@ -79,12 +79,15 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
   }
 
   @override
-  Future<void> addPayment(Payment payment) {
-    if (payment.amountInCents < 0) {
+  Future<void> addPayment(
+    Payment payment, {
+    Subscription? updatedSubscription,
+  }) {
+    if (payment.amountInCents <= 0) {
       throw ArgumentError.value(
         payment.amountInCents,
         'payment.amountInCents',
-        'Payment amount cannot be negative.',
+        'Payment amount must be positive.',
       );
     }
     return _database.recordPayment(
@@ -94,6 +97,9 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
         amountInCents: payment.amountInCents,
         date: payment.date,
       ),
+      updatedSubscription: updatedSubscription == null
+          ? null
+          : _subscriptionCompanion(updatedSubscription),
     );
   }
 
@@ -131,6 +137,9 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
       billingCycle: subscription.billingCycle.name,
       startDate: subscription.startDate,
       nextPaymentDate: subscription.nextPaymentDate,
+      billingAnchorDay: Value(
+        subscription.billingAnchorDay ?? subscription.nextPaymentDate.day,
+      ),
       status: subscription.status.name,
       totalSpentInCents: Value(subscription.totalSpentInCents),
       reminderEnabled: Value(subscription.reminderEnabled),
@@ -156,6 +165,7 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
       ),
       startDate: record.startDate,
       nextPaymentDate: record.nextPaymentDate,
+      billingAnchorDay: record.billingAnchorDay,
       status: _enumByName(
         SubscriptionStatus.values,
         record.status,

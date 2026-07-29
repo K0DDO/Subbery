@@ -1,6 +1,7 @@
 import '../../../core/models/monthly_spend_point.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
+import '../../subscriptions/domain/subscription_schedule.dart';
 
 class PaymentOccurrence {
   const PaymentOccurrence({required this.subscription, required this.date});
@@ -85,23 +86,7 @@ class OverviewMetrics {
   final List<PaymentOccurrence> upcomingYearOccurrences;
 
   static DateTime nextOccurrence(Subscription subscription, DateTime now) {
-    final today = DateTime(now.year, now.month, now.day);
-    var candidate = DateTime(
-      subscription.nextPaymentDate.year,
-      subscription.nextPaymentDate.month,
-      subscription.nextPaymentDate.day,
-    );
-    while (candidate.isBefore(today)) {
-      candidate = switch (subscription.billingCycle) {
-        BillingCycle.monthly => _addMonths(candidate, 1),
-        BillingCycle.yearly => _safeDate(
-          candidate.year + 1,
-          candidate.month,
-          candidate.day,
-        ),
-      };
-    }
-    return candidate;
+    return SubscriptionSchedule.normalizedNextPayment(subscription, now);
   }
 
   static List<PaymentOccurrence> buildYearOccurrences(
@@ -110,31 +95,31 @@ class OverviewMetrics {
   ) {
     final occurrences = <PaymentOccurrence>[];
     for (final subscription in subscriptions) {
-      switch (subscription.billingCycle) {
-        case BillingCycle.monthly:
-          for (var month = 1; month <= 12; month++) {
-            final date = _safeDate(
-              year,
-              month,
-              subscription.nextPaymentDate.day,
-            );
-            if (!date.isBefore(subscription.startDate)) {
-              occurrences.add(
-                PaymentOccurrence(subscription: subscription, date: date),
-              );
-            }
-          }
-        case BillingCycle.yearly:
-          final date = _safeDate(
-            year,
-            subscription.nextPaymentDate.month,
-            subscription.nextPaymentDate.day,
+      final anchorDay =
+          subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
+      var candidate = SubscriptionSchedule.dateOnly(
+        subscription.nextPaymentDate,
+      );
+      while (candidate.year < year) {
+        candidate = SubscriptionSchedule.nextAfter(
+          candidate,
+          subscription.billingCycle,
+          anchorDay: anchorDay,
+        );
+      }
+      while (candidate.year == year) {
+        if (!candidate.isBefore(
+          SubscriptionSchedule.dateOnly(subscription.startDate),
+        )) {
+          occurrences.add(
+            PaymentOccurrence(subscription: subscription, date: candidate),
           );
-          if (!date.isBefore(subscription.startDate)) {
-            occurrences.add(
-              PaymentOccurrence(subscription: subscription, date: date),
-            );
-          }
+        }
+        candidate = SubscriptionSchedule.nextAfter(
+          candidate,
+          subscription.billingCycle,
+          anchorDay: anchorDay,
+        );
       }
     }
     occurrences.sort((left, right) => left.date.compareTo(right.date));

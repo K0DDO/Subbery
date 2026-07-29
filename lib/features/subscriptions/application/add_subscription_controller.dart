@@ -154,6 +154,7 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
       billingCycle: state.billingCycle,
       startDate: DateTime(now.year, now.month, now.day),
       nextPaymentDate: state.nextPaymentDate,
+      billingAnchorDay: state.nextPaymentDate.day,
       status: SubscriptionStatus.active,
       totalSpentInCents: 0,
       reminderEnabled: true,
