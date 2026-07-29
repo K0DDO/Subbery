@@ -8,6 +8,7 @@ import '../../features/shell/presentation/app_shell.dart';
 import '../../features/subscriptions/domain/entities/subscription.dart';
 import '../../features/subscriptions/presentation/add_subscription_screen.dart';
 import '../../features/subscriptions/presentation/subscription_details_screen.dart';
+import '../../features/subscriptions/presentation/subscription_payment_schedule_screen.dart';
 import '../../features/subscriptions/presentation/subscriptions_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -92,6 +93,21 @@ final GoRouter appRouter = GoRouter(
         return CustomTransitionPage<void>(
           key: state.pageKey,
           child: AddSubscriptionScreen(
+            subscriptionId: state.pathParameters['id']!,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/subscriptions/:id/schedule',
+      name: 'subscription-payment-schedule',
+      pageBuilder: (context, state) {
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: SubscriptionPaymentScheduleScreen(
             subscriptionId: state.pathParameters['id']!,
           ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {

@@ -66,37 +66,29 @@ class SubscriptionsScreen extends ConsumerWidget {
             subtitle: initialCategory == null
                 ? 'Все сервисы в одном месте'
                 : 'Категория: ${initialCategory!.label}',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _CategoryFilterButton(
-                  selected: initialCategory,
-                  onSelected: (category) {
-                    context.goNamed(
-                      'subscriptions',
-                      queryParameters: category == null
-                          ? const <String, String>{}
-                          : <String, String>{'category': category.name},
-                    );
-                  },
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                IconButton.filled(
-                  tooltip: 'Добавить подписку',
-                  onPressed: () => context.push('/subscriptions/add'),
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppColors.coral,
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.add_rounded),
-                ),
-              ],
+            trailing: IconButton.filled(
+              tooltip: 'Добавить подписку',
+              onPressed: () => context.push('/subscriptions/add'),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.coral,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.add_rounded),
             ),
           ),
           _FilterBar(
             selected: selectedFilter,
+            category: initialCategory,
             onSelected: (filter) {
               ref.read(subscriptionListFilterProvider.notifier).state = filter;
+            },
+            onCategorySelected: (category) {
+              context.goNamed(
+                'subscriptions',
+                queryParameters: category == null
+                    ? const <String, String>{}
+                    : <String, String>{'category': category.name},
+              );
             },
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -174,6 +166,7 @@ class _CategoryFilterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       tooltip: 'Фильтр по категории',
+      padding: EdgeInsets.zero,
       initialValue: selected?.name,
       onSelected: (value) {
         SubscriptionCategory? category;
@@ -215,10 +208,17 @@ class _CategoryFilterButton extends StatelessWidget {
 }
 
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.selected, required this.onSelected});
+  const _FilterBar({
+    required this.selected,
+    required this.category,
+    required this.onSelected,
+    required this.onCategorySelected,
+  });
 
   final SubscriptionListFilter selected;
+  final SubscriptionCategory? category;
   final ValueChanged<SubscriptionListFilter> onSelected;
+  final ValueChanged<SubscriptionCategory?> onCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +244,11 @@ class _FilterBar extends StatelessWidget {
             label: 'Годовые',
             selected: selected == SubscriptionListFilter.yearly,
             onTap: () => onSelected(SubscriptionListFilter.yearly),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          _CategoryFilterButton(
+            selected: category,
+            onSelected: onCategorySelected,
           ),
         ],
       ),

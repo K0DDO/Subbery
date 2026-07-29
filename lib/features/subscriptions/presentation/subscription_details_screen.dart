@@ -261,6 +261,10 @@ class _DetailsContent extends StatelessWidget {
                   label: 'Следующий',
                   value: AppFormatters.shortDate(subscription.nextPaymentDate),
                   color: AppColors.coral,
+                  onTap: () => context.pushNamed(
+                    'subscription-payment-schedule',
+                    pathParameters: <String, String>{'id': subscription.id},
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

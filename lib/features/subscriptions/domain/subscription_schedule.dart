@@ -24,6 +24,27 @@ abstract final class SubscriptionSchedule {
     return candidate;
   }
 
+  static List<DateTime> upcomingDates(
+    Subscription subscription,
+    DateTime now, {
+    int count = 12,
+  }) {
+    if (count <= 0) return const <DateTime>[];
+    final anchorDay =
+        subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
+    var candidate = normalizedNextPayment(subscription, now);
+    final dates = <DateTime>[];
+    for (var index = 0; index < count; index++) {
+      dates.add(candidate);
+      candidate = nextAfter(
+        candidate,
+        subscription.billingCycle,
+        anchorDay: anchorDay,
+      );
+    }
+    return dates;
+  }
+
   static DateTime nextAfter(
     DateTime date,
     BillingCycle billingCycle, {

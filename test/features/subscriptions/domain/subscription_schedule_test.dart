@@ -45,6 +45,26 @@ void main() {
       DateTime(2028, 2, 29),
     );
   });
+
+  test('builds a subscription-specific payment schedule', () {
+    final subscription = _subscription(
+      nextPaymentDate: DateTime(2026, 7, 31),
+      billingAnchorDay: 31,
+    );
+
+    expect(
+      SubscriptionSchedule.upcomingDates(
+        subscription,
+        DateTime(2026, 7, 30),
+        count: 3,
+      ),
+      <DateTime>[
+        DateTime(2026, 7, 31),
+        DateTime(2026, 8, 31),
+        DateTime(2026, 9, 30),
+      ],
+    );
+  });
 }
 
 Subscription _subscription({
