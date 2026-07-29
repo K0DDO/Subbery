@@ -72,11 +72,11 @@ void main() {
 
     expect(
       occurrences.where((item) => item.subscription.id == 'monthly'),
-      hasLength(5),
+      hasLength(12),
     );
     expect(
       occurrences.firstWhere((item) => item.subscription.id == 'monthly').date,
-      DateTime(2026, 8, 31),
+      DateTime(2026, 1, 31),
     );
     expect(
       occurrences.where((item) => item.subscription.id == 'annual').single.date,

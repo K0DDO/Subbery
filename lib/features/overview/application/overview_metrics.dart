@@ -112,29 +112,33 @@ class OverviewMetrics {
     for (final subscription in subscriptions) {
       final anchorDay =
           subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
-      var candidate = SubscriptionSchedule.dateOnly(
-        subscription.nextPaymentDate,
-      );
-      while (candidate.year < year) {
-        candidate = SubscriptionSchedule.nextAfter(
-          candidate,
-          subscription.billingCycle,
-          anchorDay: anchorDay,
-        );
-      }
-      while (candidate.year == year) {
-        if (!candidate.isBefore(
-          SubscriptionSchedule.dateOnly(subscription.startDate),
-        )) {
-          occurrences.add(
-            PaymentOccurrence(subscription: subscription, date: candidate),
+      final startDate = SubscriptionSchedule.dateOnly(subscription.startDate);
+      switch (subscription.billingCycle) {
+        case BillingCycle.monthly:
+          final firstMonth = startDate.year == year ? startDate.month : 1;
+          if (startDate.year > year) continue;
+          for (var month = firstMonth; month <= 12; month++) {
+            final candidate = SubscriptionSchedule.safeDate(
+              year,
+              month,
+              anchorDay,
+            );
+            if (candidate.isBefore(startDate)) continue;
+            occurrences.add(
+              PaymentOccurrence(subscription: subscription, date: candidate),
+            );
+          }
+        case BillingCycle.yearly:
+          final candidate = SubscriptionSchedule.safeDate(
+            year,
+            subscription.nextPaymentDate.month,
+            anchorDay,
           );
-        }
-        candidate = SubscriptionSchedule.nextAfter(
-          candidate,
-          subscription.billingCycle,
-          anchorDay: anchorDay,
-        );
+          if (!candidate.isBefore(startDate)) {
+            occurrences.add(
+              PaymentOccurrence(subscription: subscription, date: candidate),
+            );
+          }
       }
     }
     occurrences.sort((left, right) => left.date.compareTo(right.date));

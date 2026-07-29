@@ -217,26 +217,28 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                       ),
                     ),
                   ),
-                  if (widget.showPeriodArcs)
-                    Positioned.fill(
-                      child: AnimatedBuilder(
-                        animation: Listenable.merge(<Listenable>[
-                          _animationController,
-                          _pulseController,
-                        ]),
-                        builder: (context, child) {
-                          return Stack(
-                            children: _buildPeriodIcons(
-                              size,
-                              Curves.easeOutCubic.transform(
-                                _animationController.value,
-                              ),
-                              _pulseController.value,
-                            ),
-                          );
-                        },
-                      ),
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge(<Listenable>[
+                        _animationController,
+                        _pulseController,
+                      ]),
+                      builder: (context, child) {
+                        final progress = Curves.easeOutCubic.transform(
+                          _animationController.value,
+                        );
+                        return Stack(
+                          children: widget.showPeriodArcs
+                              ? _buildPeriodIcons(
+                                  size,
+                                  progress,
+                                  _pulseController.value,
+                                )
+                              : _buildCalendarIcons(size, progress),
+                        );
+                      },
                     ),
+                  ),
                 ],
               ),
             ),
@@ -244,6 +246,53 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
         );
       },
     );
+  }
+
+  List<Widget> _buildCalendarIcons(double size, double progress) {
+    final center = Offset(size / 2, size / 2);
+    final radius = size * 0.335;
+    final daysInYear = DateTime(
+      widget.year + 1,
+    ).difference(DateTime(widget.year)).inDays;
+    final sameDayCount = <int, int>{};
+    final icons = <Widget>[];
+    for (final occurrence in widget.occurrences) {
+      final day = occurrence.date.difference(DateTime(widget.year)).inDays;
+      if (day < 0 || day >= daysInYear) continue;
+      final stackIndex = sameDayCount.update(
+        day,
+        (value) => value + 1,
+        ifAbsent: () => 0,
+      );
+      if (stackIndex > 2) continue;
+      final angle = -math.pi / 2 - day / daysInYear * math.pi * 2;
+      final pointRadius = radius + 2 + stackIndex * 10;
+      final point =
+          center +
+          Offset(math.cos(angle) * pointRadius, math.sin(angle) * pointRadius);
+      const iconSize = 14.0;
+      icons.add(
+        Positioned(
+          left: point.dx - iconSize / 2,
+          top: point.dy - iconSize / 2,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: progress,
+              child: Transform.scale(
+                scale: 0.65 + progress * 0.35,
+                child: ServiceLogo(
+                  name: occurrence.subscription.name,
+                  logoKey: occurrence.subscription.logo,
+                  category: occurrence.subscription.category,
+                  size: iconSize,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return icons;
   }
 
   List<Widget> _buildPeriodIcons(double size, double progress, double pulse) {
@@ -454,40 +503,6 @@ class _CalendarRingPainter extends CustomPainter {
         start: start,
         daysInYear: daysInYear,
       );
-    }
-    if (!showPeriodArcs) {
-      final sameDayCount = <int, int>{};
-      for (final occurrence in occurrences) {
-        final day = occurrence.date.difference(DateTime(year)).inDays;
-        if (day < 0 || day >= daysInYear) continue;
-        final stackIndex = sameDayCount.update(
-          day,
-          (value) => value + 1,
-          ifAbsent: () => 0,
-        );
-        final angle = start - (day / daysInYear) * math.pi * 2;
-        final pointRadius = radius + 2 + stackIndex * 6;
-        final point =
-            center +
-            Offset(
-              math.cos(angle) * pointRadius,
-              math.sin(angle) * pointRadius,
-            );
-        final color = occurrence.subscription.category.color;
-        canvas.drawCircle(
-          point,
-          5.2 * progress,
-          Paint()..color = color.withValues(alpha: progress),
-        );
-        canvas.drawCircle(
-          point,
-          5.2 * progress,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.4
-            ..color = Colors.white.withValues(alpha: 0.8 * progress),
-        );
-      }
     }
   }
 

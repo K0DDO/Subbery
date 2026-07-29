@@ -64,6 +64,23 @@ void main() {
     expect(await repository.getSubscriptions(), isEmpty);
   });
 
+  test('records one overdue payment and advances its schedule', () async {
+    controller
+      ..setServiceName('Netflix')
+      ..setPrice('799')
+      ..setNextPaymentDate(DateTime(2026, 7, 28));
+
+    expect(await controller.submit(), isTrue);
+
+    final saved = (await repository.getSubscriptions()).single;
+    expect(saved.startDate, DateTime(2026, 7, 28));
+    expect(saved.nextPaymentDate, DateTime(2026, 8, 28));
+    final payments = await repository.getPayments(saved.id);
+    expect(payments, hasLength(1));
+    expect(payments.single.date, DateTime(2026, 7, 28));
+    expect(payments.single.amountInCents, 79900);
+  });
+
   test('updates every editable subscription field', () async {
     controller
       ..setServiceName('Netflix')

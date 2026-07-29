@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/catalog/known_services.dart';
+import '../domain/entities/payment.dart';
 import '../domain/entities/subscription.dart';
 import '../domain/repositories/subscription_repository.dart';
+import '../domain/subscription_schedule.dart';
 import 'subscription_providers.dart';
 
 final addSubscriptionControllerProvider =
@@ -200,28 +202,52 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     final now = _clock();
+    final today = SubscriptionSchedule.dateOnly(now);
+    final selectedPaymentDate = SubscriptionSchedule.dateOnly(
+      state.nextPaymentDate,
+    );
+    final isOverdue = selectedPaymentDate.isBefore(today);
     final initial = _initialSubscription;
-    final subscription = Subscription(
+    var subscription = Subscription(
       id: initial?.id ?? _uuid.v4(),
       name: name,
       logo: state.selectedService?.logoKey,
       category: state.category,
       priceInCents: priceInCents,
       billingCycle: state.billingCycle,
-      startDate: initial?.startDate ?? DateTime(now.year, now.month, now.day),
-      nextPaymentDate: state.nextPaymentDate,
-      billingAnchorDay: state.nextPaymentDate.day,
+      startDate:
+          initial?.startDate ?? (isOverdue ? selectedPaymentDate : today),
+      nextPaymentDate: selectedPaymentDate,
+      billingAnchorDay: selectedPaymentDate.day,
       status: initial?.status ?? SubscriptionStatus.active,
       totalSpentInCents: initial?.totalSpentInCents ?? 0,
       reminderEnabled: state.reminderEnabled,
       notes: state.notesText.trim().isEmpty ? null : state.notesText.trim(),
     );
+    if (isOverdue) {
+      subscription = subscription.copyWith(
+        nextPaymentDate: SubscriptionSchedule.normalizedNextPayment(
+          subscription,
+          today,
+        ),
+      );
+    }
 
     try {
       if (initial == null) {
         await _repository.createSubscription(subscription);
       } else {
         await _repository.updateSubscription(subscription);
+      }
+      if (isOverdue) {
+        await _repository.addPayment(
+          Payment(
+            id: _uuid.v4(),
+            subscriptionId: subscription.id,
+            amountInCents: priceInCents,
+            date: selectedPaymentDate,
+          ),
+        );
       }
       state = state.copyWith(isSubmitting: false);
       return true;
