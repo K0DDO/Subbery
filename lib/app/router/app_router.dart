@@ -1,68 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_background.dart';
-import '../../core/widgets/glass_button.dart';
-import '../../core/widgets/glass_card.dart';
-import '../../core/widgets/subberry_logo.dart';
+import '../../features/analytics/presentation/analytics_screen.dart';
+import '../../features/overview/presentation/overview_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/shell/presentation/app_shell.dart';
+import '../../features/subscriptions/presentation/add_subscription_placeholder_screen.dart';
+import '../../features/subscriptions/presentation/subscriptions_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   routes: <RouteBase>[
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) {
+        return AppShell(navigationShell: navigationShell);
+      },
+      branches: <StatefulShellBranch>[
+        StatefulShellBranch(
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/',
+              name: 'overview',
+              builder: (context, state) => const OverviewScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/subscriptions',
+              name: 'subscriptions',
+              builder: (context, state) => const SubscriptionsScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/analytics',
+              name: 'analytics',
+              builder: (context, state) => const AnalyticsScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/settings',
+              name: 'settings',
+              builder: (context, state) => const SettingsScreen(),
+            ),
+          ],
+        ),
+      ],
+    ),
     GoRoute(
-      path: '/',
-      name: 'home',
-      builder: (BuildContext context, GoRouterState state) {
-        return const _FoundationScreen();
+      path: '/subscriptions/add',
+      name: 'add-subscription',
+      pageBuilder: (context, state) {
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const AddSubscriptionPlaceholderScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final offsetAnimation =
+                Tween<Offset>(
+                  begin: const Offset(0, 0.04),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                );
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(position: offsetAnimation, child: child),
+            );
+          },
+        );
       },
     ),
   ],
 );
-
-class _FoundationScreen extends StatelessWidget {
-  const _FoundationScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: AppBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                const SubberryLogo(size: 88),
-                const SizedBox(height: AppSpacing.xl),
-                GlassCard(
-                  strong: true,
-                  child: Column(
-                    children: <Widget>[
-                      Text(
-                        'Subberry',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Все подписки — в одном красивом месте.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                GlassButton(
-                  label: 'Начать',
-                  icon: Icons.arrow_forward_rounded,
-                  onPressed: () {},
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
