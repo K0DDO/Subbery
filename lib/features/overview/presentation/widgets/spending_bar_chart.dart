@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/models/monthly_spend_point.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../application/overview_metrics.dart';
 
 class SpendingBarChart extends StatelessWidget {
   const SpendingBarChart({required this.points, super.key});

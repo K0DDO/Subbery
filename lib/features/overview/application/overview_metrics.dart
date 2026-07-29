@@ -1,12 +1,6 @@
+import '../../../core/models/monthly_spend_point.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
-
-class MonthlySpendPoint {
-  const MonthlySpendPoint({required this.month, required this.amountInCents});
-
-  final DateTime month;
-  final int amountInCents;
-}
 
 class PaymentOccurrence {
   const PaymentOccurrence({required this.subscription, required this.date});
