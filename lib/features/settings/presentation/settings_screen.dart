@@ -83,36 +83,13 @@ class SettingsScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<ThemeMode>(
-                          segments: const <ButtonSegment<ThemeMode>>[
-                            ButtonSegment(
-                              value: ThemeMode.light,
-                              icon: Icon(Icons.light_mode_rounded),
-                              label: Text('Светлая'),
-                            ),
-                            ButtonSegment(
-                              value: ThemeMode.dark,
-                              icon: Icon(Icons.dark_mode_rounded),
-                              label: Text('Тёмная'),
-                            ),
-                            ButtonSegment(
-                              value: ThemeMode.system,
-                              icon: Icon(Icons.auto_mode_rounded),
-                              label: Text('Система'),
-                            ),
-                          ],
-                          selected: <ThemeMode>{themeMode},
-                          showSelectedIcon: false,
-                          onSelectionChanged: (selection) {
-                            unawaited(
-                              ref
-                                  .read(themeModeProvider.notifier)
-                                  .setMode(selection.first),
-                            );
-                          },
-                        ),
+                      _ThemeModePicker(
+                        selected: themeMode,
+                        onSelected: (mode) {
+                          unawaited(
+                            ref.read(themeModeProvider.notifier).setMode(mode),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -243,6 +220,102 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+class _ThemeModePicker extends StatelessWidget {
+  const _ThemeModePicker({required this.selected, required this.onSelected});
+
+  final ThemeMode selected;
+  final ValueChanged<ThemeMode> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    const choices = <(ThemeMode, IconData, String)>[
+      (ThemeMode.light, Icons.light_mode_rounded, 'Светлая'),
+      (ThemeMode.dark, Icons.dark_mode_rounded, 'Тёмная'),
+      (ThemeMode.system, Icons.auto_mode_rounded, 'Система'),
+    ];
+    return Row(
+      children: <Widget>[
+        for (var index = 0; index < choices.length; index++) ...<Widget>[
+          Expanded(
+            child: _ThemeModeTile(
+              icon: choices[index].$2,
+              label: choices[index].$3,
+              selected: selected == choices[index].$1,
+              onTap: () => onSelected(choices[index].$1),
+            ),
+          ),
+          if (index != choices.length - 1) const SizedBox(width: AppSpacing.xs),
+        ],
+      ],
+    );
+  }
+}
+
+class _ThemeModeTile extends StatelessWidget {
+  const _ThemeModeTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected
+        ? AppColors.coral
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          height: 72,
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.coral.withValues(alpha: 0.13)
+                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: selected
+                  ? AppColors.coral
+                  : Theme.of(context).dividerColor,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: AppSpacing.xxs),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AppIconPicker extends StatelessWidget {
   const _AppIconPicker({
     required this.selected,
@@ -256,66 +329,135 @@ class _AppIconPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: AppSpacing.sm,
-        mainAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 0.78,
-      ),
-      itemCount: AppIconChoice.values.length,
-      itemBuilder: (context, index) {
-        final choice = AppIconChoice.values[index];
-        final isSelected = choice == selected;
-        return Semantics(
-          selected: isSelected,
-          button: true,
-          label: choice.label,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            onTap: isBusy ? null : () => onSelected(choice),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.coral.withValues(alpha: 0.13)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.coral
-                      : Theme.of(context).dividerColor,
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              child: Column(
-                children: <Widget>[
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      child: Image.asset(choice.assetPath, fit: BoxFit.cover),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    choice.label,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isSelected ? AppColors.coral : null,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('Тёмные', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: AppSpacing.sm),
+        _AppIconRow(
+          choices: AppIconChoice.values
+              .where((choice) => choice.name.startsWith('dark'))
+              .toList(growable: false),
+          selected: selected,
+          isBusy: isBusy,
+          onSelected: onSelected,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Светлые', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: AppSpacing.sm),
+        _AppIconRow(
+          choices: AppIconChoice.values
+              .where((choice) => choice.name.startsWith('light'))
+              .toList(growable: false),
+          selected: selected,
+          isBusy: isBusy,
+          onSelected: onSelected,
+        ),
+      ],
+    );
+  }
+}
+
+class _AppIconRow extends StatelessWidget {
+  const _AppIconRow({
+    required this.choices,
+    required this.selected,
+    required this.isBusy,
+    required this.onSelected,
+  });
+
+  final List<AppIconChoice> choices;
+  final AppIconChoice selected;
+  final bool isBusy;
+  final ValueChanged<AppIconChoice> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        for (var index = 0; index < choices.length; index++) ...<Widget>[
+          Expanded(
+            child: _AppIconTile(
+              choice: choices[index],
+              selected: choices[index] == selected,
+              enabled: !isBusy,
+              onTap: () => onSelected(choices[index]),
             ),
           ),
-        );
-      },
+          if (index != choices.length - 1) const SizedBox(width: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
+}
+
+class _AppIconTile extends StatelessWidget {
+  const _AppIconTile({
+    required this.choice,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final AppIconChoice choice;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final shortLabel = switch (choice) {
+      AppIconChoice.darkGlass || AppIconChoice.lightGlass => 'Стекло',
+      AppIconChoice.darkNeon || AppIconChoice.lightNeon => 'Неон',
+      AppIconChoice.darkMinimal || AppIconChoice.lightMinimal => 'Минимал',
+    };
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: choice.label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: enabled && !selected ? onTap : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.coral.withValues(alpha: 0.13)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: selected
+                  ? AppColors.coral
+                  : Theme.of(context).dividerColor,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: <Widget>[
+              AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: Image.asset(choice.assetPath, fit: BoxFit.cover),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  shortLabel,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: selected ? AppColors.coral : null,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
