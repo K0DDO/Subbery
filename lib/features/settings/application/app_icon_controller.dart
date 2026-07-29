@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dynamic_app_icon_flutter_plus/dynamic_app_icon_flutter_plus.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -60,9 +61,46 @@ class PlatformAppIconGateway implements AppIconGateway {
     return DynamicAppIconFlutterPlus.setAlternateIconName(
       alternateName,
       showAlert: Platform.isIOS,
-      deferUntilBackground: false,
+      deferUntilBackground: Platform.isAndroid,
     );
   }
+}
+
+class AppIconLifecycleObserver extends StatefulWidget {
+  const AppIconLifecycleObserver({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  State<AppIconLifecycleObserver> createState() =>
+      _AppIconLifecycleObserverState();
+}
+
+class _AppIconLifecycleObserverState extends State<AppIconLifecycleObserver>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (Platform.isAndroid &&
+        (state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused)) {
+      unawaited(DynamicAppIconFlutterPlus.applyPendingIcon());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 final appIconGatewayProvider = Provider<AppIconGateway>((ref) {
