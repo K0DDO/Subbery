@@ -18,59 +18,61 @@ import '../domain/subscription_schedule.dart';
 import 'subscription_ui_extensions.dart';
 import 'widgets/service_logo.dart';
 
-enum _DetailsAction { pause, resume, cancel, delete }
+enum _StatusAction { pause, resume, cancel }
 
 class SubscriptionDetailsScreen extends ConsumerWidget {
   const SubscriptionDetailsScreen({required this.subscriptionId, super.key});
 
   final String subscriptionId;
 
-  Future<void> _handleAction(
+  Future<void> _handleStatusAction(
     BuildContext context,
     WidgetRef ref,
     Subscription subscription,
-    _DetailsAction action,
+    _StatusAction action,
   ) async {
     final controller = ref.read(
       subscriptionDetailsControllerProvider(subscriptionId).notifier,
     );
 
-    if (action == _DetailsAction.delete) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Удалить подписку?'),
-          content: Text(
-            '${subscription.name} и история платежей будут удалены.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Удалить'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !context.mounted) return;
-      final deleted = await controller.deleteSubscription();
-      if (deleted && context.mounted) Navigator.pop(context);
-      return;
-    }
-
     final status = switch (action) {
-      _DetailsAction.pause => SubscriptionStatus.paused,
-      _DetailsAction.resume => SubscriptionStatus.active,
-      _DetailsAction.cancel => SubscriptionStatus.cancelled,
-      _DetailsAction.delete => subscription.status,
+      _StatusAction.pause => SubscriptionStatus.paused,
+      _StatusAction.resume => SubscriptionStatus.active,
+      _StatusAction.cancel => SubscriptionStatus.cancelled,
     };
     final updated = await controller.changeStatus(subscription, status);
     if (!updated && context.mounted) {
       _showError(context, 'Не удалось изменить статус');
     }
+  }
+
+  Future<void> _deleteSubscription(
+    BuildContext context,
+    WidgetRef ref,
+    Subscription subscription,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удалить подписку?'),
+        content: Text('${subscription.name} и история платежей будут удалены.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final deleted = await ref
+        .read(subscriptionDetailsControllerProvider(subscriptionId).notifier)
+        .deleteSubscription();
+    if (deleted && context.mounted) Navigator.pop(context);
   }
 
   Future<void> _addPayment(
@@ -120,32 +122,12 @@ class SubscriptionDetailsScreen extends ConsumerWidget {
           surfaceTintColor: Colors.transparent,
           actions: <Widget>[
             if (item != null)
-              PopupMenuButton<_DetailsAction>(
-                tooltip: 'Действия',
-                onSelected: (action) {
-                  unawaited(_handleAction(context, ref, item, action));
-                },
-                itemBuilder: (context) => <PopupMenuEntry<_DetailsAction>>[
-                  if (item.status == SubscriptionStatus.paused)
-                    const PopupMenuItem(
-                      value: _DetailsAction.resume,
-                      child: Text('Возобновить'),
-                    )
-                  else
-                    const PopupMenuItem(
-                      value: _DetailsAction.pause,
-                      child: Text('Приостановить'),
-                    ),
-                  const PopupMenuItem(
-                    value: _DetailsAction.cancel,
-                    child: Text('Отменить подписку'),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: _DetailsAction.delete,
-                    child: Text('Удалить'),
-                  ),
-                ],
+              IconButton(
+                tooltip: 'Удалить подписку',
+                onPressed: actionState.isLoading
+                    ? null
+                    : () => unawaited(_deleteSubscription(context, ref, item)),
+                icon: const Icon(Icons.delete_outline_rounded),
               ),
           ],
         ),
@@ -165,6 +147,9 @@ class SubscriptionDetailsScreen extends ConsumerWidget {
                 isBusy: actionState.isLoading,
                 onAddPayment: () {
                   unawaited(_addPayment(context, ref, value));
+                },
+                onStatusAction: (action) {
+                  unawaited(_handleStatusAction(context, ref, value, action));
                 },
               );
             },
@@ -187,12 +172,14 @@ class _DetailsContent extends StatelessWidget {
     required this.payments,
     required this.isBusy,
     required this.onAddPayment,
+    required this.onStatusAction,
   });
 
   final Subscription subscription;
   final AsyncValue<List<Payment>> payments;
   final bool isBusy;
   final VoidCallback onAddPayment;
+  final ValueChanged<_StatusAction> onStatusAction;
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +230,11 @@ class _DetailsContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                _StatusBadge(status: subscription.status),
+                _StatusBadge(
+                  status: subscription.status,
+                  enabled: !isBusy,
+                  onSelected: onStatusAction,
+                ),
               ],
             ),
           ),
@@ -328,9 +319,15 @@ class _DetailsContent extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+  const _StatusBadge({
+    required this.status,
+    required this.enabled,
+    required this.onSelected,
+  });
 
   final SubscriptionStatus status;
+  final bool enabled;
+  final ValueChanged<_StatusAction> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -341,19 +338,62 @@ class _StatusBadge extends StatelessWidget {
       SubscriptionStatus.expired => AppColors.other,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        subscriptionStatusLabel(status),
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color),
+    return PopupMenuButton<_StatusAction>(
+      enabled: enabled,
+      tooltip: 'Изменить статус',
+      onSelected: onSelected,
+      itemBuilder: (context) => <PopupMenuEntry<_StatusAction>>[
+        if (status == SubscriptionStatus.active)
+          const PopupMenuItem(
+            value: _StatusAction.pause,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.pause_circle_outline_rounded),
+              title: Text('Приостановить'),
+            ),
+          )
+        else
+          const PopupMenuItem(
+            value: _StatusAction.resume,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.play_circle_outline_rounded),
+              title: Text('Возобновить'),
+            ),
+          ),
+        if (status != SubscriptionStatus.cancelled)
+          const PopupMenuItem(
+            value: _StatusAction.cancel,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.block_rounded),
+              title: Text('Отменить подписку'),
+            ),
+          ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              subscriptionStatusLabel(status),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: color),
+            ),
+            const SizedBox(width: AppSpacing.xxs),
+            Icon(Icons.expand_more_rounded, size: 18, color: color),
+          ],
+        ),
       ),
     );
   }
