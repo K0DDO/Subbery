@@ -224,7 +224,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.0.0',
+                    subtitle: 'Версия 1.1.0',
                   ),
                 ),
               ],
