@@ -6,6 +6,7 @@ void main() {
   testWidgets('renders the application foundation', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: SubberryApp()));
 
-    expect(find.text('Subberry 🍓'), findsOneWidget);
+    expect(find.text('Subberry'), findsOneWidget);
+    expect(find.text('Начать'), findsOneWidget);
   });
 }
