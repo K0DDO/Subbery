@@ -10,13 +10,16 @@ import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../application/add_subscription_controller.dart';
+import '../application/subscription_providers.dart';
 import '../data/catalog/known_services.dart';
 import '../domain/entities/subscription.dart';
 import 'subscription_ui_extensions.dart';
 import 'widgets/service_logo.dart';
 
 class AddSubscriptionScreen extends ConsumerStatefulWidget {
-  const AddSubscriptionScreen({super.key});
+  const AddSubscriptionScreen({this.subscriptionId, super.key});
+
+  final String? subscriptionId;
 
   @override
   ConsumerState<AddSubscriptionScreen> createState() =>
@@ -26,18 +29,21 @@ class AddSubscriptionScreen extends ConsumerStatefulWidget {
 class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
+  final _notesController = TextEditingController();
   final _nameFocusNode = FocusNode();
+  bool _initializedControllers = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
+    _notesController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
   }
 
   void _selectService(KnownService service) {
-    ref.read(addSubscriptionControllerProvider.notifier).selectService(service);
+    _controller().selectService(service);
     _nameController
       ..text = service.name
       ..selection = TextSelection.collapsed(offset: service.name.length);
@@ -56,24 +62,43 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
       confirmText: 'Готово',
     );
     if (date == null) return;
-    ref
-        .read(addSubscriptionControllerProvider.notifier)
-        .setNextPaymentDate(date);
+    _controller().setNextPaymentDate(date);
   }
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    final saved = await ref
-        .read(addSubscriptionControllerProvider.notifier)
-        .submit();
+    final saved = await _controller().submit();
     if (!mounted || !saved) return;
     Navigator.of(context).pop(true);
   }
 
+  AddSubscriptionController _controller() {
+    final subscriptionId = widget.subscriptionId;
+    return subscriptionId == null
+        ? ref.read(addSubscriptionControllerProvider.notifier)
+        : ref.read(editSubscriptionControllerProvider(subscriptionId).notifier);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(addSubscriptionControllerProvider);
-    final controller = ref.read(addSubscriptionControllerProvider.notifier);
+    final subscriptionId = widget.subscriptionId;
+    if (subscriptionId != null &&
+        ref.watch(subscriptionProvider(subscriptionId)).asData?.value == null) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: AppBackground(child: Center(child: CircularProgressIndicator())),
+      );
+    }
+    final state = subscriptionId == null
+        ? ref.watch(addSubscriptionControllerProvider)
+        : ref.watch(editSubscriptionControllerProvider(subscriptionId));
+    final controller = _controller();
+    if (!_initializedControllers) {
+      _initializedControllers = true;
+      _nameController.text = state.serviceName;
+      _priceController.text = state.priceText;
+      _notesController.text = state.notesText;
+    }
     final selectedService = state.selectedService;
 
     return PopScope(
@@ -82,7 +107,9 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
         backgroundColor: Colors.transparent,
         extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: const Text('Новая подписка'),
+          title: Text(
+            subscriptionId == null ? 'Новая подписка' : 'Изменить подписку',
+          ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
@@ -271,6 +298,40 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.lg),
+                const _SectionLabel(
+                  title: 'Дополнительно',
+                  caption: 'Напоминания и заметка',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                GlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    children: <Widget>[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.notifications_rounded),
+                        title: const Text('Напоминать о списании'),
+                        value: state.reminderEnabled,
+                        onChanged: controller.setReminderEnabled,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextField(
+                        controller: _notesController,
+                        minLines: 2,
+                        maxLines: 4,
+                        textCapitalization: TextCapitalization.sentences,
+                        onChanged: controller.setNotes,
+                        decoration: const InputDecoration(
+                          labelText: 'Заметка',
+                          hintText: 'Необязательно',
+                          prefixIcon: Icon(Icons.notes_rounded),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
                   child: state.errorMessage == null
@@ -294,8 +355,14 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                 GlassButton(
                   label: state.isSubmitting
                       ? 'Сохраняем...'
-                      : 'Добавить подписку',
-                  icon: state.isSubmitting ? null : Icons.add_rounded,
+                      : subscriptionId == null
+                      ? 'Добавить подписку'
+                      : 'Сохранить изменения',
+                  icon: state.isSubmitting
+                      ? null
+                      : subscriptionId == null
+                      ? Icons.add_rounded
+                      : Icons.check_rounded,
                   onPressed: state.isSubmitting ? null : _submit,
                 ),
               ],

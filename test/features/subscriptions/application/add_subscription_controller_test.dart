@@ -63,4 +63,38 @@ void main() {
     expect(controller.state.errorMessage, 'Укажите корректную стоимость');
     expect(await repository.getSubscriptions(), isEmpty);
   });
+
+  test('updates every editable subscription field', () async {
+    controller
+      ..setServiceName('Netflix')
+      ..setPrice('799')
+      ..setNextPaymentDate(DateTime(2026, 8, 29));
+    expect(await controller.submit(), isTrue);
+    final original = (await repository.getSubscriptions()).single;
+
+    final editor = AddSubscriptionController(
+      repository,
+      initialSubscription: original,
+    );
+    editor
+      ..setServiceName('Spotify')
+      ..setPrice('199,50')
+      ..setCategory(SubscriptionCategory.music)
+      ..setBillingCycle(BillingCycle.yearly)
+      ..setNextPaymentDate(DateTime(2027, 8, 29))
+      ..setReminderEnabled(false)
+      ..setNotes('Семейный план');
+
+    expect(await editor.submit(), isTrue);
+    final updated = (await repository.getSubscriptions()).single;
+    expect(updated.id, original.id);
+    expect(updated.name, 'Spotify');
+    expect(updated.logo, 'spotify');
+    expect(updated.priceInCents, 19950);
+    expect(updated.billingCycle, BillingCycle.yearly);
+    expect(updated.nextPaymentDate, DateTime(2027, 8, 29));
+    expect(updated.reminderEnabled, isFalse);
+    expect(updated.notes, 'Семейный план');
+    editor.dispose();
+  });
 }

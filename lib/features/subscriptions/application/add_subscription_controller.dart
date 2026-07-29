@@ -17,6 +17,25 @@ final addSubscriptionControllerProvider =
       );
     });
 
+final editSubscriptionControllerProvider = StateNotifierProvider.autoDispose
+    .family<AddSubscriptionController, AddSubscriptionState, String>((
+      ref,
+      subscriptionId,
+    ) {
+      final subscription = ref.watch(
+        subscriptionProvider(
+          subscriptionId,
+        ).select((value) => value.asData?.value),
+      );
+      if (subscription == null) {
+        throw StateError('Subscription $subscriptionId is not loaded.');
+      }
+      return AddSubscriptionController(
+        ref.watch(subscriptionRepositoryProvider),
+        initialSubscription: subscription,
+      );
+    });
+
 class AddSubscriptionState extends Equatable {
   AddSubscriptionState({
     this.serviceName = '',
@@ -25,6 +44,8 @@ class AddSubscriptionState extends Equatable {
     this.billingCycle = BillingCycle.monthly,
     DateTime? nextPaymentDate,
     this.selectedService,
+    this.notesText = '',
+    this.reminderEnabled = true,
     this.isSubmitting = false,
     this.errorMessage,
   }) : nextPaymentDate = nextPaymentDate ?? DateTime.now();
@@ -35,6 +56,8 @@ class AddSubscriptionState extends Equatable {
   final BillingCycle billingCycle;
   final DateTime nextPaymentDate;
   final KnownService? selectedService;
+  final String notesText;
+  final bool reminderEnabled;
   final bool isSubmitting;
   final String? errorMessage;
 
@@ -49,6 +72,8 @@ class AddSubscriptionState extends Equatable {
     DateTime? nextPaymentDate,
     KnownService? selectedService,
     bool clearSelectedService = false,
+    String? notesText,
+    bool? reminderEnabled,
     bool? isSubmitting,
     String? errorMessage,
     bool clearError = false,
@@ -62,6 +87,8 @@ class AddSubscriptionState extends Equatable {
       selectedService: clearSelectedService
           ? null
           : selectedService ?? this.selectedService,
+      notesText: notesText ?? this.notesText,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
@@ -75,6 +102,8 @@ class AddSubscriptionState extends Equatable {
     billingCycle,
     nextPaymentDate,
     selectedService,
+    notesText,
+    reminderEnabled,
     isSubmitting,
     errorMessage,
   ];
@@ -85,12 +114,30 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
     this._repository, {
     this._uuid = const Uuid(),
     DateTime Function()? clock,
+    Subscription? initialSubscription,
   }) : _clock = clock ?? DateTime.now,
-       super(AddSubscriptionState());
+       _initialSubscription = initialSubscription,
+       super(
+         initialSubscription == null
+             ? AddSubscriptionState()
+             : AddSubscriptionState(
+                 serviceName: initialSubscription.name,
+                 priceText: _formatPrice(initialSubscription.priceInCents),
+                 category: initialSubscription.category,
+                 billingCycle: initialSubscription.billingCycle,
+                 nextPaymentDate: initialSubscription.nextPaymentDate,
+                 selectedService: KnownServices.byLogoKey(
+                   initialSubscription.logo,
+                 ),
+                 notesText: initialSubscription.notes ?? '',
+                 reminderEnabled: initialSubscription.reminderEnabled,
+               ),
+       );
 
   final SubscriptionRepository _repository;
   final Uuid _uuid;
   final DateTime Function() _clock;
+  final Subscription? _initialSubscription;
 
   void setServiceName(String value) {
     final match = KnownServices.exactMatch(value);
@@ -131,6 +178,14 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
     );
   }
 
+  void setNotes(String value) {
+    state = state.copyWith(notesText: value, clearError: true);
+  }
+
+  void setReminderEnabled(bool value) {
+    state = state.copyWith(reminderEnabled: value, clearError: true);
+  }
+
   Future<bool> submit() async {
     final name = state.serviceName.trim();
     final priceInCents = _parsePriceInCents(state.priceText);
@@ -145,23 +200,29 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     final now = _clock();
+    final initial = _initialSubscription;
     final subscription = Subscription(
-      id: _uuid.v4(),
+      id: initial?.id ?? _uuid.v4(),
       name: name,
       logo: state.selectedService?.logoKey,
       category: state.category,
       priceInCents: priceInCents,
       billingCycle: state.billingCycle,
-      startDate: DateTime(now.year, now.month, now.day),
+      startDate: initial?.startDate ?? DateTime(now.year, now.month, now.day),
       nextPaymentDate: state.nextPaymentDate,
       billingAnchorDay: state.nextPaymentDate.day,
-      status: SubscriptionStatus.active,
-      totalSpentInCents: 0,
-      reminderEnabled: true,
+      status: initial?.status ?? SubscriptionStatus.active,
+      totalSpentInCents: initial?.totalSpentInCents ?? 0,
+      reminderEnabled: state.reminderEnabled,
+      notes: state.notesText.trim().isEmpty ? null : state.notesText.trim(),
     );
 
     try {
-      await _repository.createSubscription(subscription);
+      if (initial == null) {
+        await _repository.createSubscription(subscription);
+      } else {
+        await _repository.updateSubscription(subscription);
+      }
       state = state.copyWith(isSubmitting: false);
       return true;
     } on Object {
@@ -180,5 +241,10 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
     final amount = double.tryParse(normalized);
     if (amount == null || !amount.isFinite) return null;
     return (amount * 100).round();
+  }
+
+  static String _formatPrice(int priceInCents) {
+    final amount = priceInCents / 100;
+    return amount.toStringAsFixed(priceInCents % 100 == 0 ? 0 : 2);
   }
 }

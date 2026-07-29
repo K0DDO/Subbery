@@ -81,6 +81,21 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/subscriptions/:id/edit',
+      name: 'edit-subscription',
+      pageBuilder: (context, state) {
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddSubscriptionScreen(
+            subscriptionId: state.pathParameters['id']!,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
+    ),
+    GoRoute(
       path: '/subscriptions/:id',
       name: 'subscription-details',
       pageBuilder: (context, state) {

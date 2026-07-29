@@ -100,6 +100,14 @@ abstract final class KnownServices {
     return null;
   }
 
+  static KnownService? byLogoKey(String? logoKey) {
+    if (logoKey == null) return null;
+    for (final service in all) {
+      if (service.logoKey == logoKey) return service;
+    }
+    return null;
+  }
+
   static List<KnownService> suggestionsFor(String query, {int limit = 4}) {
     final normalizedQuery = _normalize(query);
     if (normalizedQuery.isEmpty) return const <KnownService>[];
