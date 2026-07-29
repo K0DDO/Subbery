@@ -1,0 +1,89 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:subberry/features/overview/application/overview_metrics.dart';
+import 'package:subberry/features/subscriptions/domain/entities/payment.dart';
+import 'package:subberry/features/subscriptions/domain/entities/subscription.dart';
+
+void main() {
+  test('calculates normalized monthly spend and upcoming order', () {
+    final monthly = _subscription(
+      id: 'monthly',
+      priceInCents: 79900,
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 8, 3),
+    );
+    final annual = _subscription(
+      id: 'annual',
+      priceInCents: 120000,
+      billingCycle: BillingCycle.yearly,
+      nextPaymentDate: DateTime(2026, 7, 30),
+    );
+
+    final metrics = OverviewMetrics.calculate(
+      subscriptions: <Subscription>[monthly, annual],
+      payments: const <Payment>[],
+      now: DateTime(2026, 7, 29),
+    );
+
+    expect(metrics.monthlyRecurringInCents, 89900);
+    expect(metrics.averageMonthlyInCents, 89900);
+    expect(metrics.upcomingPayments.first.subscription.id, 'annual');
+    expect(metrics.spendingByMonth.last.amountInCents, 89900);
+  });
+
+  test('creates monthly and yearly calendar occurrences', () {
+    final monthly = _subscription(
+      id: 'monthly',
+      priceInCents: 79900,
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 8, 31),
+    );
+    final annual = _subscription(
+      id: 'annual',
+      priceInCents: 120000,
+      billingCycle: BillingCycle.yearly,
+      nextPaymentDate: DateTime(2026, 10, 2),
+    );
+
+    final occurrences = OverviewMetrics.buildYearOccurrences(<Subscription>[
+      monthly,
+      annual,
+    ], 2026);
+
+    expect(
+      occurrences.where((item) => item.subscription.id == 'monthly'),
+      hasLength(12),
+    );
+    expect(
+      occurrences
+          .firstWhere(
+            (item) => item.subscription.id == 'monthly' && item.date.month == 2,
+          )
+          .date,
+      DateTime(2026, 2, 28),
+    );
+    expect(
+      occurrences.where((item) => item.subscription.id == 'annual').single.date,
+      DateTime(2026, 10, 2),
+    );
+  });
+}
+
+Subscription _subscription({
+  required String id,
+  required int priceInCents,
+  required BillingCycle billingCycle,
+  required DateTime nextPaymentDate,
+}) {
+  return Subscription(
+    id: id,
+    name: id,
+    category: SubscriptionCategory.other,
+    priceInCents: priceInCents,
+    billingCycle: billingCycle,
+    startDate: DateTime(2026),
+    nextPaymentDate: nextPaymentDate,
+    status: SubscriptionStatus.active,
+    totalSpentInCents: 0,
+    reminderEnabled: true,
+  );
+}

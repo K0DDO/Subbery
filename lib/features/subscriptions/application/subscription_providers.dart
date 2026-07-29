@@ -37,3 +37,7 @@ final paymentsProvider = StreamProvider.family<List<Payment>, String>((
       .watch(subscriptionRepositoryProvider)
       .watchPayments(subscriptionId);
 });
+
+final allPaymentsProvider = StreamProvider<List<Payment>>((ref) {
+  return ref.watch(subscriptionRepositoryProvider).watchAllPayments();
+});

@@ -107,6 +107,13 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  Stream<List<PaymentRecord>> watchAllPayments() {
+    return (select(payments)..orderBy(<OrderingTerm Function(Payments)>[
+          (table) => OrderingTerm.desc(table.date),
+        ]))
+        .watch();
+  }
+
   Future<List<PaymentRecord>> getPaymentsFor(String subscriptionId) {
     return (select(payments)
           ..where((table) => table.subscriptionId.equals(subscriptionId))

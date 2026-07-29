@@ -18,6 +18,8 @@ abstract interface class SubscriptionRepository {
 
   Stream<List<Payment>> watchPayments(String subscriptionId);
 
+  Stream<List<Payment>> watchAllPayments();
+
   Future<List<Payment>> getPayments(String subscriptionId);
 
   Future<void> addPayment(Payment payment);
