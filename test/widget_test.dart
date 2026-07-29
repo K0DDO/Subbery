@@ -26,7 +26,7 @@ void main() {
     await tester.tap(find.text('Настройки'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Версия 1.0.0'), findsOneWidget);
+    expect(find.text('Иконка приложения'), findsOneWidget);
   });
 }
 

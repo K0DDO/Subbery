@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../notifications/application/notification_settings_controller.dart';
+import '../application/app_icon_controller.dart';
 import '../application/theme_mode_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -29,10 +31,24 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _setAppIcon(
+    BuildContext context,
+    WidgetRef ref,
+    AppIconChoice choice,
+  ) async {
+    final changed = await ref.read(appIconProvider.notifier).selectIcon(choice);
+    if (!changed && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось сменить иконку')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
+    final appIconState = ref.watch(appIconProvider);
 
     return SafeArea(
       bottom: false,
@@ -90,6 +106,33 @@ class SettingsScreen extends ConsumerWidget {
                             );
                           },
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Иконка приложения',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Выберите любой из шести вариантов',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _AppIconPicker(
+                        selected: appIconState.selected,
+                        isBusy: appIconState.isBusy,
+                        onSelected: (choice) {
+                          unawaited(_setAppIcon(context, ref, choice));
+                        },
                       ),
                     ],
                   ),
@@ -189,6 +232,83 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AppIconPicker extends StatelessWidget {
+  const _AppIconPicker({
+    required this.selected,
+    required this.isBusy,
+    required this.onSelected,
+  });
+
+  final AppIconChoice selected;
+  final bool isBusy;
+  final ValueChanged<AppIconChoice> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: AppSpacing.sm,
+        mainAxisSpacing: AppSpacing.sm,
+        childAspectRatio: 0.78,
+      ),
+      itemCount: AppIconChoice.values.length,
+      itemBuilder: (context, index) {
+        final choice = AppIconChoice.values[index];
+        final isSelected = choice == selected;
+        return Semantics(
+          selected: isSelected,
+          button: true,
+          label: choice.label,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: isBusy ? null : () => onSelected(choice),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.coral.withValues(alpha: 0.13)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.coral
+                      : Theme.of(context).dividerColor,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: <Widget>[
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      child: Image.asset(choice.assetPath, fit: BoxFit.cover),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    choice.label,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: isSelected ? AppColors.coral : null,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

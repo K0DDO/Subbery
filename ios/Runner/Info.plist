@@ -16,6 +16,52 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>Subberry</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>dark_neon</key>
+			<dict>
+				<key>CFBundleIconName</key>
+				<string>DarkNeon</string>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+			<key>dark_minimal</key>
+			<dict>
+				<key>CFBundleIconName</key>
+				<string>DarkMinimal</string>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+			<key>light_glass</key>
+			<dict>
+				<key>CFBundleIconName</key>
+				<string>LightGlass</string>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+			<key>light_neon</key>
+			<dict>
+				<key>CFBundleIconName</key>
+				<string>LightNeon</string>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+			<key>light_minimal</key>
+			<dict>
+				<key>CFBundleIconName</key>
+				<string>LightMinimal</string>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
