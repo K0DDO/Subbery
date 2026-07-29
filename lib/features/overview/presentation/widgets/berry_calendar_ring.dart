@@ -71,7 +71,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   void _handleTap(TapUpDetails details, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final delta = details.localPosition - center;
-    var angle = math.atan2(delta.dy, delta.dx) + math.pi / 2;
+    var angle = -math.atan2(delta.dy, delta.dx) - math.pi / 2;
     if (angle < 0) angle += math.pi * 2;
     final month = (angle / (math.pi * 2) * 12).floor() + 1;
     widget.onMonthSelected(month.clamp(1, 12));
@@ -231,13 +231,13 @@ class _CalendarRingPainter extends CustomPainter {
             : trackColor;
       canvas.drawArc(
         ringRect,
-        start + index * segment + gap,
-        (segment - gap * 2) * progress,
+        start - index * segment - gap,
+        -(segment - gap * 2) * progress,
         false,
         paint,
       );
 
-      final labelAngle = start + (index + 0.5) * segment;
+      final labelAngle = start - (index + 0.5) * segment;
       final labelOffset =
           center +
           Offset(
@@ -271,7 +271,7 @@ class _CalendarRingPainter extends CustomPainter {
         (value) => value + 1,
         ifAbsent: () => 0,
       );
-      final angle = start + (day / daysInYear) * math.pi * 2;
+      final angle = start - (day / daysInYear) * math.pi * 2;
       final pointRadius = radius + 2 + stackIndex * 6;
       final point =
           center +
