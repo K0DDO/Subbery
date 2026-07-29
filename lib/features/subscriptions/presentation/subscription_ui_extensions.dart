@@ -1,0 +1,60 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../domain/entities/subscription.dart';
+
+extension SubscriptionCategoryUi on SubscriptionCategory {
+  String get label => switch (this) {
+    SubscriptionCategory.entertainment => 'Развлечения',
+    SubscriptionCategory.music => 'Музыка',
+    SubscriptionCategory.work => 'Работа',
+    SubscriptionCategory.cloud => 'Облако',
+    SubscriptionCategory.gaming => 'Игры',
+    SubscriptionCategory.education => 'Образование',
+    SubscriptionCategory.health => 'Здоровье',
+    SubscriptionCategory.other => 'Другое',
+  };
+
+  String get emoji => switch (this) {
+    SubscriptionCategory.entertainment => '🍿',
+    SubscriptionCategory.music => '🎧',
+    SubscriptionCategory.work => '💻',
+    SubscriptionCategory.cloud => '☁️',
+    SubscriptionCategory.gaming => '🎮',
+    SubscriptionCategory.education => '🧠',
+    SubscriptionCategory.health => '🏥',
+    SubscriptionCategory.other => '📦',
+  };
+
+  Color get color => switch (this) {
+    SubscriptionCategory.entertainment => AppColors.entertainment,
+    SubscriptionCategory.music => AppColors.music,
+    SubscriptionCategory.work => AppColors.work,
+    SubscriptionCategory.cloud => AppColors.cloud,
+    SubscriptionCategory.gaming => AppColors.gaming,
+    SubscriptionCategory.education => AppColors.education,
+    SubscriptionCategory.health => AppColors.health,
+    SubscriptionCategory.other => AppColors.other,
+  };
+}
+
+extension BillingCycleUi on BillingCycle {
+  String get label => switch (this) {
+    BillingCycle.monthly => 'Ежемесячно',
+    BillingCycle.yearly => 'Ежегодно',
+  };
+
+  String get shortLabel => switch (this) {
+    BillingCycle.monthly => 'месяц',
+    BillingCycle.yearly => 'год',
+  };
+}
+
+extension SubscriptionStatusUi on SubscriptionStatus {
+  String get label => switch (this) {
+    SubscriptionStatus.active => 'Активна',
+    SubscriptionStatus.paused => 'Приостановлена',
+    SubscriptionStatus.cancelled => 'Отменена',
+    SubscriptionStatus.expired => 'Истекла',
+  };
+}

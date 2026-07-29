@@ -5,7 +5,7 @@ import '../../features/analytics/presentation/analytics_screen.dart';
 import '../../features/overview/presentation/overview_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
-import '../../features/subscriptions/presentation/add_subscription_placeholder_screen.dart';
+import '../../features/subscriptions/presentation/add_subscription_screen.dart';
 import '../../features/subscriptions/presentation/subscriptions_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -59,7 +59,7 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         return CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const AddSubscriptionPlaceholderScreen(),
+          child: const AddSubscriptionScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final offsetAnimation =
                 Tween<Offset>(
