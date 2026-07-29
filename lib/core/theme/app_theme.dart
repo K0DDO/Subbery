@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 import 'glass_theme.dart';
@@ -48,7 +47,10 @@ abstract final class AppTheme {
       surface: background,
     );
 
-    final baseTextTheme = GoogleFonts.manropeTextTheme();
+    final baseTextTheme = ThemeData(
+      brightness: brightness,
+      useMaterial3: true,
+    ).textTheme;
     final textTheme = baseTextTheme
         .copyWith(
           displayLarge: baseTextTheme.displayLarge?.copyWith(
