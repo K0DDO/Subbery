@@ -347,16 +347,24 @@ class _MonthlySummary extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Запланировано в этом месяце',
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Text(
+                  'Запланировано в этом месяце',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text(
-            AppFormatters.money(metrics.plannedThisMonthInCents),
-            style: Theme.of(context).textTheme.displaySmall,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              AppFormatters.money(metrics.plannedThisMonthInCents),
+              style: Theme.of(context).textTheme.displaySmall,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -372,7 +380,7 @@ class _MonthlySummary extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _SummaryCaption(
-                  label: 'Среднее по годовому плану',
+                  label: 'Среднее',
                   value:
                       '${AppFormatters.money(metrics.averageMonthlyPlannedInCents)} / мес',
                 ),
@@ -402,22 +410,37 @@ class _NextPaymentCaption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subscription = occurrence.subscription;
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        ServiceLogo(
-          name: subscription.name,
-          logoKey: subscription.logo,
-          category: subscription.category,
-          size: 30,
+        Text(
+          'Ближайшее',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: _SummaryCaption(
-            label: 'Следующее списание',
-            value:
+        const SizedBox(height: 2),
+        Row(
+          children: <Widget>[
+            ServiceLogo(
+              name: subscription.name,
+              logoKey: subscription.logo,
+              category: subscription.category,
+              size: 24,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
                 '${subscription.name} · '
                 '${AppFormatters.shortDate(occurrence.date)}',
-          ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
         ),
       ],
     );
