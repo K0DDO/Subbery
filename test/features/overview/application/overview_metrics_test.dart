@@ -36,7 +36,13 @@ void main() {
     expect(metrics.averageMonthlyPlannedInCents, 89900);
     expect(metrics.upcomingPayments.first.subscription.id, 'annual');
     expect(metrics.spendingByMonth.last.amountInCents, 79900);
-    expect(metrics.upcomingYearOccurrences, hasLength(6));
+    expect(metrics.upcomingYearOccurrences, hasLength(2));
+    expect(
+      metrics.upcomingYearOccurrences
+          .map((occurrence) => occurrence.subscription.id)
+          .toSet(),
+      hasLength(2),
+    );
     expect(
       metrics.upcomingYearOccurrences.every(
         (occurrence) => !occurrence.date.isBefore(DateTime(2026, 7, 29)),

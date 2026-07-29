@@ -118,7 +118,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   children: <Widget>[
                     _RingGalleryPage(
                       title: 'Ближайшие платежи',
-                      subtitle: 'До конца ${now.year} года',
+                      subtitle: 'По одной дате на подписку',
                       year: now.year,
                       now: now,
                       occurrences: metrics.upcomingYearOccurrences,
@@ -151,7 +151,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   duration: const Duration(milliseconds: 240),
                   child: Text(
                     _ringPage == 0
-                        ? 'Тонкие дуги показывают срок до следующего списания'
+                        ? 'Дуги показывают срок до следующего списания'
                         : 'Свайпните вправо, чтобы вернуться к ближайшим',
                     key: ValueKey<int>(_ringPage),
                     textAlign: TextAlign.center,

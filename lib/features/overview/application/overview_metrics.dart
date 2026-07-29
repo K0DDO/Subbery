@@ -80,7 +80,7 @@ class OverviewMetrics {
       upcomingPayments: upcoming,
       spendingByMonth: spendingByMonth,
       yearOccurrences: yearOccurrences,
-      upcomingYearOccurrences: yearOccurrences
+      upcomingYearOccurrences: upcoming
           .where(
             (occurrence) =>
                 !occurrence.date.isBefore(

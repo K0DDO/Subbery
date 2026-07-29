@@ -4,7 +4,28 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
+import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/overview_metrics.dart';
+
+const _maxPeriodArcs = 4;
+
+List<PaymentOccurrence> _periodOccurrences(
+  List<PaymentOccurrence> occurrences,
+  DateTime now,
+) {
+  final today = DateTime(now.year, now.month, now.day);
+  final firstBySubscription = <String, PaymentOccurrence>{};
+  for (final occurrence in occurrences) {
+    if (occurrence.date.isBefore(today)) continue;
+    final current = firstBySubscription[occurrence.subscription.id];
+    if (current == null || occurrence.date.isBefore(current.date)) {
+      firstBySubscription[occurrence.subscription.id] = occurrence;
+    }
+  }
+  final periods = firstBySubscription.values.toList()
+    ..sort((left, right) => right.date.compareTo(left.date));
+  return periods.take(_maxPeriodArcs).toList(growable: false);
+}
 
 class BerryCalendarRing extends StatefulWidget {
   const BerryCalendarRing({
@@ -100,69 +121,135 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
             onTapUp: (details) => _handleTap(details, Size.square(size)),
             child: SizedBox.square(
               dimension: size,
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: _CalendarRingPainter(
-                      year: widget.year,
-                      occurrences: widget.occurrences,
-                      selectedMonth: widget.selectedMonth,
-                      now: widget.now,
-                      showPeriodArcs: widget.showPeriodArcs,
-                      progress: Curves.easeOutCubic.transform(
-                        _animationController.value,
-                      ),
-                      textColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                      trackColor: Theme.of(
-                        context,
-                      ).dividerColor.withValues(alpha: 0.45),
-                    ),
-                    child: child,
-                  );
-                },
-                child: Center(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 240),
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: ScaleTransition(scale: animation, child: child),
-                      );
-                    },
-                    child: Column(
-                      key: ValueKey<int>(widget.selectedMonth),
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(
-                          _monthNames[widget.selectedMonth - 1],
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${selected.length} ${_paymentWord(selected.length)}',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          painter: _CalendarRingPainter(
+                            year: widget.year,
+                            occurrences: widget.occurrences,
+                            selectedMonth: widget.selectedMonth,
+                            now: widget.now,
+                            showPeriodArcs: widget.showPeriodArcs,
+                            progress: Curves.easeOutCubic.transform(
+                              _animationController.value,
+                            ),
+                            textColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            trackColor: Theme.of(
+                              context,
+                            ).dividerColor.withValues(alpha: 0.45),
+                          ),
+                          child: child,
+                        );
+                      },
+                      child: Center(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 240),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                scale: animation,
+                                child: child,
                               ),
+                            );
+                          },
+                          child: Column(
+                            key: ValueKey<int>(widget.selectedMonth),
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                _monthNames[widget.selectedMonth - 1],
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${selected.length} '
+                                '${_paymentWord(selected.length)}',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _compactMoney(total),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(color: AppColors.coral),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _compactMoney(total),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(color: AppColors.coral),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  if (widget.showPeriodArcs) ..._buildPeriodIcons(size),
+                ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  List<Widget> _buildPeriodIcons(double size) {
+    final periods = _periodOccurrences(widget.occurrences, widget.now);
+    if (periods.isEmpty) return const <Widget>[];
+    final center = Offset(size / 2, size / 2);
+    final outerRadius = size * 0.335;
+    final innermostRadius = size * 0.205;
+    final outermostRadius = outerRadius - 24;
+    final spacing = periods.length == 1
+        ? 0.0
+        : (outermostRadius - innermostRadius) / (periods.length - 1);
+    final daysInYear = DateTime(
+      widget.year + 1,
+    ).difference(DateTime(widget.year)).inDays;
+
+    return <Widget>[
+      for (var index = 0; index < periods.length; index++)
+        _periodIcon(
+          occurrence: periods[index],
+          center: center,
+          radius: innermostRadius + spacing * index,
+          daysInYear: daysInYear,
+        ),
+    ];
+  }
+
+  Widget _periodIcon({
+    required PaymentOccurrence occurrence,
+    required Offset center,
+    required double radius,
+    required int daysInYear,
+  }) {
+    final day = occurrence.date
+        .difference(DateTime(widget.year))
+        .inDays
+        .clamp(0, daysInYear - 1);
+    final angle = -math.pi / 2 - day / daysInYear * math.pi * 2;
+    final point =
+        center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
+    const iconSize = 22.0;
+    return Positioned(
+      left: point.dx - iconSize / 2,
+      top: point.dy - iconSize / 2,
+      child: IgnorePointer(
+        child: ServiceLogo(
+          name: occurrence.subscription.name,
+          logoKey: occurrence.subscription.logo,
+          category: occurrence.subscription.category,
+          size: iconSize,
+        ),
+      ),
     );
   }
 
@@ -234,7 +321,7 @@ class _CalendarRingPainter extends CustomPainter {
       final selected = index + 1 == selectedMonth;
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = selected ? 22 : 16
+        ..strokeWidth = selected ? 24 : 18
         ..strokeCap = StrokeCap.round
         ..color = selected
             ? AppColors.coral.withValues(alpha: 0.95)
@@ -282,34 +369,39 @@ class _CalendarRingPainter extends CustomPainter {
         daysInYear: daysInYear,
       );
     }
-    final sameDayCount = <int, int>{};
-    for (final occurrence in occurrences) {
-      final day = occurrence.date.difference(DateTime(year)).inDays;
-      if (day < 0 || day >= daysInYear) continue;
-      final stackIndex = sameDayCount.update(
-        day,
-        (value) => value + 1,
-        ifAbsent: () => 0,
-      );
-      final angle = start - (day / daysInYear) * math.pi * 2;
-      final pointRadius = radius + 2 + stackIndex * 6;
-      final point =
-          center +
-          Offset(math.cos(angle) * pointRadius, math.sin(angle) * pointRadius);
-      final color = occurrence.subscription.category.color;
-      canvas.drawCircle(
-        point,
-        5.2 * progress,
-        Paint()..color = color.withValues(alpha: progress),
-      );
-      canvas.drawCircle(
-        point,
-        5.2 * progress,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.4
-          ..color = Colors.white.withValues(alpha: 0.8 * progress),
-      );
+    if (!showPeriodArcs) {
+      final sameDayCount = <int, int>{};
+      for (final occurrence in occurrences) {
+        final day = occurrence.date.difference(DateTime(year)).inDays;
+        if (day < 0 || day >= daysInYear) continue;
+        final stackIndex = sameDayCount.update(
+          day,
+          (value) => value + 1,
+          ifAbsent: () => 0,
+        );
+        final angle = start - (day / daysInYear) * math.pi * 2;
+        final pointRadius = radius + 2 + stackIndex * 6;
+        final point =
+            center +
+            Offset(
+              math.cos(angle) * pointRadius,
+              math.sin(angle) * pointRadius,
+            );
+        final color = occurrence.subscription.category.color;
+        canvas.drawCircle(
+          point,
+          5.2 * progress,
+          Paint()..color = color.withValues(alpha: progress),
+        );
+        canvas.drawCircle(
+          point,
+          5.2 * progress,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.4
+            ..color = Colors.white.withValues(alpha: 0.8 * progress),
+        );
+      }
     }
   }
 
@@ -322,16 +414,7 @@ class _CalendarRingPainter extends CustomPainter {
     required int daysInYear,
   }) {
     final today = DateTime(now.year, now.month, now.day);
-    final firstOccurrenceBySubscription = <String, PaymentOccurrence>{};
-    for (final occurrence in occurrences) {
-      if (occurrence.date.isBefore(today)) continue;
-      firstOccurrenceBySubscription.putIfAbsent(
-        occurrence.subscription.id,
-        () => occurrence,
-      );
-    }
-    final periods = firstOccurrenceBySubscription.values.toList()
-      ..sort((left, right) => right.date.compareTo(left.date));
+    final periods = _periodOccurrences(occurrences, now);
     if (periods.isEmpty) return;
 
     final innermostRadius = size.width * 0.205;
@@ -356,14 +439,6 @@ class _CalendarRingPainter extends CustomPainter {
       final sweep = -(endIndex - todayIndex) / daysInYear * math.pi * 2;
       final color = occurrence.subscription.category.color;
 
-      canvas.drawCircle(
-        center,
-        periodRadius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = trackColor.withValues(alpha: 0.32),
-      );
       canvas.drawArc(
         rect,
         arcStart,
@@ -371,7 +446,7 @@ class _CalendarRingPainter extends CustomPainter {
         false,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.2
+          ..strokeWidth = 4
           ..strokeCap = StrokeCap.round
           ..color = color.withValues(alpha: 0.82 * progress),
       );
