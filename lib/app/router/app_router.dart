@@ -6,6 +6,7 @@ import '../../features/overview/presentation/overview_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 import '../../features/subscriptions/presentation/add_subscription_screen.dart';
+import '../../features/subscriptions/presentation/subscription_details_placeholder_screen.dart';
 import '../../features/subscriptions/presentation/subscriptions_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -74,6 +75,36 @@ final GoRouter appRouter = GoRouter(
             return FadeTransition(
               opacity: animation,
               child: SlideTransition(position: offsetAnimation, child: child),
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/subscriptions/:id',
+      name: 'subscription-details',
+      pageBuilder: (context, state) {
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: SubscriptionDetailsPlaceholderScreen(
+            subscriptionId: state.pathParameters['id']!,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0.04, 0),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                child: child,
+              ),
             );
           },
         );
