@@ -72,6 +72,7 @@ class BerryCalendarRing extends StatefulWidget {
     required this.onMonthSelected,
     required this.now,
     this.showPeriodArcs = false,
+    this.showCalendarLogos = true,
     super.key,
   });
 
@@ -81,6 +82,7 @@ class BerryCalendarRing extends StatefulWidget {
   final ValueChanged<int> onMonthSelected;
   final DateTime now;
   final bool showPeriodArcs;
+  final bool showCalendarLogos;
 
   @override
   State<BerryCalendarRing> createState() => _BerryCalendarRingState();
@@ -267,13 +269,16 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                           _animationController.value,
                         );
                         return Stack(
-                          children: widget.showPeriodArcs
-                              ? _buildPeriodIcons(
-                                  size,
-                                  progress,
-                                  _pulseController.value,
-                                )
-                              : _buildCalendarIcons(size, progress),
+                          children: <Widget>[
+                            if (widget.showCalendarLogos)
+                              ..._buildCalendarIcons(size, progress),
+                            if (widget.showPeriodArcs)
+                              ..._buildPeriodIcons(
+                                size,
+                                progress,
+                                _pulseController.value,
+                              ),
+                          ],
                         );
                       },
                     ),

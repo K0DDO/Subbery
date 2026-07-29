@@ -99,6 +99,7 @@ void main() {
                 occurrences: occurrences,
                 selectedMonth: 8,
                 showPeriodArcs: true,
+                showCalendarLogos: false,
                 onMonthSelected: (_) {},
               ),
             ),
@@ -136,6 +137,7 @@ void main() {
                 ],
                 selectedMonth: 8,
                 showPeriodArcs: true,
+                showCalendarLogos: false,
                 onMonthSelected: (_) {},
               ),
             ),
@@ -146,6 +148,41 @@ void main() {
 
     expect(find.text('2'), findsOneWidget);
     expect(find.byType(ServiceLogo), findsOneWidget);
+  });
+
+  testWidgets('keeps calendar logos together with period arcs', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 340,
+              child: BerryCalendarRing(
+                year: 2026,
+                now: DateTime(2026, 7, 29),
+                occurrences: <PaymentOccurrence>[
+                  PaymentOccurrence(
+                    subscription: _subscription('a'),
+                    date: DateTime(2026, 8, 3),
+                  ),
+                  PaymentOccurrence(
+                    subscription: _subscription('b'),
+                    date: DateTime(2026, 9, 10),
+                  ),
+                ],
+                selectedMonth: 8,
+                showPeriodArcs: true,
+                showCalendarLogos: true,
+                onMonthSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Two calendar logos + two period endpoint logos.
+    expect(find.byType(ServiceLogo), findsNWidgets(4));
   });
 }
 

@@ -133,6 +133,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       occurrences: metrics.upcomingPayments,
                       selectedMonth: _selectedMonth,
                       showPeriodArcs: true,
+                      showCalendarLogos: false,
                       onMonthSelected: (month) {
                         setState(() => _selectedMonth = month);
                       },
@@ -144,6 +145,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       now: now,
                       occurrences: metrics.yearOccurrences,
                       selectedMonth: _selectedMonth,
+                      showPeriodArcs: true,
+                      showCalendarLogos: true,
                       onMonthSelected: (month) {
                         setState(() => _selectedMonth = month);
                       },
@@ -229,6 +232,7 @@ class _RingGalleryPage extends StatelessWidget {
     required this.selectedMonth,
     required this.onMonthSelected,
     this.showPeriodArcs = false,
+    this.showCalendarLogos = true,
   });
 
   final String title;
@@ -239,6 +243,7 @@ class _RingGalleryPage extends StatelessWidget {
   final int selectedMonth;
   final ValueChanged<int> onMonthSelected;
   final bool showPeriodArcs;
+  final bool showCalendarLogos;
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +295,7 @@ class _RingGalleryPage extends StatelessWidget {
           occurrences: occurrences,
           selectedMonth: selectedMonth,
           showPeriodArcs: showPeriodArcs,
+          showCalendarLogos: showCalendarLogos,
           onMonthSelected: onMonthSelected,
         ),
       ],
