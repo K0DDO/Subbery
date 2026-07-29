@@ -71,6 +71,12 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  Stream<SubscriptionRecord?> watchSubscriptionById(String id) {
+    return (select(
+      subscriptions,
+    )..where((table) => table.id.equals(id))).watchSingleOrNull();
+  }
+
   Future<SubscriptionRecord?> getSubscriptionById(String id) {
     return (select(
       subscriptions,

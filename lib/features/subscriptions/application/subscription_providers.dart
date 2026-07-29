@@ -22,11 +22,11 @@ final subscriptionsProvider = StreamProvider<List<Subscription>>((ref) {
   return ref.watch(subscriptionRepositoryProvider).watchSubscriptions();
 });
 
-final subscriptionProvider = FutureProvider.family<Subscription?, String>((
+final subscriptionProvider = StreamProvider.family<Subscription?, String>((
   ref,
   id,
 ) {
-  return ref.watch(subscriptionRepositoryProvider).getSubscription(id);
+  return ref.watch(subscriptionRepositoryProvider).watchSubscription(id);
 });
 
 final paymentsProvider = StreamProvider.family<List<Payment>, String>((

@@ -6,7 +6,7 @@ import '../../features/overview/presentation/overview_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 import '../../features/subscriptions/presentation/add_subscription_screen.dart';
-import '../../features/subscriptions/presentation/subscription_details_placeholder_screen.dart';
+import '../../features/subscriptions/presentation/subscription_details_screen.dart';
 import '../../features/subscriptions/presentation/subscriptions_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -86,7 +86,7 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         return CustomTransitionPage<void>(
           key: state.pageKey,
-          child: SubscriptionDetailsPlaceholderScreen(
+          child: SubscriptionDetailsScreen(
             subscriptionId: state.pathParameters['id']!,
           ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {

@@ -4,6 +4,8 @@ import '../entities/subscription.dart';
 abstract interface class SubscriptionRepository {
   Stream<List<Subscription>> watchSubscriptions();
 
+  Stream<Subscription?> watchSubscription(String id);
+
   Future<List<Subscription>> getSubscriptions();
 
   Future<Subscription?> getSubscription(String id);

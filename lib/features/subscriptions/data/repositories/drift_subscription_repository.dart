@@ -18,6 +18,13 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
   }
 
   @override
+  Stream<Subscription?> watchSubscription(String id) {
+    return _database
+        .watchSubscriptionById(id)
+        .map((record) => record == null ? null : _mapSubscription(record));
+  }
+
+  @override
   Future<List<Subscription>> getSubscriptions() async {
     final records = await _database.getAllSubscriptions();
     return records.map(_mapSubscription).toList(growable: false);
