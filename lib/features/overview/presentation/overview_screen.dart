@@ -89,7 +89,11 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         ? metrics.upcomingPayments
         : metrics.yearOccurrences;
     final selectedOccurrences = visibleRingOccurrences
-        .where((occurrence) => occurrence.date.month == _selectedMonth)
+        .where(
+          (occurrence) =>
+              occurrence.date.month == _selectedMonth &&
+              occurrence.date.year == now.year,
+        )
         .toList(growable: false);
 
     return ListView(
@@ -438,8 +442,7 @@ class _NextPaymentCaption extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
-                '${subscription.name} · '
-                '${AppFormatters.shortDate(occurrence.date)}',
+                subscription.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(

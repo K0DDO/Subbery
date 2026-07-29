@@ -51,6 +51,40 @@ void main() {
     );
   });
 
+  test('keeps next-year payment out of current-month planned total', () {
+    final nextYearAnnual = _subscription(
+      id: 'next-year',
+      priceInCents: 199900,
+      billingCycle: BillingCycle.yearly,
+      nextPaymentDate: DateTime(2027, 7, 29),
+    );
+    final thisMonthMonthly = _subscription(
+      id: 'monthly',
+      priceInCents: 79900,
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 8, 3),
+    );
+
+    final metrics = OverviewMetrics.calculate(
+      subscriptions: <Subscription>[nextYearAnnual, thisMonthMonthly],
+      payments: const <Payment>[],
+      now: DateTime(2026, 7, 30),
+    );
+
+    expect(metrics.plannedThisMonthInCents, 79900);
+    expect(metrics.upcomingPayments, hasLength(2));
+    expect(metrics.upcomingPayments.last.date, DateTime(2027, 7, 29));
+    expect(
+      metrics.upcomingPayments
+          .where(
+            (occurrence) =>
+                occurrence.date.month == 7 && occurrence.date.year == 2026,
+          )
+          .toList(growable: false),
+      isEmpty,
+    );
+  });
+
   test('creates monthly and yearly calendar occurrences', () {
     final monthly = _subscription(
       id: 'monthly',

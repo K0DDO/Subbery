@@ -12,6 +12,7 @@ abstract final class AppFormatters {
     decimalDigits: 2,
   );
   static final _shortDate = DateFormat('d MMMM', 'ru');
+  static final _shortDateWithYear = DateFormat('d MMMM yyyy', 'ru');
   static final _fullDate = DateFormat('dd.MM.yyyy', 'ru');
 
   static String money(int cents) {
@@ -19,7 +20,13 @@ abstract final class AppFormatters {
     return formatter.format(cents / 100);
   }
 
-  static String shortDate(DateTime date) => _shortDate.format(date);
+  static String shortDate(DateTime date, {DateTime? now}) {
+    final reference = now ?? DateTime.now();
+    if (date.year == reference.year) {
+      return _shortDate.format(date);
+    }
+    return _shortDateWithYear.format(date);
+  }
 
   static String fullDate(DateTime date) => _fullDate.format(date);
 }

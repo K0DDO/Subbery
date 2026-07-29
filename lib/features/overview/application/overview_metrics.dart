@@ -45,7 +45,8 @@ class OverviewMetrics {
           (subscription) =>
               subscription.startDate.isBefore(nextMonth) &&
               (subscription.billingCycle == BillingCycle.monthly ||
-                  subscription.nextPaymentDate.month == now.month),
+                  (subscription.nextPaymentDate.month == now.month &&
+                      subscription.nextPaymentDate.year == now.year)),
         )
         .fold<int>(
           0,

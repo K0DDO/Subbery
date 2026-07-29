@@ -132,7 +132,11 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   @override
   Widget build(BuildContext context) {
     final selected = widget.occurrences
-        .where((occurrence) => occurrence.date.month == widget.selectedMonth)
+        .where(
+          (occurrence) =>
+              occurrence.date.month == widget.selectedMonth &&
+              occurrence.date.year == widget.year,
+        )
         .toList(growable: false);
     final total = selected.fold<int>(
       0,
