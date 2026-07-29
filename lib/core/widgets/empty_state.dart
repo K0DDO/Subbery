@@ -37,13 +37,17 @@ class EmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               if (icon == null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  child: Image.asset(
-                    'assets/icons/subberry_dark_glass.png',
-                    width: 82,
-                    height: 82,
-                    fit: BoxFit.cover,
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: Image.asset(
+                      Theme.of(context).brightness == Brightness.dark
+                          ? 'assets/icons/subberry_wordmark_dark.png'
+                          : 'assets/icons/subberry_wordmark_light.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 )
               else
