@@ -47,7 +47,7 @@ void main() {
     expect(find.text('Привет, Анна 👋'), findsOneWidget);
   });
 
-  testWidgets('shows dima date simulator only for Дима', (tester) async {
+  testWidgets('shows admin date simulator only for dima4ka', (tester) async {
     final subscription = Subscription(
       id: 'netflix',
       name: 'Netflix',
@@ -64,7 +64,7 @@ void main() {
 
     await tester.pumpWidget(
       _emptyApp(
-        userName: 'Дима',
+        userName: 'dima4ka',
         subscriptions: <Subscription>[subscription],
       ),
     );
@@ -75,10 +75,7 @@ void main() {
     expect(find.byType(Slider), findsOneWidget);
 
     await tester.pumpWidget(
-      _emptyApp(
-        userName: 'Анна',
-        subscriptions: <Subscription>[subscription],
-      ),
+      _emptyApp(userName: 'Анна', subscriptions: <Subscription>[subscription]),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Обзор'));
@@ -87,7 +84,7 @@ void main() {
     expect(find.byType(Slider), findsNothing);
   });
 
-  testWidgets('dima date simulator changes overview date', (tester) async {
+  testWidgets('admin date simulator changes overview date', (tester) async {
     final subscription = Subscription(
       id: 'netflix',
       name: 'Netflix',
@@ -104,7 +101,7 @@ void main() {
 
     await tester.pumpWidget(
       _emptyApp(
-        userName: 'дима',
+        userName: 'DIMA4KA',
         subscriptions: <Subscription>[subscription],
       ),
     );
@@ -155,6 +152,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Календарь платежей'), findsOneWidget);
+  });
+
+  testWidgets('changes profile name without removing subscriptions', (
+    tester,
+  ) async {
+    final subscription = _subscription('Netflix', BillingCycle.monthly);
+    await tester.pumpWidget(
+      _emptyApp(userName: 'Анна', subscriptions: <Subscription>[subscription]),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Настройки'));
+    await tester.pumpAndSettle();
+    expect(find.text('Анна'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Изменить имя'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'Мария');
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(find.text('Мария'), findsOneWidget);
+
+    await tester.tap(find.text('Подписки'));
+    await tester.pumpAndSettle();
+    expect(find.text('Netflix'), findsOneWidget);
+
+    await tester.tap(find.text('Обзор'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('resets subscription filters after switching tabs', (

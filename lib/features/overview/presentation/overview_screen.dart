@@ -19,8 +19,8 @@ import 'widgets/berry_calendar_ring.dart';
 import 'widgets/spending_bar_chart.dart';
 
 @visibleForTesting
-bool isDimaDateSimulator(String? name) {
-  return name?.trim().toLowerCase() == 'дима';
+bool isAdminDateSimulator(String? name) {
+  return name?.trim().toLowerCase() == 'dima4ka';
 }
 
 class OverviewScreen extends ConsumerStatefulWidget {
@@ -170,9 +170,9 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   ],
                 ),
               ),
-              if (isDimaDateSimulator(userName)) ...<Widget>[
+              if (isAdminDateSimulator(userName)) ...<Widget>[
                 const SizedBox(height: AppSpacing.sm),
-                _DimaDateSimulator(
+                _AdminDateSimulator(
                   dayOffset: _debugDayOffset,
                   selectedDate: now,
                   onChanged: (offset) {
@@ -229,8 +229,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   }
 }
 
-class _DimaDateSimulator extends StatelessWidget {
-  const _DimaDateSimulator({
+class _AdminDateSimulator extends StatelessWidget {
+  const _AdminDateSimulator({
     required this.dayOffset,
     required this.selectedDate,
     required this.onChanged,

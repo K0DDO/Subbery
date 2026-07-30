@@ -10,12 +10,74 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../notifications/application/notification_settings_controller.dart';
+import '../../profile/application/user_profile_controller.dart';
 import '../../shell/application/tab_reset_provider.dart';
 import '../application/app_icon_controller.dart';
 import '../application/theme_mode_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _editName(
+    BuildContext context,
+    WidgetRef ref,
+    String currentName,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    var editedName = currentName;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Изменить имя'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            initialValue: currentName,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            maxLength: 40,
+            decoration: const InputDecoration(
+              labelText: 'Имя',
+              prefixIcon: Icon(Icons.person_rounded),
+            ),
+            validator: (value) {
+              final normalized = value?.trim() ?? '';
+              if (normalized.isEmpty) return 'Введите имя';
+              if (normalized.length > 40) return 'Не больше 40 символов';
+              return null;
+            },
+            onChanged: (value) => editedName = value,
+            onFieldSubmitted: (_) {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(context, editedName);
+              }
+            },
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(context, editedName);
+              }
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || !context.mounted) return;
+    final saved = await ref.read(userProfileProvider.notifier).saveName(name);
+    if (!saved && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось изменить имя')));
+    }
+  }
 
   Future<void> _setNotifications(
     BuildContext context,
@@ -57,6 +119,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
     final appIconState = ref.watch(appIconProvider);
+    final profile = ref.watch(userProfileProvider);
     final resetRevision = ref.watch(tabResetRevisionProvider(3));
 
     return SafeArea(
@@ -77,6 +140,28 @@ class SettingsScreen extends ConsumerWidget {
                 128,
               ),
               children: <Widget>[
+                GlassCard(
+                  child: _SettingsRow(
+                    icon: Icons.person_rounded,
+                    title: 'Имя',
+                    subtitle: profile.name ?? 'Не указано',
+                    trailing: IconButton(
+                      tooltip: 'Изменить имя',
+                      onPressed: profile.isSaving
+                          ? null
+                          : () => unawaited(
+                              _editName(context, ref, profile.name ?? ''),
+                            ),
+                      icon: profile.isSaving
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.edit_rounded),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
                 GlassCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

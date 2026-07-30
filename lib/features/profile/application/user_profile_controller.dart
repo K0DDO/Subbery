@@ -90,7 +90,9 @@ class UserProfileController extends StateNotifier<UserProfileState> {
 
   Future<bool> saveName(String value) async {
     final normalized = value.trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (normalized.isEmpty || state.isSaving) return false;
+    if (normalized.isEmpty || normalized.length > 40 || state.isSaving) {
+      return false;
+    }
     state = state.copyWith(isSaving: true, clearError: true);
     try {
       await _gateway.writeName(normalized);
