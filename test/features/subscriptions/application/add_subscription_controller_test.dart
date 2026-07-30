@@ -81,6 +81,21 @@ void main() {
     expect(payments.single.amountInCents, 79900);
   });
 
+  test('creates a manual payment without auto-recording a past date', () async {
+    controller
+      ..setServiceName('Flexible service')
+      ..setPrice('499')
+      ..setRenewalMode(RenewalMode.manual)
+      ..setNextPaymentDate(DateTime(2026, 7, 20));
+
+    expect(await controller.submit(), isTrue);
+
+    final saved = (await repository.getSubscriptions()).single;
+    expect(saved.renewalMode, RenewalMode.manual);
+    expect(saved.nextPaymentDate, DateTime(2026, 7, 20));
+    expect(await repository.getPayments(saved.id), isEmpty);
+  });
+
   test('updates every editable subscription field', () async {
     controller
       ..setServiceName('Netflix')
@@ -98,6 +113,7 @@ void main() {
       ..setPrice('199,50')
       ..setCategory(SubscriptionCategory.music)
       ..setBillingCycle(BillingCycle.yearly)
+      ..setRenewalMode(RenewalMode.manual)
       ..setNextPaymentDate(DateTime(2027, 8, 29))
       ..setReminderEnabled(false)
       ..setNotes('Семейный план');
@@ -109,6 +125,7 @@ void main() {
     expect(updated.logo, 'spotify');
     expect(updated.priceInCents, 19950);
     expect(updated.billingCycle, BillingCycle.yearly);
+    expect(updated.renewalMode, RenewalMode.manual);
     expect(updated.nextPaymentDate, DateTime(2027, 8, 29));
     expect(updated.reminderEnabled, isFalse);
     expect(updated.notes, 'Семейный план');

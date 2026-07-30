@@ -15,6 +15,8 @@ class Subscriptions extends Table {
   TextColumn get category => text()();
   IntColumn get priceInCents => integer()();
   TextColumn get billingCycle => text()();
+  TextColumn get renewalMode =>
+      text().withDefault(const Constant('automatic'))();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get nextPaymentDate => dateTime()();
   IntColumn get billingAnchorDay => integer().nullable()();
@@ -47,13 +49,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.addColumn(subscriptions, subscriptions.billingAnchorDay);
+      }
+      if (from < 3) {
+        await migrator.addColumn(subscriptions, subscriptions.renewalMode);
       }
     },
     beforeOpen: (details) async {

@@ -65,11 +65,35 @@ void main() {
       ],
     );
   });
+
+  test('keeps one explicit date for a manual subscription', () {
+    final subscription = _subscription(
+      nextPaymentDate: DateTime(2026, 7, 1),
+      renewalMode: RenewalMode.manual,
+    );
+
+    expect(
+      SubscriptionSchedule.normalizedNextPayment(
+        subscription,
+        DateTime(2026, 9, 1),
+      ),
+      DateTime(2026, 7, 1),
+    );
+    expect(
+      SubscriptionSchedule.upcomingDates(
+        subscription,
+        DateTime(2026, 9, 1),
+        count: 12,
+      ),
+      <DateTime>[DateTime(2026, 7, 1)],
+    );
+  });
 }
 
 Subscription _subscription({
   required DateTime nextPaymentDate,
   BillingCycle billingCycle = BillingCycle.monthly,
+  RenewalMode renewalMode = RenewalMode.automatic,
   int? billingAnchorDay,
 }) {
   return Subscription(
@@ -78,6 +102,7 @@ Subscription _subscription({
     category: SubscriptionCategory.other,
     priceInCents: 10000,
     billingCycle: billingCycle,
+    renewalMode: renewalMode,
     startDate: DateTime(2024),
     nextPaymentDate: nextPaymentDate,
     status: SubscriptionStatus.active,

@@ -34,9 +34,12 @@ class OverviewMetrics {
       0,
       (total, item) =>
           total +
-          switch (item.billingCycle) {
-            BillingCycle.monthly => item.priceInCents * 12,
-            BillingCycle.yearly => item.priceInCents,
+          switch (item.renewalMode) {
+            RenewalMode.manual => 0,
+            RenewalMode.automatic => switch (item.billingCycle) {
+              BillingCycle.monthly => item.priceInCents * 12,
+              BillingCycle.yearly => item.priceInCents,
+            },
           },
     );
     final currentMonth = DateTime(now.year, now.month);
@@ -45,7 +48,8 @@ class OverviewMetrics {
         .where(
           (subscription) =>
               subscription.startDate.isBefore(nextMonth) &&
-              (subscription.billingCycle == BillingCycle.monthly ||
+              ((subscription.renewalMode == RenewalMode.automatic &&
+                      subscription.billingCycle == BillingCycle.monthly) ||
                   (subscription.nextPaymentDate.month == now.month &&
                       subscription.nextPaymentDate.year == now.year)),
         )
@@ -123,6 +127,17 @@ class OverviewMetrics {
   ) {
     final occurrences = <PaymentOccurrence>[];
     for (final subscription in subscriptions) {
+      if (subscription.renewalMode == RenewalMode.manual) {
+        final date = SubscriptionSchedule.dateOnly(
+          subscription.nextPaymentDate,
+        );
+        if (date.year == year) {
+          occurrences.add(
+            PaymentOccurrence(subscription: subscription, date: date),
+          );
+        }
+        continue;
+      }
       final anchorDay =
           subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
       final startDate = SubscriptionSchedule.dateOnly(subscription.startDate);

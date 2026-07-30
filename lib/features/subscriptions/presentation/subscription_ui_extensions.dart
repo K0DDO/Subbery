@@ -50,6 +50,13 @@ extension BillingCycleUi on BillingCycle {
   };
 }
 
+extension RenewalModeUi on RenewalMode {
+  String get label => switch (this) {
+    RenewalMode.automatic => 'Автоматическая',
+    RenewalMode.manual => 'Единичная',
+  };
+}
+
 extension SubscriptionStatusUi on SubscriptionStatus {
   String get label => switch (this) {
     SubscriptionStatus.active => 'Активна',

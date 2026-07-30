@@ -44,6 +44,7 @@ class AddSubscriptionState extends Equatable {
     this.priceText = '',
     this.category = SubscriptionCategory.other,
     this.billingCycle = BillingCycle.monthly,
+    this.renewalMode = RenewalMode.automatic,
     DateTime? nextPaymentDate,
     this.selectedService,
     this.notesText = '',
@@ -56,6 +57,7 @@ class AddSubscriptionState extends Equatable {
   final String priceText;
   final SubscriptionCategory category;
   final BillingCycle billingCycle;
+  final RenewalMode renewalMode;
   final DateTime nextPaymentDate;
   final KnownService? selectedService;
   final String notesText;
@@ -71,6 +73,7 @@ class AddSubscriptionState extends Equatable {
     String? priceText,
     SubscriptionCategory? category,
     BillingCycle? billingCycle,
+    RenewalMode? renewalMode,
     DateTime? nextPaymentDate,
     KnownService? selectedService,
     bool clearSelectedService = false,
@@ -85,6 +88,7 @@ class AddSubscriptionState extends Equatable {
       priceText: priceText ?? this.priceText,
       category: category ?? this.category,
       billingCycle: billingCycle ?? this.billingCycle,
+      renewalMode: renewalMode ?? this.renewalMode,
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
       selectedService: clearSelectedService
           ? null
@@ -102,6 +106,7 @@ class AddSubscriptionState extends Equatable {
     priceText,
     category,
     billingCycle,
+    renewalMode,
     nextPaymentDate,
     selectedService,
     notesText,
@@ -127,6 +132,7 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
                  priceText: _formatPrice(initialSubscription.priceInCents),
                  category: initialSubscription.category,
                  billingCycle: initialSubscription.billingCycle,
+                 renewalMode: initialSubscription.renewalMode,
                  nextPaymentDate: initialSubscription.nextPaymentDate,
                  selectedService: KnownServices.byLogoKey(
                    initialSubscription.logo,
@@ -173,6 +179,10 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
     state = state.copyWith(billingCycle: value, clearError: true);
   }
 
+  void setRenewalMode(RenewalMode value) {
+    state = state.copyWith(renewalMode: value, clearError: true);
+  }
+
   void setNextPaymentDate(DateTime value) {
     state = state.copyWith(
       nextPaymentDate: DateTime(value.year, value.month, value.day),
@@ -206,7 +216,9 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
     final selectedPaymentDate = SubscriptionSchedule.dateOnly(
       state.nextPaymentDate,
     );
-    final isOverdue = selectedPaymentDate.isBefore(today);
+    final isOverdue =
+        state.renewalMode == RenewalMode.automatic &&
+        selectedPaymentDate.isBefore(today);
     final initial = _initialSubscription;
     var subscription = Subscription(
       id: initial?.id ?? _uuid.v4(),
@@ -215,8 +227,10 @@ class AddSubscriptionController extends StateNotifier<AddSubscriptionState> {
       category: state.category,
       priceInCents: priceInCents,
       billingCycle: state.billingCycle,
+      renewalMode: state.renewalMode,
       startDate:
-          initial?.startDate ?? (isOverdue ? selectedPaymentDate : today),
+          initial?.startDate ??
+          (selectedPaymentDate.isBefore(today) ? selectedPaymentDate : today),
       nextPaymentDate: selectedPaymentDate,
       billingAnchorDay: selectedPaymentDate.day,
       status: initial?.status ?? SubscriptionStatus.active,

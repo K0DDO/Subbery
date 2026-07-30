@@ -402,7 +402,9 @@ class _SubscriptionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '/ ${subscription.billingCycle.shortLabel}',
+                  subscription.renewalMode == RenewalMode.manual
+                      ? 'единично'
+                      : '/ ${subscription.billingCycle.shortLabel}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),

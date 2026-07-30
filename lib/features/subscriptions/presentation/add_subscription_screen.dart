@@ -178,7 +178,42 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                const _SectionLabel(title: 'Стоимость и период'),
+                const _SectionLabel(
+                  title: 'Тип оплаты',
+                  caption: 'Автопродление или одна оплата по вашему решению',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                GlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<RenewalMode>(
+                      segments: const <ButtonSegment<RenewalMode>>[
+                        ButtonSegment(
+                          value: RenewalMode.automatic,
+                          label: Text('Автоматическая'),
+                          icon: Icon(Icons.autorenew_rounded),
+                        ),
+                        ButtonSegment(
+                          value: RenewalMode.manual,
+                          label: Text('Единичная'),
+                          icon: Icon(Icons.looks_one_rounded),
+                        ),
+                      ],
+                      selected: <RenewalMode>{state.renewalMode},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (selection) {
+                        controller.setRenewalMode(selection.first);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionLabel(
+                  title: state.renewalMode == RenewalMode.manual
+                      ? 'Ожидаемая стоимость и период'
+                      : 'Стоимость и период',
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 GlassCard(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -191,10 +226,12 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                         ),
                         textInputAction: TextInputAction.done,
                         onChanged: controller.setPrice,
-                        decoration: const InputDecoration(
-                          labelText: 'Стоимость',
+                        decoration: InputDecoration(
+                          labelText: state.renewalMode == RenewalMode.manual
+                              ? 'Стоимость этой оплаты'
+                              : 'Стоимость',
                           hintText: '799',
-                          prefixIcon: Icon(Icons.payments_rounded),
+                          prefixIcon: const Icon(Icons.payments_rounded),
                           suffixText: '₽',
                         ),
                       ),
@@ -252,7 +289,14 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                const _SectionLabel(title: 'Следующее списание'),
+                _SectionLabel(
+                  title: state.renewalMode == RenewalMode.manual
+                      ? 'Планируемая оплата'
+                      : 'Следующее списание',
+                  caption: state.renewalMode == RenewalMode.manual
+                      ? 'После оплаты автопродления не будет'
+                      : null,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 GlassCard(
                   padding: EdgeInsets.zero,
@@ -279,7 +323,9 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'Дата платежа',
+                                state.renewalMode == RenewalMode.manual
+                                    ? 'Дата единичной оплаты'
+                                    : 'Дата платежа',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               const SizedBox(height: 2),

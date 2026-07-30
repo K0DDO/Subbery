@@ -69,6 +69,18 @@ class $SubscriptionsTable extends Subscriptions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _renewalModeMeta = const VerificationMeta(
+    'renewalMode',
+  );
+  @override
+  late final GeneratedColumn<String> renewalMode = GeneratedColumn<String>(
+    'renewal_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('automatic'),
+  );
   static const VerificationMeta _startDateMeta = const VerificationMeta(
     'startDate',
   );
@@ -156,6 +168,7 @@ class $SubscriptionsTable extends Subscriptions
     category,
     priceInCents,
     billingCycle,
+    renewalMode,
     startDate,
     nextPaymentDate,
     billingAnchorDay,
@@ -224,6 +237,15 @@ class $SubscriptionsTable extends Subscriptions
       );
     } else if (isInserting) {
       context.missing(_billingCycleMeta);
+    }
+    if (data.containsKey('renewal_mode')) {
+      context.handle(
+        _renewalModeMeta,
+        renewalMode.isAcceptableOrUnknown(
+          data['renewal_mode']!,
+          _renewalModeMeta,
+        ),
+      );
     }
     if (data.containsKey('start_date')) {
       context.handle(
@@ -318,6 +340,10 @@ class $SubscriptionsTable extends Subscriptions
         DriftSqlType.string,
         data['${effectivePrefix}billing_cycle'],
       )!,
+      renewalMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}renewal_mode'],
+      )!,
       startDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_date'],
@@ -363,6 +389,7 @@ class SubscriptionRecord extends DataClass
   final String category;
   final int priceInCents;
   final String billingCycle;
+  final String renewalMode;
   final DateTime startDate;
   final DateTime nextPaymentDate;
   final int? billingAnchorDay;
@@ -377,6 +404,7 @@ class SubscriptionRecord extends DataClass
     required this.category,
     required this.priceInCents,
     required this.billingCycle,
+    required this.renewalMode,
     required this.startDate,
     required this.nextPaymentDate,
     this.billingAnchorDay,
@@ -396,6 +424,7 @@ class SubscriptionRecord extends DataClass
     map['category'] = Variable<String>(category);
     map['price_in_cents'] = Variable<int>(priceInCents);
     map['billing_cycle'] = Variable<String>(billingCycle);
+    map['renewal_mode'] = Variable<String>(renewalMode);
     map['start_date'] = Variable<DateTime>(startDate);
     map['next_payment_date'] = Variable<DateTime>(nextPaymentDate);
     if (!nullToAbsent || billingAnchorDay != null) {
@@ -418,6 +447,7 @@ class SubscriptionRecord extends DataClass
       category: Value(category),
       priceInCents: Value(priceInCents),
       billingCycle: Value(billingCycle),
+      renewalMode: Value(renewalMode),
       startDate: Value(startDate),
       nextPaymentDate: Value(nextPaymentDate),
       billingAnchorDay: billingAnchorDay == null && nullToAbsent
@@ -444,6 +474,7 @@ class SubscriptionRecord extends DataClass
       category: serializer.fromJson<String>(json['category']),
       priceInCents: serializer.fromJson<int>(json['priceInCents']),
       billingCycle: serializer.fromJson<String>(json['billingCycle']),
+      renewalMode: serializer.fromJson<String>(json['renewalMode']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       nextPaymentDate: serializer.fromJson<DateTime>(json['nextPaymentDate']),
       billingAnchorDay: serializer.fromJson<int?>(json['billingAnchorDay']),
@@ -463,6 +494,7 @@ class SubscriptionRecord extends DataClass
       'category': serializer.toJson<String>(category),
       'priceInCents': serializer.toJson<int>(priceInCents),
       'billingCycle': serializer.toJson<String>(billingCycle),
+      'renewalMode': serializer.toJson<String>(renewalMode),
       'startDate': serializer.toJson<DateTime>(startDate),
       'nextPaymentDate': serializer.toJson<DateTime>(nextPaymentDate),
       'billingAnchorDay': serializer.toJson<int?>(billingAnchorDay),
@@ -480,6 +512,7 @@ class SubscriptionRecord extends DataClass
     String? category,
     int? priceInCents,
     String? billingCycle,
+    String? renewalMode,
     DateTime? startDate,
     DateTime? nextPaymentDate,
     Value<int?> billingAnchorDay = const Value.absent(),
@@ -494,6 +527,7 @@ class SubscriptionRecord extends DataClass
     category: category ?? this.category,
     priceInCents: priceInCents ?? this.priceInCents,
     billingCycle: billingCycle ?? this.billingCycle,
+    renewalMode: renewalMode ?? this.renewalMode,
     startDate: startDate ?? this.startDate,
     nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
     billingAnchorDay: billingAnchorDay.present
@@ -516,6 +550,9 @@ class SubscriptionRecord extends DataClass
       billingCycle: data.billingCycle.present
           ? data.billingCycle.value
           : this.billingCycle,
+      renewalMode: data.renewalMode.present
+          ? data.renewalMode.value
+          : this.renewalMode,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       nextPaymentDate: data.nextPaymentDate.present
           ? data.nextPaymentDate.value
@@ -543,6 +580,7 @@ class SubscriptionRecord extends DataClass
           ..write('category: $category, ')
           ..write('priceInCents: $priceInCents, ')
           ..write('billingCycle: $billingCycle, ')
+          ..write('renewalMode: $renewalMode, ')
           ..write('startDate: $startDate, ')
           ..write('nextPaymentDate: $nextPaymentDate, ')
           ..write('billingAnchorDay: $billingAnchorDay, ')
@@ -562,6 +600,7 @@ class SubscriptionRecord extends DataClass
     category,
     priceInCents,
     billingCycle,
+    renewalMode,
     startDate,
     nextPaymentDate,
     billingAnchorDay,
@@ -580,6 +619,7 @@ class SubscriptionRecord extends DataClass
           other.category == this.category &&
           other.priceInCents == this.priceInCents &&
           other.billingCycle == this.billingCycle &&
+          other.renewalMode == this.renewalMode &&
           other.startDate == this.startDate &&
           other.nextPaymentDate == this.nextPaymentDate &&
           other.billingAnchorDay == this.billingAnchorDay &&
@@ -596,6 +636,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
   final Value<String> category;
   final Value<int> priceInCents;
   final Value<String> billingCycle;
+  final Value<String> renewalMode;
   final Value<DateTime> startDate;
   final Value<DateTime> nextPaymentDate;
   final Value<int?> billingAnchorDay;
@@ -611,6 +652,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     this.category = const Value.absent(),
     this.priceInCents = const Value.absent(),
     this.billingCycle = const Value.absent(),
+    this.renewalMode = const Value.absent(),
     this.startDate = const Value.absent(),
     this.nextPaymentDate = const Value.absent(),
     this.billingAnchorDay = const Value.absent(),
@@ -627,6 +669,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     required String category,
     required int priceInCents,
     required String billingCycle,
+    this.renewalMode = const Value.absent(),
     required DateTime startDate,
     required DateTime nextPaymentDate,
     this.billingAnchorDay = const Value.absent(),
@@ -650,6 +693,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     Expression<String>? category,
     Expression<int>? priceInCents,
     Expression<String>? billingCycle,
+    Expression<String>? renewalMode,
     Expression<DateTime>? startDate,
     Expression<DateTime>? nextPaymentDate,
     Expression<int>? billingAnchorDay,
@@ -666,6 +710,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
       if (category != null) 'category': category,
       if (priceInCents != null) 'price_in_cents': priceInCents,
       if (billingCycle != null) 'billing_cycle': billingCycle,
+      if (renewalMode != null) 'renewal_mode': renewalMode,
       if (startDate != null) 'start_date': startDate,
       if (nextPaymentDate != null) 'next_payment_date': nextPaymentDate,
       if (billingAnchorDay != null) 'billing_anchor_day': billingAnchorDay,
@@ -684,6 +729,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     Value<String>? category,
     Value<int>? priceInCents,
     Value<String>? billingCycle,
+    Value<String>? renewalMode,
     Value<DateTime>? startDate,
     Value<DateTime>? nextPaymentDate,
     Value<int?>? billingAnchorDay,
@@ -700,6 +746,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
       category: category ?? this.category,
       priceInCents: priceInCents ?? this.priceInCents,
       billingCycle: billingCycle ?? this.billingCycle,
+      renewalMode: renewalMode ?? this.renewalMode,
       startDate: startDate ?? this.startDate,
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
       billingAnchorDay: billingAnchorDay ?? this.billingAnchorDay,
@@ -731,6 +778,9 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     }
     if (billingCycle.present) {
       map['billing_cycle'] = Variable<String>(billingCycle.value);
+    }
+    if (renewalMode.present) {
+      map['renewal_mode'] = Variable<String>(renewalMode.value);
     }
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
@@ -768,6 +818,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
           ..write('category: $category, ')
           ..write('priceInCents: $priceInCents, ')
           ..write('billingCycle: $billingCycle, ')
+          ..write('renewalMode: $renewalMode, ')
           ..write('startDate: $startDate, ')
           ..write('nextPaymentDate: $nextPaymentDate, ')
           ..write('billingAnchorDay: $billingAnchorDay, ')
@@ -1137,6 +1188,7 @@ typedef $$SubscriptionsTableCreateCompanionBuilder =
       required String category,
       required int priceInCents,
       required String billingCycle,
+      Value<String> renewalMode,
       required DateTime startDate,
       required DateTime nextPaymentDate,
       Value<int?> billingAnchorDay,
@@ -1154,6 +1206,7 @@ typedef $$SubscriptionsTableUpdateCompanionBuilder =
       Value<String> category,
       Value<int> priceInCents,
       Value<String> billingCycle,
+      Value<String> renewalMode,
       Value<DateTime> startDate,
       Value<DateTime> nextPaymentDate,
       Value<int?> billingAnchorDay,
@@ -1228,6 +1281,11 @@ class $$SubscriptionsTableFilterComposer
 
   ColumnFilters<String> get billingCycle => $composableBuilder(
     column: $table.billingCycle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get renewalMode => $composableBuilder(
+    column: $table.renewalMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1331,6 +1389,11 @@ class $$SubscriptionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get renewalMode => $composableBuilder(
+    column: $table.renewalMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get startDate => $composableBuilder(
     column: $table.startDate,
     builder: (column) => ColumnOrderings(column),
@@ -1395,6 +1458,11 @@ class $$SubscriptionsTableAnnotationComposer
 
   GeneratedColumn<String> get billingCycle => $composableBuilder(
     column: $table.billingCycle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get renewalMode => $composableBuilder(
+    column: $table.renewalMode,
     builder: (column) => column,
   );
 
@@ -1487,6 +1555,7 @@ class $$SubscriptionsTableTableManager
                 Value<String> category = const Value.absent(),
                 Value<int> priceInCents = const Value.absent(),
                 Value<String> billingCycle = const Value.absent(),
+                Value<String> renewalMode = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
                 Value<DateTime> nextPaymentDate = const Value.absent(),
                 Value<int?> billingAnchorDay = const Value.absent(),
@@ -1502,6 +1571,7 @@ class $$SubscriptionsTableTableManager
                 category: category,
                 priceInCents: priceInCents,
                 billingCycle: billingCycle,
+                renewalMode: renewalMode,
                 startDate: startDate,
                 nextPaymentDate: nextPaymentDate,
                 billingAnchorDay: billingAnchorDay,
@@ -1519,6 +1589,7 @@ class $$SubscriptionsTableTableManager
                 required String category,
                 required int priceInCents,
                 required String billingCycle,
+                Value<String> renewalMode = const Value.absent(),
                 required DateTime startDate,
                 required DateTime nextPaymentDate,
                 Value<int?> billingAnchorDay = const Value.absent(),
@@ -1534,6 +1605,7 @@ class $$SubscriptionsTableTableManager
                 category: category,
                 priceInCents: priceInCents,
                 billingCycle: billingCycle,
+                renewalMode: renewalMode,
                 startDate: startDate,
                 nextPaymentDate: nextPaymentDate,
                 billingAnchorDay: billingAnchorDay,

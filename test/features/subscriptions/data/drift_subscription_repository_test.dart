@@ -48,6 +48,31 @@ void main() {
     expect(await repository.getSubscription('netflix'), isNull);
   });
 
+  test(
+    'persists manual renewal mode and defaults the schema to automatic',
+    () async {
+      final manual = _subscription(
+        id: 'manual',
+        name: 'Manual',
+        nextPaymentDate: DateTime(2026, 9, 1),
+      ).copyWith(renewalMode: RenewalMode.manual);
+
+      await repository.createSubscription(manual);
+
+      expect(
+        (await repository.getSubscription(manual.id))?.renewalMode,
+        RenewalMode.manual,
+      );
+      final columns = await database
+          .customSelect('PRAGMA table_info(subscriptions)')
+          .get();
+      final renewalColumn = columns.singleWhere(
+        (row) => row.read<String>('name') == 'renewal_mode',
+      );
+      expect(renewalColumn.read<String>('dflt_value'), "'automatic'");
+    },
+  );
+
   test('records payments and keeps total spent consistent', () async {
     final netflix = _subscription(
       id: 'netflix',

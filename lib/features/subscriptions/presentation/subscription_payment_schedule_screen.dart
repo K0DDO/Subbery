@@ -61,11 +61,15 @@ class _ScheduleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dates = SubscriptionSchedule.upcomingDates(
-      subscription,
-      DateTime.now(),
-      count: subscription.billingCycle == BillingCycle.monthly ? 12 : 5,
-    );
+    final dates =
+        subscription.renewalMode == RenewalMode.manual &&
+            subscription.status != SubscriptionStatus.active
+        ? const <DateTime>[]
+        : SubscriptionSchedule.upcomingDates(
+            subscription,
+            DateTime.now(),
+            count: subscription.billingCycle == BillingCycle.monthly ? 12 : 5,
+          );
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -99,7 +103,7 @@ class _ScheduleContent extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         '${AppFormatters.money(subscription.priceInCents)}'
-                        ' / ${subscription.billingCycle.shortLabel}',
+                        '${subscription.renewalMode == RenewalMode.manual ? ' · единично' : ' / ${subscription.billingCycle.shortLabel}'}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -112,23 +116,34 @@ class _ScheduleContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'Предстоящие платежи',
+            subscription.renewalMode == RenewalMode.manual
+                ? 'Запланированная оплата'
+                : 'Предстоящие платежи',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: AppSpacing.sm),
           GlassCard(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Column(
-              children: <Widget>[
-                for (var index = 0; index < dates.length; index++)
-                  _ScheduleRow(
-                    date: dates[index],
-                    amountInCents: subscription.priceInCents,
-                    isFirst: index == 0,
-                    isLast: index == dates.length - 1,
+            child: dates.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    child: Text(
+                      'Новая оплата пока не запланирована. '
+                      'Возобновите подписку, когда она снова понадобится.',
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : Column(
+                    children: <Widget>[
+                      for (var index = 0; index < dates.length; index++)
+                        _ScheduleRow(
+                          date: dates[index],
+                          amountInCents: subscription.priceInCents,
+                          isFirst: index == 0,
+                          isLast: index == dates.length - 1,
+                        ),
+                    ],
                   ),
-              ],
-            ),
           ),
         ],
       ),

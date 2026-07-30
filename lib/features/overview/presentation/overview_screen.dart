@@ -55,12 +55,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           Expanded(
             child: subscriptions.when(
               data: (items) => payments.when(
-                data: (paymentItems) => _buildContent(
-                  items,
-                  paymentItems,
-                  resetRevision,
-                  userName,
-                ),
+                data: (paymentItems) =>
+                    _buildContent(items, paymentItems, resetRevision, userName),
                 loading: _LoadingOverview.new,
                 error: (error, stackTrace) => const _OverviewError(),
               ),
@@ -629,36 +625,24 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    required this.subtitle,
-    this.action,
-  });
+  const _SectionTitle({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
-  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        ?action,
       ],
     );
   }

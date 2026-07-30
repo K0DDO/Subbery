@@ -49,6 +49,10 @@ class SubscriptionDetailsController extends StateNotifier<AsyncValue<void>> {
       if (subscription == null) {
         throw StateError('Subscription $_subscriptionId does not exist.');
       }
+      if (subscription.renewalMode == RenewalMode.manual &&
+          subscription.status != SubscriptionStatus.active) {
+        throw StateError('Manual subscription has no active planned payment.');
+      }
       final paymentDate = SubscriptionSchedule.dateOnly(date);
       final currentDueDate = SubscriptionSchedule.normalizedNextPayment(
         subscription,
@@ -62,19 +66,27 @@ class SubscriptionDetailsController extends StateNotifier<AsyncValue<void>> {
         );
       }
 
-      final anchorDay =
-          subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
-      final updatedNextPayment = paymentDate == currentDueDate
-          ? SubscriptionSchedule.nextAfter(
-              currentDueDate,
-              subscription.billingCycle,
-              anchorDay: anchorDay,
-            )
-          : currentDueDate;
-      final updatedSubscription = subscription.copyWith(
-        nextPaymentDate: updatedNextPayment,
-        billingAnchorDay: anchorDay,
-      );
+      final updatedSubscription = switch (subscription.renewalMode) {
+        RenewalMode.manual => subscription.copyWith(
+          priceInCents: amountInCents,
+          status: SubscriptionStatus.expired,
+        ),
+        RenewalMode.automatic => () {
+          final anchorDay =
+              subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
+          final updatedNextPayment = paymentDate == currentDueDate
+              ? SubscriptionSchedule.nextAfter(
+                  currentDueDate,
+                  subscription.billingCycle,
+                  anchorDay: anchorDay,
+                )
+              : currentDueDate;
+          return subscription.copyWith(
+            nextPaymentDate: updatedNextPayment,
+            billingAnchorDay: anchorDay,
+          );
+        }(),
+      };
 
       await _repository.addPayment(
         Payment(
@@ -95,6 +107,27 @@ class SubscriptionDetailsController extends StateNotifier<AsyncValue<void>> {
     return _run(
       () =>
           _repository.updateSubscription(subscription.copyWith(status: status)),
+    );
+  }
+
+  Future<bool> planManualPayment({
+    required Subscription subscription,
+    required int amountInCents,
+    required DateTime date,
+  }) {
+    if (subscription.renewalMode != RenewalMode.manual || amountInCents <= 0) {
+      return Future<bool>.value(false);
+    }
+    final plannedDate = SubscriptionSchedule.dateOnly(date);
+    return _run(
+      () => _repository.updateSubscription(
+        subscription.copyWith(
+          priceInCents: amountInCents,
+          nextPaymentDate: plannedDate,
+          billingAnchorDay: plannedDate.day,
+          status: SubscriptionStatus.active,
+        ),
+      ),
     );
   }
 

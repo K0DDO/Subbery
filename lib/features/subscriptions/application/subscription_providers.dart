@@ -62,7 +62,10 @@ final allPaymentsProvider = StreamProvider<List<Payment>>((ref) {
 });
 
 Subscription _normalizeSchedule(Subscription subscription, DateTime now) {
-  if (subscription.status != SubscriptionStatus.active) return subscription;
+  if (subscription.status != SubscriptionStatus.active ||
+      subscription.renewalMode == RenewalMode.manual) {
+    return subscription;
+  }
   final nextPayment = SubscriptionSchedule.normalizedNextPayment(
     subscription,
     now,

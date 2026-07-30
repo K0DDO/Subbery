@@ -81,6 +81,45 @@ void main() {
     expect(await repository.getPayments(subscription.id), isEmpty);
   });
 
+  test('manual payment finishes without scheduling another cycle', () async {
+    final manual = subscription.copyWith(renewalMode: RenewalMode.manual);
+    await repository.updateSubscription(manual);
+
+    final saved = await controller.recordPayment(
+      amountInCents: 99900,
+      date: DateTime(2026, 8, 3),
+    );
+
+    expect(saved, isTrue);
+    final updated = await repository.getSubscription(subscription.id);
+    expect(updated?.status, SubscriptionStatus.expired);
+    expect(updated?.priceInCents, 99900);
+    expect(updated?.nextPaymentDate, DateTime(2026, 8, 3));
+  });
+
+  test('reactivates manual subscription with a new amount and date', () async {
+    final expired = subscription.copyWith(
+      renewalMode: RenewalMode.manual,
+      status: SubscriptionStatus.expired,
+    );
+    await repository.updateSubscription(expired);
+
+    expect(
+      await controller.planManualPayment(
+        subscription: expired,
+        amountInCents: 34900,
+        date: DateTime(2026, 10, 5),
+      ),
+      isTrue,
+    );
+
+    final updated = await repository.getSubscription(subscription.id);
+    expect(updated?.status, SubscriptionStatus.active);
+    expect(updated?.priceInCents, 34900);
+    expect(updated?.nextPaymentDate, DateTime(2026, 10, 5));
+    expect(await repository.getPayments(subscription.id), isEmpty);
+  });
+
   test('changes status and deletes subscription', () async {
     expect(
       await controller.changeStatus(subscription, SubscriptionStatus.paused),

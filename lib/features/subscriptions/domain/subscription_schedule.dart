@@ -9,6 +9,9 @@ abstract final class SubscriptionSchedule {
     Subscription subscription,
     DateTime now,
   ) {
+    if (subscription.renewalMode == RenewalMode.manual) {
+      return dateOnly(subscription.nextPaymentDate);
+    }
     final today = dateOnly(now);
     var candidate = dateOnly(subscription.nextPaymentDate);
     final anchorDay =
@@ -30,6 +33,9 @@ abstract final class SubscriptionSchedule {
     int count = 12,
   }) {
     if (count <= 0) return const <DateTime>[];
+    if (subscription.renewalMode == RenewalMode.manual) {
+      return <DateTime>[dateOnly(subscription.nextPaymentDate)];
+    }
     final anchorDay =
         subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
     var candidate = normalizedNextPayment(subscription, now);

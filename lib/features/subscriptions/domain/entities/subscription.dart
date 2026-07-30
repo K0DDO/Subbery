@@ -13,6 +13,8 @@ enum SubscriptionCategory {
 
 enum BillingCycle { monthly, yearly }
 
+enum RenewalMode { automatic, manual }
+
 enum SubscriptionStatus { active, paused, cancelled, expired }
 
 class Subscription extends Equatable {
@@ -27,6 +29,7 @@ class Subscription extends Equatable {
     required this.status,
     required this.totalSpentInCents,
     required this.reminderEnabled,
+    this.renewalMode = RenewalMode.automatic,
     this.billingAnchorDay,
     this.logo,
     this.notes,
@@ -43,6 +46,7 @@ class Subscription extends Equatable {
   final SubscriptionStatus status;
   final int totalSpentInCents;
   final bool reminderEnabled;
+  final RenewalMode renewalMode;
   final int? billingAnchorDay;
   final String? notes;
 
@@ -62,6 +66,7 @@ class Subscription extends Equatable {
     SubscriptionStatus? status,
     int? totalSpentInCents,
     bool? reminderEnabled,
+    RenewalMode? renewalMode,
     int? billingAnchorDay,
     String? notes,
     bool clearNotes = false,
@@ -78,6 +83,7 @@ class Subscription extends Equatable {
       status: status ?? this.status,
       totalSpentInCents: totalSpentInCents ?? this.totalSpentInCents,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      renewalMode: renewalMode ?? this.renewalMode,
       billingAnchorDay: billingAnchorDay ?? this.billingAnchorDay,
       notes: clearNotes ? null : notes ?? this.notes,
     );
@@ -96,6 +102,7 @@ class Subscription extends Equatable {
     status,
     totalSpentInCents,
     reminderEnabled,
+    renewalMode,
     billingAnchorDay,
     notes,
   ];

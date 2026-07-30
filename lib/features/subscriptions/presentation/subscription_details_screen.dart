@@ -36,6 +36,27 @@ class SubscriptionDetailsScreen extends ConsumerWidget {
       subscriptionDetailsControllerProvider(subscriptionId).notifier,
     );
 
+    if (action == _StatusAction.resume &&
+        subscription.renewalMode == RenewalMode.manual) {
+      final draft = await showModalBottomSheet<_PaymentDraft>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) =>
+            _AddPaymentSheet(subscription: subscription, isPlanning: true),
+      );
+      if (draft == null || !context.mounted) return;
+      final planned = await controller.planManualPayment(
+        subscription: subscription,
+        amountInCents: draft.amountInCents,
+        date: draft.date,
+      );
+      if (!planned && context.mounted) {
+        _showError(context, 'Не удалось запланировать оплату');
+      }
+      return;
+    }
+
     final status = switch (action) {
       _StatusAction.pause => SubscriptionStatus.paused,
       _StatusAction.resume => SubscriptionStatus.active,
@@ -222,7 +243,9 @@ class _DetailsContent extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       TextSpan(
-                        text: ' / ${subscription.billingCycle.shortLabel}',
+                        text: subscription.renewalMode == RenewalMode.manual
+                            ? ' · единичная оплата'
+                            : ' / ${subscription.billingCycle.shortLabel}',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -236,6 +259,15 @@ class _DetailsContent extends StatelessWidget {
                   enabled: !isBusy,
                   onSelected: onStatusAction,
                 ),
+                if (subscription.renewalMode == RenewalMode.manual) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Без автоматического продления',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.sm),
                 TextButton.icon(
                   onPressed: isBusy
@@ -258,8 +290,14 @@ class _DetailsContent extends StatelessWidget {
               Expanded(
                 child: _MetricCard(
                   icon: Icons.event_rounded,
-                  label: 'Следующий',
-                  value: AppFormatters.shortDate(subscription.nextPaymentDate),
+                  label: subscription.renewalMode == RenewalMode.manual
+                      ? 'Запланировано'
+                      : 'Следующий',
+                  value:
+                      subscription.renewalMode == RenewalMode.manual &&
+                          subscription.status != SubscriptionStatus.active
+                      ? 'Нет активной оплаты'
+                      : AppFormatters.shortDate(subscription.nextPaymentDate),
                   color: AppColors.coral,
                   onTap: () => context.pushNamed(
                     'subscription-payment-schedule',
@@ -319,7 +357,12 @@ class _DetailsContent extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
-                onPressed: isBusy ? null : onAddPayment,
+                onPressed:
+                    isBusy ||
+                        (subscription.renewalMode == RenewalMode.manual &&
+                            subscription.status != SubscriptionStatus.active)
+                    ? null
+                    : onAddPayment,
                 icon: const Icon(Icons.add_rounded),
                 label: const Text('Добавить'),
               ),
@@ -596,9 +639,10 @@ class _PaymentDraft {
 }
 
 class _AddPaymentSheet extends StatefulWidget {
-  const _AddPaymentSheet({required this.subscription});
+  const _AddPaymentSheet({required this.subscription, this.isPlanning = false});
 
   final Subscription subscription;
+  final bool isPlanning;
 
   @override
   State<_AddPaymentSheet> createState() => _AddPaymentSheetState();
@@ -618,11 +662,15 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
       ),
     );
     final today = SubscriptionSchedule.dateOnly(DateTime.now());
-    final nextPayment = SubscriptionSchedule.normalizedNextPayment(
-      widget.subscription,
-      today,
-    );
-    _date = today.isAfter(nextPayment) ? nextPayment : today;
+    if (widget.isPlanning) {
+      _date = today;
+    } else {
+      final nextPayment = SubscriptionSchedule.normalizedNextPayment(
+        widget.subscription,
+        today,
+      );
+      _date = today.isAfter(nextPayment) ? nextPayment : today;
+    }
   }
 
   @override
@@ -632,10 +680,12 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
   }
 
   Future<void> _pickDate() async {
-    final lastDate = SubscriptionSchedule.normalizedNextPayment(
-      widget.subscription,
-      DateTime.now(),
-    );
+    final lastDate = widget.isPlanning
+        ? DateTime.now().add(const Duration(days: 3650))
+        : SubscriptionSchedule.normalizedNextPayment(
+            widget.subscription,
+            DateTime.now(),
+          );
     final selected = await showDatePicker(
       context: context,
       initialDate: _date,
@@ -695,7 +745,9 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'Добавить платёж',
+                widget.isPlanning
+                    ? 'Новая единичная оплата'
+                    : 'Добавить платёж',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -725,7 +777,7 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
               ),
               const SizedBox(height: AppSpacing.md),
               GlassButton(
-                label: 'Сохранить платёж',
+                label: widget.isPlanning ? 'Запланировать' : 'Сохранить платёж',
                 icon: Icons.check_rounded,
                 onPressed: _submit,
               ),

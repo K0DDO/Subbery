@@ -34,39 +34,36 @@ void main() {
   });
 
   test('groups equal dates and keeps farthest arcs outside', () {
-    final groups = buildPeriodArcGroups(
-      <PaymentOccurrence>[
-        PaymentOccurrence(
-          subscription: _subscription('a'),
-          date: DateTime(2026, 8, 1),
-        ),
-        PaymentOccurrence(
-          subscription: _subscription('b'),
-          date: DateTime(2026, 8, 1),
-        ),
-        PaymentOccurrence(
-          subscription: _subscription('c'),
-          date: DateTime(2026, 8, 10),
-        ),
-        PaymentOccurrence(
-          subscription: _subscription('d'),
-          date: DateTime(2026, 8, 20),
-        ),
-        PaymentOccurrence(
-          subscription: _subscription('e'),
-          date: DateTime(2026, 9, 1),
-        ),
-        PaymentOccurrence(
-          subscription: _subscription('f'),
-          date: DateTime(2026, 9, 15),
-        ),
-        PaymentOccurrence(
-          subscription: _subscription('g'),
-          date: DateTime(2026, 10, 1),
-        ),
-      ],
-      DateTime(2026, 7, 29),
-    );
+    final groups = buildPeriodArcGroups(<PaymentOccurrence>[
+      PaymentOccurrence(
+        subscription: _subscription('a'),
+        date: DateTime(2026, 8, 1),
+      ),
+      PaymentOccurrence(
+        subscription: _subscription('b'),
+        date: DateTime(2026, 8, 1),
+      ),
+      PaymentOccurrence(
+        subscription: _subscription('c'),
+        date: DateTime(2026, 8, 10),
+      ),
+      PaymentOccurrence(
+        subscription: _subscription('d'),
+        date: DateTime(2026, 8, 20),
+      ),
+      PaymentOccurrence(
+        subscription: _subscription('e'),
+        date: DateTime(2026, 9, 1),
+      ),
+      PaymentOccurrence(
+        subscription: _subscription('f'),
+        date: DateTime(2026, 9, 15),
+      ),
+      PaymentOccurrence(
+        subscription: _subscription('g'),
+        date: DateTime(2026, 10, 1),
+      ),
+    ], DateTime(2026, 7, 29));
 
     expect(groups, hasLength(4));
     expect(groups.map((group) => group.date).toList(), <DateTime>[

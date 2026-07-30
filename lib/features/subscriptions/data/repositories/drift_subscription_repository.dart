@@ -135,6 +135,7 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
       category: subscription.category.name,
       priceInCents: subscription.priceInCents,
       billingCycle: subscription.billingCycle.name,
+      renewalMode: Value(subscription.renewalMode.name),
       startDate: subscription.startDate,
       nextPaymentDate: subscription.nextPaymentDate,
       billingAnchorDay: Value(
@@ -162,6 +163,11 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
         BillingCycle.values,
         record.billingCycle,
         BillingCycle.monthly,
+      ),
+      renewalMode: _enumByName(
+        RenewalMode.values,
+        record.renewalMode,
+        RenewalMode.automatic,
       ),
       startDate: record.startDate,
       nextPaymentDate: record.nextPaymentDate,

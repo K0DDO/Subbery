@@ -43,11 +43,7 @@ class AnalyticsMetrics {
         .toList(growable: false);
     final recurringMonthly = active.fold<int>(
       0,
-      (total, item) =>
-          total +
-          (item.billingCycle == BillingCycle.monthly
-              ? item.priceInCents
-              : (item.priceInCents / 12).round()),
+      (total, item) => total + _monthlyEstimate(item, now),
     );
     final startOfMonth = DateTime(now.year, now.month);
     final startOfNextMonth = _addMonths(startOfMonth, 1);
@@ -69,9 +65,8 @@ class AnalyticsMetrics {
 
     final categoryTotals = <SubscriptionCategory, int>{};
     for (final subscription in active) {
-      final normalized = subscription.billingCycle == BillingCycle.monthly
-          ? subscription.priceInCents
-          : (subscription.priceInCents / 12).round();
+      final normalized = _monthlyEstimate(subscription, now);
+      if (normalized == 0) continue;
       categoryTotals.update(
         subscription.category,
         (value) => value + normalized,
@@ -118,6 +113,18 @@ class AnalyticsMetrics {
   final List<MonthlySpendPoint> monthlySpending;
   final List<CategorySpend> categorySpending;
   final List<AnalyticsInsight> insights;
+
+  static int _monthlyEstimate(Subscription subscription, DateTime now) {
+    if (subscription.renewalMode == RenewalMode.manual) {
+      return subscription.nextPaymentDate.year == now.year &&
+              subscription.nextPaymentDate.month == now.month
+          ? subscription.priceInCents
+          : 0;
+    }
+    return subscription.billingCycle == BillingCycle.monthly
+        ? subscription.priceInCents
+        : (subscription.priceInCents / 12).round();
+  }
 
   static List<MonthlySpendPoint> _sixMonthSpending(
     List<Payment> payments,

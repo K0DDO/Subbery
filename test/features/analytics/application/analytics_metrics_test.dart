@@ -70,6 +70,35 @@ void main() {
       isTrue,
     );
   });
+
+  test('counts a manual plan only in its explicitly scheduled month', () {
+    final manual =
+        _subscription(
+          id: 'manual',
+          category: SubscriptionCategory.work,
+          priceInCents: 50000,
+          startDate: DateTime(2026, 1, 1),
+        ).copyWith(
+          renewalMode: RenewalMode.manual,
+          nextPaymentDate: DateTime(2026, 8, 15),
+        );
+
+    final july = AnalyticsMetrics.calculate(
+      subscriptions: <Subscription>[manual],
+      payments: const <Payment>[],
+      now: DateTime(2026, 7, 29),
+    );
+    final august = AnalyticsMetrics.calculate(
+      subscriptions: <Subscription>[manual],
+      payments: const <Payment>[],
+      now: DateTime(2026, 8, 1),
+    );
+
+    expect(july.thisMonthInCents, 0);
+    expect(july.categorySpending, isEmpty);
+    expect(august.thisMonthInCents, 50000);
+    expect(august.categorySpending.single.amountInCents, 50000);
+  });
 }
 
 Subscription _subscription({

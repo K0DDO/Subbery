@@ -119,6 +119,28 @@ void main() {
       DateTime(2026, 10, 2),
     );
   });
+
+  test('includes a manual subscription once without annualizing it', () {
+    final manual = _subscription(
+      id: 'manual',
+      priceInCents: 49900,
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 7, 31),
+    ).copyWith(renewalMode: RenewalMode.manual);
+
+    final metrics = OverviewMetrics.calculate(
+      subscriptions: <Subscription>[manual],
+      payments: const <Payment>[],
+      now: DateTime(2026, 7, 29),
+    );
+
+    expect(metrics.plannedThisMonthInCents, 49900);
+    expect(metrics.averageMonthlyPlannedInCents, 0);
+    expect(metrics.dueThisMonthCount, 1);
+    expect(metrics.upcomingPayments, hasLength(1));
+    expect(metrics.yearOccurrences, hasLength(1));
+    expect(metrics.yearOccurrences.single.date, DateTime(2026, 7, 31));
+  });
 }
 
 Subscription _subscription({
