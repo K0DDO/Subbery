@@ -70,6 +70,7 @@ class BerryCalendarRing extends StatefulWidget {
     required this.selectedMonth,
     required this.onMonthSelected,
     required this.now,
+    this.periodArcOccurrences,
     this.showPeriodArcs = false,
     this.showCalendarLogos = true,
     super.key,
@@ -80,6 +81,7 @@ class BerryCalendarRing extends StatefulWidget {
   final int selectedMonth;
   final ValueChanged<int> onMonthSelected;
   final DateTime now;
+  final List<PaymentOccurrence>? periodArcOccurrences;
   final bool showPeriodArcs;
   final bool showCalendarLogos;
 
@@ -107,6 +109,9 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     'декабрь',
   ];
 
+  List<PaymentOccurrence> get _periodArcOccurrences =>
+      widget.periodArcOccurrences ?? widget.occurrences;
+
   @override
   void initState() {
     super.initState();
@@ -124,7 +129,11 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   @override
   void didUpdateWidget(covariant BerryCalendarRing oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_sameOccurrences(oldWidget.occurrences, widget.occurrences)) {
+    if (!_sameOccurrences(oldWidget.occurrences, widget.occurrences) ||
+        !_sameOccurrences(
+          oldWidget.periodArcOccurrences ?? oldWidget.occurrences,
+          _periodArcOccurrences,
+        )) {
       _animationController
         ..reset()
         ..forward();
@@ -136,7 +145,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     final today = DateTime(widget.now.year, widget.now.month, widget.now.day);
     final hasSoonPayment =
         widget.showPeriodArcs &&
-        widget.occurrences.any((occurrence) {
+        _periodArcOccurrences.any((occurrence) {
           final days = occurrence.date.difference(today).inDays;
           return days >= 0 && days <= 3;
         });
@@ -198,6 +207,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                           painter: _CalendarRingPainter(
                             year: widget.year,
                             occurrences: widget.occurrences,
+                            periodArcOccurrences: _periodArcOccurrences,
                             selectedMonth: widget.selectedMonth,
                             now: widget.now,
                             showPeriodArcs: widget.showPeriodArcs,
@@ -339,7 +349,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   }
 
   List<Widget> _buildPeriodIcons(double size, double progress, double pulse) {
-    final periods = buildPeriodArcGroups(widget.occurrences, widget.now);
+    final periods = buildPeriodArcGroups(_periodArcOccurrences, widget.now);
     if (periods.isEmpty) return const <Widget>[];
     final center = Offset(size / 2, size / 2);
     final outerRadius = size * 0.335;
@@ -467,6 +477,7 @@ class _CalendarRingPainter extends CustomPainter {
   const _CalendarRingPainter({
     required this.year,
     required this.occurrences,
+    required this.periodArcOccurrences,
     required this.selectedMonth,
     required this.now,
     required this.showPeriodArcs,
@@ -477,6 +488,7 @@ class _CalendarRingPainter extends CustomPainter {
 
   final int year;
   final List<PaymentOccurrence> occurrences;
+  final List<PaymentOccurrence> periodArcOccurrences;
   final int selectedMonth;
   final DateTime now;
   final bool showPeriodArcs;
@@ -571,7 +583,7 @@ class _CalendarRingPainter extends CustomPainter {
     required int daysInYear,
   }) {
     final today = DateTime(now.year, now.month, now.day);
-    final periods = buildPeriodArcGroups(occurrences, now);
+    final periods = buildPeriodArcGroups(periodArcOccurrences, now);
     if (periods.isEmpty) return;
 
     final innermostRadius = size.width * 0.205;
@@ -614,6 +626,7 @@ class _CalendarRingPainter extends CustomPainter {
     return oldDelegate.progress != progress ||
         oldDelegate.selectedMonth != selectedMonth ||
         oldDelegate.occurrences != occurrences ||
+        oldDelegate.periodArcOccurrences != periodArcOccurrences ||
         oldDelegate.now != now ||
         oldDelegate.showPeriodArcs != showPeriodArcs ||
         oldDelegate.textColor != textColor ||

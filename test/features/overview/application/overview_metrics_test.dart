@@ -34,6 +34,7 @@ void main() {
     expect(metrics.plannedThisMonthInCents, 199900);
     expect(metrics.actualThisMonthInCents, 79900);
     expect(metrics.averageMonthlyPlannedInCents, 89900);
+    expect(metrics.dueThisMonthCount, 1);
     expect(metrics.upcomingPayments.first.subscription.id, 'annual');
     expect(metrics.spendingByMonth.last.amountInCents, 79900);
     expect(metrics.upcomingYearOccurrences, hasLength(2));
@@ -72,6 +73,7 @@ void main() {
     );
 
     expect(metrics.plannedThisMonthInCents, 79900);
+    expect(metrics.dueThisMonthCount, 0);
     expect(metrics.upcomingPayments, hasLength(2));
     expect(metrics.upcomingPayments.last.date, DateTime(2027, 7, 29));
     expect(

@@ -147,6 +147,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       year: now.year,
                       now: now,
                       occurrences: metrics.upcomingPayments,
+                      periodArcOccurrences: metrics.upcomingPayments,
+                      counterValue: metrics.dueThisMonthCount,
                       selectedMonth: _selectedMonth,
                       showPeriodArcs: true,
                       showCalendarLogos: false,
@@ -160,6 +162,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       year: now.year,
                       now: now,
                       occurrences: metrics.yearOccurrences,
+                      periodArcOccurrences: metrics.upcomingPayments,
+                      counterValue: metrics.yearOccurrences.length,
                       selectedMonth: _selectedMonth,
                       showPeriodArcs: true,
                       showCalendarLogos: true,
@@ -218,25 +222,6 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _SectionTitle(
-          title: 'Следующие списания',
-          subtitle: 'Сначала самые близкие',
-          action: TextButton(
-            onPressed: () => context.go('/subscriptions'),
-            child: const Text('Все'),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        for (final occurrence in metrics.upcomingPayments.take(4)) ...<Widget>[
-          _UpcomingPaymentCard(
-            occurrence: occurrence,
-            onTap: () {
-              context.push('/subscriptions/${occurrence.subscription.id}');
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        const SizedBox(height: AppSpacing.sm),
         const _SectionTitle(
           title: 'Расходы за 6 месяцев',
           subtitle: 'Фактические платежи',
@@ -301,6 +286,8 @@ class _RingGalleryPage extends StatelessWidget {
     required this.year,
     required this.now,
     required this.occurrences,
+    required this.periodArcOccurrences,
+    required this.counterValue,
     required this.selectedMonth,
     required this.onMonthSelected,
     this.showPeriodArcs = false,
@@ -312,6 +299,8 @@ class _RingGalleryPage extends StatelessWidget {
   final int year;
   final DateTime now;
   final List<PaymentOccurrence> occurrences;
+  final List<PaymentOccurrence> periodArcOccurrences;
+  final int counterValue;
   final int selectedMonth;
   final ValueChanged<int> onMonthSelected;
   final bool showPeriodArcs;
@@ -352,7 +341,7 @@ class _RingGalleryPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
-                  '${occurrences.length}',
+                  '$counterValue',
                   style: Theme.of(
                     context,
                   ).textTheme.labelLarge?.copyWith(color: AppColors.coral),
@@ -365,6 +354,7 @@ class _RingGalleryPage extends StatelessWidget {
           year: year,
           now: now,
           occurrences: occurrences,
+          periodArcOccurrences: periodArcOccurrences,
           selectedMonth: selectedMonth,
           showPeriodArcs: showPeriodArcs,
           showCalendarLogos: showCalendarLogos,
@@ -634,60 +624,6 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _UpcomingPaymentCard extends StatelessWidget {
-  const _UpcomingPaymentCard({required this.occurrence, required this.onTap});
-
-  final PaymentOccurrence occurrence;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final subscription = occurrence.subscription;
-
-    return GlassCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: <Widget>[
-          ServiceLogo(
-            name: subscription.name,
-            logoKey: subscription.logo,
-            category: subscription.category,
-            size: 52,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  subscription.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  AppFormatters.shortDate(occurrence.date),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            AppFormatters.money(subscription.priceInCents),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          const Icon(Icons.chevron_right_rounded, size: 20),
-        ],
-      ),
     );
   }
 }

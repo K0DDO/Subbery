@@ -15,6 +15,7 @@ class OverviewMetrics {
     required this.plannedThisMonthInCents,
     required this.actualThisMonthInCents,
     required this.averageMonthlyPlannedInCents,
+    required this.dueThisMonthCount,
     required this.upcomingPayments,
     required this.spendingByMonth,
     required this.yearOccurrences,
@@ -72,12 +73,22 @@ class OverviewMetrics {
           ..sort((left, right) => left.date.compareTo(right.date));
 
     final spendingByMonth = _lastSixMonths(payments: payments, now: now);
+    final dueThisMonthCount = upcoming
+        .where(
+          (occurrence) =>
+              occurrence.date.year == now.year &&
+              occurrence.date.month == now.month,
+        )
+        .map((occurrence) => occurrence.subscription.id)
+        .toSet()
+        .length;
 
     final yearOccurrences = buildYearOccurrences(activeSubscriptions, now.year);
     return OverviewMetrics(
       plannedThisMonthInCents: plannedThisMonth,
       actualThisMonthInCents: actualThisMonth,
       averageMonthlyPlannedInCents: (annualPlan / 12).round(),
+      dueThisMonthCount: dueThisMonthCount,
       upcomingPayments: upcoming,
       spendingByMonth: spendingByMonth,
       yearOccurrences: yearOccurrences,
@@ -96,6 +107,7 @@ class OverviewMetrics {
   final int plannedThisMonthInCents;
   final int actualThisMonthInCents;
   final int averageMonthlyPlannedInCents;
+  final int dueThisMonthCount;
   final List<PaymentOccurrence> upcomingPayments;
   final List<MonthlySpendPoint> spendingByMonth;
   final List<PaymentOccurrence> yearOccurrences;

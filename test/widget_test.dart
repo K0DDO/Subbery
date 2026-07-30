@@ -148,6 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ближайшие платежи'), findsOneWidget);
+    expect(find.text('Следующие списания'), findsNothing);
     final pageView = find.byType(PageView);
     final swipeStart = tester.getTopLeft(pageView) + const Offset(200, 48);
     await tester.flingFrom(swipeStart, const Offset(-620, 0), 1200);

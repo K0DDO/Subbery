@@ -150,7 +150,9 @@ void main() {
     expect(find.byType(ServiceLogo), findsOneWidget);
   });
 
-  testWidgets('keeps calendar logos together with period arcs', (tester) async {
+  testWidgets('uses separate sources for calendar logos and period arcs', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -170,6 +172,12 @@ void main() {
                     date: DateTime(2026, 9, 10),
                   ),
                 ],
+                periodArcOccurrences: <PaymentOccurrence>[
+                  PaymentOccurrence(
+                    subscription: _subscription('arc'),
+                    date: DateTime(2026, 10, 4),
+                  ),
+                ],
                 selectedMonth: 8,
                 showPeriodArcs: true,
                 showCalendarLogos: true,
@@ -181,8 +189,8 @@ void main() {
       ),
     );
 
-    // Two calendar logos + two period endpoint logos.
-    expect(find.byType(ServiceLogo), findsNWidgets(4));
+    // Two yearly calendar logos + one upcoming-payment endpoint logo.
+    expect(find.byType(ServiceLogo), findsNWidgets(3));
   });
 }
 
