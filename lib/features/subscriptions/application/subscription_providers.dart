@@ -27,12 +27,25 @@ final subscriptionsProvider = StreamProvider<List<Subscription>>((ref) {
     final normalized = subscriptions
         .map((subscription) => _normalizeSchedule(subscription, now))
         .toList(growable: false);
-    normalized.sort(
-      (left, right) => left.nextPaymentDate.compareTo(right.nextPaymentDate),
-    );
+    normalized.sort((left, right) {
+      final byStatus = _statusSortRank(
+        left.status,
+      ).compareTo(_statusSortRank(right.status));
+      if (byStatus != 0) return byStatus;
+      return left.nextPaymentDate.compareTo(right.nextPaymentDate);
+    });
     return normalized;
   });
 });
+
+int _statusSortRank(SubscriptionStatus status) {
+  return switch (status) {
+    SubscriptionStatus.active => 0,
+    SubscriptionStatus.paused => 1,
+    SubscriptionStatus.cancelled => 2,
+    SubscriptionStatus.expired => 3,
+  };
+}
 
 final subscriptionProvider = StreamProvider.family<Subscription?, String>((
   ref,

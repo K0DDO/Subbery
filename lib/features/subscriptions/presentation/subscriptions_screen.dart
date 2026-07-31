@@ -12,27 +12,65 @@ import '../../../core/widgets/screen_header.dart';
 import '../../shell/application/tab_reset_provider.dart';
 import '../application/subscription_providers.dart';
 import '../domain/entities/subscription.dart';
+import '../domain/subscription_schedule.dart';
 import 'subscription_ui_extensions.dart';
 import 'widgets/service_logo.dart';
 
 enum SubscriptionListFilter { all, upcoming, yearly }
 
-final subscriptionListFilterProvider = StateProvider<SubscriptionListFilter>(
-  (ref) => SubscriptionListFilter.all,
-);
+class SubscriptionFilterState {
+  const SubscriptionFilterState({
+    this.quick = SubscriptionListFilter.all,
+    this.categories = const <SubscriptionCategory>{},
+    this.statuses = const <SubscriptionStatus>{},
+  });
+
+  final SubscriptionListFilter quick;
+  final Set<SubscriptionCategory> categories;
+  final Set<SubscriptionStatus> statuses;
+
+  bool get hasAdvancedFilters =>
+      categories.isNotEmpty || statuses.isNotEmpty;
+
+  SubscriptionFilterState copyWith({
+    SubscriptionListFilter? quick,
+    Set<SubscriptionCategory>? categories,
+    Set<SubscriptionStatus>? statuses,
+  }) {
+    return SubscriptionFilterState(
+      quick: quick ?? this.quick,
+      categories: categories ?? this.categories,
+      statuses: statuses ?? this.statuses,
+    );
+  }
+}
+
+final subscriptionFilterProvider =
+    StateProvider<SubscriptionFilterState>((ref) => const SubscriptionFilterState());
 
 List<Subscription> filterSubscriptions(
   List<Subscription> subscriptions,
   SubscriptionListFilter filter, {
   SubscriptionCategory? category,
+  Set<SubscriptionCategory> categories = const <SubscriptionCategory>{},
+  Set<SubscriptionStatus> statuses = const <SubscriptionStatus>{},
   DateTime? now,
 }) {
-  final today = now ?? DateTime.now();
+  final today = SubscriptionSchedule.dateOnly(now ?? DateTime.now());
   final upcomingLimit = today.add(const Duration(days: 30));
+  final selectedCategories = categories.isNotEmpty
+      ? categories
+      : (category == null
+            ? const <SubscriptionCategory>{}
+            : <SubscriptionCategory>{category});
 
   return subscriptions
       .where((subscription) {
-        if (category != null && subscription.category != category) {
+        if (selectedCategories.isNotEmpty &&
+            !selectedCategories.contains(subscription.category)) {
+          return false;
+        }
+        if (statuses.isNotEmpty && !statuses.contains(subscription.status)) {
           return false;
         }
         return switch (filter) {
@@ -40,9 +78,12 @@ List<Subscription> filterSubscriptions(
           SubscriptionListFilter.upcoming =>
             subscription.status == SubscriptionStatus.active &&
                 !subscription.nextPaymentDate.isBefore(today) &&
-                subscription.nextPaymentDate.isBefore(upcomingLimit),
+                subscription.nextPaymentDate.isBefore(upcomingLimit) &&
+                !(subscription.renewalMode == RenewalMode.manual &&
+                    subscription.nextPaymentDate.isBefore(today)),
           SubscriptionListFilter.yearly =>
-            subscription.billingCycle == BillingCycle.yearly,
+            subscription.billingCycle == BillingCycle.yearly ||
+                subscription.billingCycle == BillingCycle.biennial,
         };
       })
       .toList(growable: false);
@@ -56,7 +97,7 @@ class SubscriptionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final subscriptions = ref.watch(subscriptionsProvider);
-    final selectedFilter = ref.watch(subscriptionListFilterProvider);
+    final filterState = ref.watch(subscriptionFilterProvider);
     final resetRevision = ref.watch(tabResetRevisionProvider(1));
 
     return SafeArea(
@@ -79,18 +120,14 @@ class SubscriptionsScreen extends ConsumerWidget {
             ),
           ),
           _FilterBar(
-            selected: selectedFilter,
-            category: initialCategory,
-            onSelected: (filter) {
-              ref.read(subscriptionListFilterProvider.notifier).state = filter;
+            state: filterState,
+            routeCategory: initialCategory,
+            onQuickSelected: (filter) {
+              ref.read(subscriptionFilterProvider.notifier).state =
+                  filterState.copyWith(quick: filter);
             },
-            onCategorySelected: (category) {
-              context.goNamed(
-                'subscriptions',
-                queryParameters: category == null
-                    ? const <String, String>{}
-                    : <String, String>{'category': category.name},
-              );
+            onAdvancedChanged: (next) {
+              ref.read(subscriptionFilterProvider.notifier).state = next;
             },
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -110,8 +147,10 @@ class SubscriptionsScreen extends ConsumerWidget {
 
                 final filtered = filterSubscriptions(
                   items,
-                  selectedFilter,
+                  filterState.quick,
                   category: initialCategory,
+                  categories: filterState.categories,
+                  statuses: filterState.statuses,
                 );
                 if (filtered.isEmpty) {
                   return const EmptyState(
@@ -156,72 +195,18 @@ class SubscriptionsScreen extends ConsumerWidget {
   }
 }
 
-class _CategoryFilterButton extends StatelessWidget {
-  const _CategoryFilterButton({
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final SubscriptionCategory? selected;
-  final ValueChanged<SubscriptionCategory?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: 'Фильтр по категории',
-      padding: EdgeInsets.zero,
-      initialValue: selected?.name,
-      onSelected: (value) {
-        SubscriptionCategory? category;
-        for (final item in SubscriptionCategory.values) {
-          if (item.name == value) category = item;
-        }
-        onSelected(category);
-      },
-      itemBuilder: (context) => <PopupMenuEntry<String>>[
-        const PopupMenuItem<String>(
-          value: '',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.apps_rounded),
-            title: Text('Все категории'),
-          ),
-        ),
-        for (final category in SubscriptionCategory.values)
-          PopupMenuItem<String>(
-            value: category.name,
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Text(category.emoji),
-              title: Text(category.label),
-            ),
-          ),
-      ],
-      icon: Badge(
-        isLabelVisible: selected != null,
-        smallSize: 8,
-        child: Icon(
-          selected == null
-              ? Icons.filter_alt_outlined
-              : Icons.filter_alt_rounded,
-        ),
-      ),
-    );
-  }
-}
-
 class _FilterBar extends StatelessWidget {
   const _FilterBar({
-    required this.selected,
-    required this.category,
-    required this.onSelected,
-    required this.onCategorySelected,
+    required this.state,
+    required this.routeCategory,
+    required this.onQuickSelected,
+    required this.onAdvancedChanged,
   });
 
-  final SubscriptionListFilter selected;
-  final SubscriptionCategory? category;
-  final ValueChanged<SubscriptionListFilter> onSelected;
-  final ValueChanged<SubscriptionCategory?> onCategorySelected;
+  final SubscriptionFilterState state;
+  final SubscriptionCategory? routeCategory;
+  final ValueChanged<SubscriptionListFilter> onQuickSelected;
+  final ValueChanged<SubscriptionFilterState> onAdvancedChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -233,27 +218,185 @@ class _FilterBar extends StatelessWidget {
         children: <Widget>[
           _FilterChip(
             label: 'Все',
-            selected: selected == SubscriptionListFilter.all,
-            onTap: () => onSelected(SubscriptionListFilter.all),
+            selected: state.quick == SubscriptionListFilter.all,
+            onTap: () => onQuickSelected(SubscriptionListFilter.all),
           ),
           const SizedBox(width: AppSpacing.xs),
           _FilterChip(
             label: 'Скоро',
-            selected: selected == SubscriptionListFilter.upcoming,
-            onTap: () => onSelected(SubscriptionListFilter.upcoming),
+            selected: state.quick == SubscriptionListFilter.upcoming,
+            onTap: () => onQuickSelected(SubscriptionListFilter.upcoming),
           ),
           const SizedBox(width: AppSpacing.xs),
           _FilterChip(
             label: 'Годовые',
-            selected: selected == SubscriptionListFilter.yearly,
-            onTap: () => onSelected(SubscriptionListFilter.yearly),
+            selected: state.quick == SubscriptionListFilter.yearly,
+            onTap: () => onQuickSelected(SubscriptionListFilter.yearly),
           ),
           const SizedBox(width: AppSpacing.xs),
-          _CategoryFilterButton(
-            selected: category,
-            onSelected: onCategorySelected,
+          _AdvancedFilterButton(
+            state: state,
+            routeCategory: routeCategory,
+            onChanged: onAdvancedChanged,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AdvancedFilterButton extends StatelessWidget {
+  const _AdvancedFilterButton({
+    required this.state,
+    required this.routeCategory,
+    required this.onChanged,
+  });
+
+  final SubscriptionFilterState state;
+  final SubscriptionCategory? routeCategory;
+  final ValueChanged<SubscriptionFilterState> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final active =
+        state.hasAdvancedFilters || routeCategory != null;
+    return IconButton(
+      tooltip: 'Фильтры',
+      onPressed: () async {
+        final next = await showModalBottomSheet<SubscriptionFilterState>(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (context) => _FilterSheet(initial: state),
+        );
+        if (next != null) onChanged(next);
+      },
+      icon: Badge(
+        isLabelVisible: active,
+        smallSize: 8,
+        child: Icon(
+          active ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.initial});
+
+  final SubscriptionFilterState initial;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late Set<SubscriptionCategory> _categories;
+  late Set<SubscriptionStatus> _statuses;
+
+  @override
+  void initState() {
+    super.initState();
+    _categories = {...widget.initial.categories};
+    _statuses = {...widget.initial.statuses};
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Фильтры', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.md),
+            Text('Категории', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (final category in SubscriptionCategory.values)
+                  FilterChip(
+                    label: Text('${category.emoji} ${category.label}'),
+                    selected: _categories.contains(category),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _categories.add(category);
+                        } else {
+                          _categories.remove(category);
+                        }
+                      });
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Статус', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (final status in const <SubscriptionStatus>[
+                  SubscriptionStatus.active,
+                  SubscriptionStatus.paused,
+                  SubscriptionStatus.cancelled,
+                  SubscriptionStatus.expired,
+                ])
+                  FilterChip(
+                    label: Text(status.label),
+                    selected: _statuses.contains(status),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _statuses.add(status);
+                        } else {
+                          _statuses.remove(status);
+                        }
+                      });
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _categories.clear();
+                      _statuses.clear();
+                    });
+                  },
+                  child: const Text('Сбросить'),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(
+                      context,
+                      widget.initial.copyWith(
+                        categories: _categories,
+                        statuses: _statuses,
+                      ),
+                    );
+                  },
+                  child: const Text('Готово'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -318,9 +461,21 @@ class _SubscriptionCard extends StatelessWidget {
   final int animationIndex;
   final VoidCallback onTap;
 
+  Color get _statusDotColor {
+    return switch (subscription.status) {
+      SubscriptionStatus.active => const Color(0xFF63C987),
+      SubscriptionStatus.paused => const Color(0xFFF0C14E),
+      SubscriptionStatus.cancelled => const Color(0xFFE57373),
+      SubscriptionStatus.expired => const Color(0xFF9E9E9E),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isActive = subscription.status == SubscriptionStatus.active;
+    final today = SubscriptionSchedule.dateOnly(DateTime.now());
+    final isPastOneTime =
+        subscription.renewalMode == RenewalMode.manual &&
+        subscription.nextPaymentDate.isBefore(today);
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
@@ -337,16 +492,13 @@ class _SubscriptionCard extends StatelessWidget {
       },
       child: GlassCard(
         onTap: onTap,
-        padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: <Widget>[
-            Hero(
-              tag: 'subscription-logo-${subscription.id}',
-              child: ServiceLogo(
-                name: subscription.name,
-                logoKey: subscription.logo,
-                category: subscription.category,
-              ),
+            ServiceLogo(
+              name: subscription.name,
+              logoKey: subscription.logo,
+              category: subscription.category,
+              size: 48,
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -369,22 +521,22 @@ class _SubscriptionCard extends StatelessWidget {
                         height: 7,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isActive
-                              ? const Color(0xFF63C987)
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: _statusDotColor,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    'Следующее списание',
+                    isPastOneTime ? 'Дата оплаты' : 'Следующее списание',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
-                    AppFormatters.shortDate(subscription.nextPaymentDate),
+                    isPastOneTime
+                        ? '${AppFormatters.shortDate(subscription.nextPaymentDate)} · прошло'
+                        : AppFormatters.shortDate(subscription.nextPaymentDate),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -404,7 +556,7 @@ class _SubscriptionCard extends StatelessWidget {
                 Text(
                   subscription.renewalMode == RenewalMode.manual
                       ? 'единично'
-                      : '/ ${subscription.billingCycle.shortLabel}',
+                      : '/ ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -467,8 +619,7 @@ class _SubscriptionsError extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             GlassButton(
-              label: 'Попробовать снова',
-              expanded: false,
+              label: 'Повторить',
               onPressed: onRetry,
             ),
           ],

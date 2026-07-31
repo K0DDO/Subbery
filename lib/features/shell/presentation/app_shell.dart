@@ -20,8 +20,8 @@ class AppShell extends ConsumerWidget {
 
   void _openBranch(WidgetRef ref, int index) {
     unawaited(HapticFeedback.selectionClick());
-    ref.read(subscriptionListFilterProvider.notifier).state =
-        SubscriptionListFilter.all;
+    ref.read(subscriptionFilterProvider.notifier).state =
+        const SubscriptionFilterState();
     ref.read(tabResetRevisionProvider(index).notifier).state++;
     navigationShell.goBranch(index, initialLocation: true);
   }
