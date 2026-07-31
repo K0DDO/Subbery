@@ -135,6 +135,30 @@ abstract final class KnownServices {
       category: SubscriptionCategory.music,
       brandColorValue: 0xFF000000,
     ),
+    KnownService(
+      name: 'Epidemic Sound',
+      logoKey: 'epidemic_sound',
+      category: SubscriptionCategory.music,
+      brandColorValue: 0xFF000000,
+    ),
+    KnownService(
+      name: 'Artlist',
+      logoKey: 'artlist',
+      category: SubscriptionCategory.music,
+      brandColorValue: 0xFF0B0B0B,
+    ),
+    KnownService(
+      name: 'Musicbed',
+      logoKey: 'musicbed',
+      category: SubscriptionCategory.music,
+      brandColorValue: 0xFF1C1C1C,
+    ),
+    KnownService(
+      name: 'Audiio',
+      logoKey: 'audiio',
+      category: SubscriptionCategory.music,
+      brandColorValue: 0xFFFF4D00,
+    ),
 
     // Russian ecosystems & banks
     KnownService(

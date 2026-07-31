@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_icons/simple_icons.dart';
 import 'package:subberry/features/subscriptions/domain/entities/subscription.dart';
 import 'package:subberry/features/subscriptions/presentation/widgets/service_logo.dart';
 
@@ -18,7 +17,7 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(SimpleIcons.netflix), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
     expect(find.text('N'), findsNothing);
   });
 

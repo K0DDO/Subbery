@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -112,6 +113,13 @@ class SettingsScreen extends ConsumerWidget {
       await Future<void>.delayed(const Duration(milliseconds: 120));
       await SystemNavigator.pop();
     }
+  }
+
+  Future<void> _openIcons8() async {
+    await launchUrl(
+      Uri.parse('https://icons8.com'),
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   @override
@@ -296,7 +304,17 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.2.7',
+                    subtitle: 'Версия 1.2.8',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  onTap: _openIcons8,
+                  child: const _SettingsRow(
+                    icon: Icons.image_outlined,
+                    title: 'Иконки сервисов',
+                    subtitle: 'Icons8 и официальные иконки Google Play',
+                    trailing: Icon(Icons.open_in_new_rounded),
                   ),
                 ),
               ],

@@ -1,0 +1,498 @@
+{
+  "netflix": {
+    "name": "Netflix",
+    "source": "Google Play",
+    "package": "com.netflix.mediaclient",
+    "url": "https://play-lh.googleusercontent.com/fXVS45nukV1x9PYVSKHkCQK0QGCOishIvAOxIZS3sgRem8HS7l9l94_Ggj-WZPrTLePRdNYN4pp4SPAQL7oS0PU"
+  },
+  "youtube": {
+    "name": "YouTube Premium",
+    "source": "Google Play",
+    "package": "com.google.android.youtube",
+    "url": "https://play-lh.googleusercontent.com/QNmuZQc9I6Zbe3mWnSr0hycnENqGFCI5p3yE29Hkxtf22T0IWS6zTrpxULLyyjWpB7ONAXDsDQXnXcVWokl3eg"
+  },
+  "kinopoisk": {
+    "name": "Кинопоиск",
+    "source": "Google Play",
+    "package": "ru.kinopoisk",
+    "url": "https://play-lh.googleusercontent.com/wKdRcSk5jof1YAV40mWZiZHRJdDRi-MMVuNOzuiQWHkITjDTbbg4CXpzpvJhYg5-duxH9Cpd9m2TKwd7fGpD"
+  },
+  "ivi": {
+    "name": "IVI",
+    "source": "Google Play",
+    "package": "ru.ivi.client",
+    "url": "https://play-lh.googleusercontent.com/3JQPeWDnD-W0jKynNJhJW_rI2FRdlNbb4lKxfb19aYPzNm1QTxyiRu_QcmIXRAYAYBoIbFqHqDnC7GttnFAr55M"
+  },
+  "okko": {
+    "name": "Okko",
+    "source": "Google Play",
+    "package": "ru.more.play",
+    "url": "https://play-lh.googleusercontent.com/3qi0muO8onegHHOxSH6MP8_9ZyjaV-B1Dh8J5tkpPr-4Q7SYijeqoox41mCb93pF0NChJc6Nzu2CnKUZFg78EA"
+  },
+  "wink": {
+    "name": "Wink",
+    "source": "Google Play",
+    "package": "ru.rt.video.app.mobile",
+    "url": "https://play-lh.googleusercontent.com/l25s6vpReS0wuqIs2aqixoLoNqUpHmsFsJPlf40sRDZPWH84OCttEjh4VHYM4x22oCrxbmaqdu_q4JwSucJHbgM"
+  },
+  "premier": {
+    "name": "Premier",
+    "source": "Google Play",
+    "package": "gpm.tnt_premier",
+    "url": "https://play-lh.googleusercontent.com/A1DfcCBkgfhqfg4eVPi1dGlPJm6Zafpf6EyCSj_-__RMoHvbv6o7oRVGxrurzSVnE11ZmUuhEgbIvEUQUavLDg"
+  },
+  "apple_tv": {
+    "name": "Apple TV+",
+    "source": "Google Play",
+    "package": "com.apple.atve.androidtv.appletv",
+    "url": "https://play-lh.googleusercontent.com/OClJIvZt6akgvt1v9AZf5C0RHtanBLtxtEKPMO-iU0UQgOIaKqSf_efqSi06H8dRNVVAz1y9rMX8TUugdpSI9A"
+  },
+  "hbo_max": {
+    "name": "HBO Max",
+    "source": "Google Play",
+    "package": "com.wbd.stream",
+    "url": "https://play-lh.googleusercontent.com/wKJ5hN5CmSBWXPBVYYuRENzcEVb7FB6NyibjKqPT4SB0eoZ7Fww2jq-OhUDCxEPGALrSekQaazrHLSBwVb6T4A"
+  },
+  "crunchyroll": {
+    "name": "Crunchyroll",
+    "source": "Google Play",
+    "package": "com.crunchyroll.crunchyroid",
+    "url": "https://play-lh.googleusercontent.com/FUEOotGzxEZqItvGGov0YBiOhZBCACxCM6kF37OtpWrCG9H6EyxSeY2G8PDXQGueLxlxtL3Xr0fbkvXaQ67NLg"
+  },
+  "paramount": {
+    "name": "Paramount+",
+    "source": "Google Play",
+    "package": "com.cbs.app",
+    "url": "https://play-lh.googleusercontent.com/k1l4W88OoOaTutOXjcZFAYaDWixhb9CDH3CyexsrtSYDFPbGr05qDsDNE6FTx2uDTM9SexZGfc9S6wHyqZF8Uw8"
+  },
+  "spotify": {
+    "name": "Spotify",
+    "source": "Google Play",
+    "package": "com.spotify.music",
+    "url": "https://play-lh.googleusercontent.com/IzQgYCcnCFCD08GR-3bdtcT8xzOvrNkC84avGT5CwTX2VIqmTmKKJcP_Cd4JoBOdmCMlTndlOzV6hrthg2fOWA"
+  },
+  "apple_music": {
+    "name": "Apple Music",
+    "source": "Google Play",
+    "package": "com.apple.android.music",
+    "url": "https://play-lh.googleusercontent.com/MGyoUqkEdhfozD6bo8otUvCEsD4RlGorPXOqKGdap99JX1McBjHgI70iGai-W-_YenuJ8gdIGJQQmUt2wP7ung"
+  },
+  "youtube_music": {
+    "name": "YouTube Music",
+    "source": "Google Play",
+    "package": "com.google.android.apps.youtube.music",
+    "url": "https://play-lh.googleusercontent.com/MyptZXmcCyF59phIWPsNCfHq6zSO_ojEdw_4rMYYWPOGdikSjqeOXcoszBZ053VYpINe5K7ZR9KV1nkFWgxdOw"
+  },
+  "yandex_music": {
+    "name": "Яндекс Музыка",
+    "source": "Google Play",
+    "package": "ru.yandex.music",
+    "url": "https://play-lh.googleusercontent.com/Jk0Nrh3alWIZSCbkPqRJaDm5ewxiwfOuQdD1hcGs_bNm1Zi4t1LQrUiUSIHY8y6g-AzrRwdQC6ZBFMb7dZxuUCE"
+  },
+  "vk_music": {
+    "name": "VK Музыка",
+    "source": "Google Play",
+    "package": "com.uma.musicvk",
+    "url": "https://play-lh.googleusercontent.com/WLutS1BYg12BUmB34-r0uoSKyRX-LyLif9snMRSXxrI-7MP6hgwI2_zm9C1kBF4XpsCUzEpquOWEdFAvJ7gyOQ"
+  },
+  "soundcloud": {
+    "name": "SoundCloud Go+",
+    "source": "Google Play",
+    "package": "com.soundcloud.android",
+    "url": "https://play-lh.googleusercontent.com/rfmCNUApzYntPTdAVmor5vpaOGxIUJWNlpED2pwKcDuCTUaf_2vJlOALNzX1PiejSgZIuAT8k0F5xIBU58JG3g"
+  },
+  "deezer": {
+    "name": "Deezer",
+    "source": "Google Play",
+    "package": "deezer.android.app",
+    "url": "https://play-lh.googleusercontent.com/RFBXn4V0H8Zmi3_jViu73GTpQOmGmrvG7mdM1ynStAAYEd2aOLo5G0v9AHSUMwia1lQGI-c5oXMzZJCq0RMlJA"
+  },
+  "tidal": {
+    "name": "Tidal",
+    "source": "Google Play",
+    "package": "com.aspiro.tidal",
+    "url": "https://play-lh.googleusercontent.com/_ktGwooWwh0h_MCi0T2YmFQB-pj6o5AGFDvdI302bdnNWtcQniOHy3pf4WRVs6rzjMtdl01J7-Qfw88xtYrWn6w"
+  },
+  "epidemic_sound": {
+    "name": "Epidemic Sound",
+    "source": "Google Play",
+    "package": "com.epidemicsound.player",
+    "url": "https://play-lh.googleusercontent.com/2b7hOybLu-z4K1WbnioYyqf-PBQRpOYNA5-lCqUjLFa_9DoQ1u8lrUGt7kJnWWAnHWXtbTa2hf4azjIupzKc_w"
+  },
+  "artlist": {
+    "name": "Artlist",
+    "source": "Google Favicon",
+    "domain": "artlist.io",
+    "url": "https://www.google.com/s2/favicons?domain=artlist.io&sz=128"
+  },
+  "musicbed": {
+    "name": "Musicbed",
+    "source": "Google Play",
+    "package": "com.themusicbed.musicbed",
+    "url": "https://play-lh.googleusercontent.com/69lXUhu-qevzuJBAt0qGdGQXKRkmI8x4GZqTz5cIJe4KfE_ztim4W4Rw5tVHR35bNo2bKpCrg2AL1tgxkn5bjqI"
+  },
+  "audiio": {
+    "name": "Audiio",
+    "source": "Google Play",
+    "package": "com.audiiopro",
+    "url": "https://play-lh.googleusercontent.com/BTXpatNeHN4rGlVcN4pudTgjXUjN5Xw8C83oBcwtF-VqVONGrGLd0CTLNi8wQ8Mcp01K0bYKtA3sI1z5EWChVA"
+  },
+  "yandex_plus": {
+    "name": "Яндекс Плюс",
+    "source": "Logo-teka",
+    "url": "https://logo-teka.com/download/logo/56049/png/"
+  },
+  "yandex_disk": {
+    "name": "Яндекс Диск",
+    "source": "Google Play",
+    "package": "ru.yandex.disk",
+    "url": "https://play-lh.googleusercontent.com/zSe2SfsyJ9BtsZUUyjgb3adHH4Hwv87Lo8a8rjqB-y_g2UgyJ5qFebrTOJ1LdHFS8AkNyP1XM8QPb6JRReiO"
+  },
+  "vk_combo": {
+    "name": "VK Combo",
+    "source": "Google Favicon",
+    "domain": "vk.com",
+    "url": "https://www.google.com/s2/favicons?domain=vk.com&sz=128"
+  },
+  "tpro": {
+    "name": "T-Pro",
+    "source": "Google Favicon",
+    "domain": "tbank.ru",
+    "url": "https://www.google.com/s2/favicons?domain=tbank.ru&sz=128"
+  },
+  "sberprime": {
+    "name": "СберПрайм",
+    "source": "Google Favicon",
+    "domain": "sberbank.ru",
+    "url": "https://www.google.com/s2/favicons?domain=sberbank.ru&sz=128"
+  },
+  "alfa_smart": {
+    "name": "Альфа-Смарт",
+    "source": "Google Favicon",
+    "domain": "alfabank.ru",
+    "url": "https://www.google.com/s2/favicons?domain=alfabank.ru&sz=128"
+  },
+  "mts_premium": {
+    "name": "МТС Premium",
+    "source": "Google Play",
+    "package": "ru.mts.mymts",
+    "url": "https://play-lh.googleusercontent.com/KAwGUHHPM3y0B725Zo2iCQPL4d1ElI61L25bKIos2ZVn8SQtFk1a-CUkFkmdXSzMbGhbOcdXbCDXcKwZPKaFvJM"
+  },
+  "telegram": {
+    "name": "Telegram Premium",
+    "source": "Google Play",
+    "package": "org.telegram.messenger",
+    "url": "https://play-lh.googleusercontent.com/PyZ3akMGXPV0tKKirKNwfO--PSQW3FHR6rD_H9mAaukZ8LiHyYFuBLeU8UZ2ok6r5SP79-3prkfybWKh98AZAD0"
+  },
+  "discord": {
+    "name": "Discord Nitro",
+    "source": "Google Play",
+    "package": "com.discord",
+    "url": "https://play-lh.googleusercontent.com/w2DdjDHGSj3DQElQQM0_J3PsNsALS-WD3CBeH0aXOYceR-F3aT02gFonhoFzz-Tc9ec8Dx9cLqh48-tzIFcP"
+  },
+  "discord_boost": {
+    "name": "Discord Boost",
+    "source": "Icons8",
+    "url": "https://img.icons8.com/?size=96&id=315Iv2pFhV1m&format=png&color=F47FFF"
+  },
+  "playstation": {
+    "name": "PlayStation Plus",
+    "source": "Google Play",
+    "package": "com.scee.psxandroid",
+    "url": "https://play-lh.googleusercontent.com/3Y2xJ77Ucj7Ovxf12AbJszkAqttbJfiO7DOjK9NO8vQn57Rar8uhkgcwbXFu2k7eXZR-Z0_Nbo8NWKfZjkDsRQ"
+  },
+  "xbox": {
+    "name": "Xbox Game Pass",
+    "source": "Google Play",
+    "package": "com.microsoft.xboxone.smartglass",
+    "url": "https://play-lh.googleusercontent.com/zARzhQw-V25X6KCiciynwWtlzOfaS41kx2rZYecxPoY5Z248n-d3lyotuKL0fJYLEvQQ40QNsx8J2VSm2G7RjA"
+  },
+  "steam": {
+    "name": "Steam",
+    "source": "Google Play",
+    "package": "com.valvesoftware.android.steam.community",
+    "url": "https://play-lh.googleusercontent.com/E_x2GPSJakCdUYfECBptVyFoVnC4BxIPy3K4OdbwNyEtEJkRAY_J-Lo_Ltiybq6LiJ_aZCIzvqLv5h4Fbk91"
+  },
+  "epic_games": {
+    "name": "Epic Games",
+    "source": "Google Play",
+    "package": "com.epicgames.ega",
+    "url": "https://play-lh.googleusercontent.com/cgVdlLSLyd8CosFHwZAirDw9mUw4vpkh6BfdGv8QgroQGSk71p0vsa-p_s_V9uSOID8WGQkRm_1Dyp_pavNDbgI"
+  },
+  "twitch": {
+    "name": "Twitch Turbo",
+    "source": "Google Play",
+    "package": "tv.twitch.android.app",
+    "url": "https://play-lh.googleusercontent.com/JHCM4AIyomRp6Lo2-5ugoznlGdsZmNnejVN8DLvtWFHShcz8YRgUE170f1CyOfrleYbtFL2g8tQ3VqlQNAgqoA"
+  },
+  "icloud": {
+    "name": "iCloud",
+    "source": "Google Favicon",
+    "domain": "icloud.com",
+    "url": "https://www.google.com/s2/favicons?domain=icloud.com&sz=128"
+  },
+  "google_one": {
+    "name": "Google One",
+    "source": "Google Play",
+    "package": "com.google.android.apps.subscriptions.red",
+    "url": "https://play-lh.googleusercontent.com/pnaxOl9i4YnkYKGMYkH17y_hA_FJOZRahlRGHQaaEGuLwPme68AfPShN2na5dEGOsem3hEzFvWXMz62WPVx8"
+  },
+  "dropbox": {
+    "name": "Dropbox",
+    "source": "Google Play",
+    "package": "com.dropbox.android",
+    "url": "https://play-lh.googleusercontent.com/A8rNctsbRVnv05n6gwR74kN68SuSaBW-B9NTdCrq62snoMxMnedV2PGZaatv-sPS9ygdVvXUomyRfGWa8Xul1Q"
+  },
+  "notion": {
+    "name": "Notion",
+    "source": "Google Play",
+    "package": "notion.id",
+    "url": "https://play-lh.googleusercontent.com/-GY1Xv9hhhK_RFJCCb-rvDX8OMR8Fj68AgcRIFcD8zIXlOA8pG-L-cuOJbgSs_U6GGGyGs8qiiQsjIfEBazE8g"
+  },
+  "figma": {
+    "name": "Figma",
+    "source": "Google Play",
+    "package": "com.figma.mirror",
+    "url": "https://play-lh.googleusercontent.com/H_ImRi06A7rPfQflyj2H56OG2AEfy2sTHWFFIYzUmY43IZc0vIneRCjUO29D7hP7JyG7YwKQsl5s2-NO1ys_1A"
+  },
+  "jetbrains": {
+    "name": "JetBrains",
+    "source": "Google Favicon",
+    "domain": "jetbrains.com",
+    "url": "https://www.google.com/s2/favicons?domain=jetbrains.com&sz=128"
+  },
+  "zoom": {
+    "name": "Zoom Pro",
+    "source": "Google Play",
+    "package": "us.zoom.videomeetings",
+    "url": "https://play-lh.googleusercontent.com/-Ajlo-aDBHtpCez_yILc8Kepv_kNhbTJPw1WyvXgkh4O-hvUN-YD_v_0FlJmgRbZ2vn1OmZCmCBOY23h4kJYEA"
+  },
+  "duolingo": {
+    "name": "Duolingo Super",
+    "source": "Google Play",
+    "package": "com.duolingo",
+    "url": "https://play-lh.googleusercontent.com/Q-wEiKezZQEspFNNrWfKjcEgAqdWy_b98_tXTAZaXGgm9y1HZ1zi-JSZXA7Tmur9MjcM0xoIA0BdXEN0Bt54"
+  },
+  "chatgpt": {
+    "name": "ChatGPT Plus",
+    "source": "Google Play",
+    "package": "com.openai.chatgpt",
+    "url": "https://play-lh.googleusercontent.com/T9J8e9oxxPd600j_KPM4KK2GHfNpUpGBdTy8lHPXBXpOUfGusRuZXj0UMgFNrP8we6LVt9V-AibEgcLootE6VK4"
+  },
+  "claude": {
+    "name": "Claude Pro",
+    "source": "Google Play",
+    "package": "com.anthropic.claude",
+    "url": "https://play-lh.googleusercontent.com/YeFCFSW5LkBVdsEAL_fjzxDxTbhKz31j1uZUfDbSaCeM0t4Bi3SqyHTWzWsUsZnbwjofXhYajitG_gr2_B2xil8"
+  },
+  "cursor": {
+    "name": "Cursor",
+    "source": "Google Favicon",
+    "domain": "cursor.com",
+    "url": "https://www.google.com/s2/favicons?domain=cursor.com&sz=128"
+  },
+  "github": {
+    "name": "GitHub Copilot",
+    "source": "Google Play",
+    "package": "com.github.android",
+    "url": "https://play-lh.googleusercontent.com/nxpwi4UD84GNJuJ42S9U0f3lGDsHu8VkIDPCccFmJL6kyNVb1O3pTY1rl1YZICLBk6EcWIaX6n9prCbdUoQEOw"
+  },
+  "gemini": {
+    "name": "Google Gemini",
+    "source": "Google Play",
+    "package": "com.google.android.apps.bard",
+    "url": "https://play-lh.googleusercontent.com/C64IqPWyFoCZzXVxXVl0Y6mliiNlG_sZJsqul-SBvk9ZL0wJHlU0Eho2wvsBHhho0FT5XQtH55RVGerIwXF_MA"
+  },
+  "perplexity": {
+    "name": "Perplexity Pro",
+    "source": "Google Play",
+    "package": "ai.perplexity.app.android",
+    "url": "https://play-lh.googleusercontent.com/vg7sPhgWiPr0L2cK_NLLcCl0mrkEmNNv7C-aUkBdIUEa-9uSnCi5x4z_3Mw0vNYWKoSVWHfgri7THMOsOZKQuA"
+  },
+  "midjourney": {
+    "name": "Midjourney",
+    "source": "Google Favicon",
+    "domain": "midjourney.com",
+    "url": "https://www.google.com/s2/favicons?domain=midjourney.com&sz=128"
+  },
+  "grok": {
+    "name": "Grok",
+    "source": "Google Play",
+    "package": "ai.x.grok",
+    "url": "https://play-lh.googleusercontent.com/-VnI9BrQO0PYyZG15YE6wt68KOmZ7AXGAqGti58g25ES1XdXWDBaaWUMIewHaiROwge6ibvn_b3WalmpgWGG"
+  },
+  "deepseek": {
+    "name": "DeepSeek",
+    "source": "Google Play",
+    "package": "com.deepseek.chat",
+    "url": "https://play-lh.googleusercontent.com/6acgsFuPK-ynZRKRvbvEhhC5jcUJybr5Dnsy9cU1OPIxiDazubiqYqfq3nGOKSq-EG3G_6VtxM7tjRV_jiaK"
+  },
+  "mistral": {
+    "name": "Mistral AI",
+    "source": "Google Play",
+    "package": "ai.mistral.chat",
+    "url": "https://play-lh.googleusercontent.com/gTnubt5PMO7sRxNDcxkaNMFYWhxOnzPJtboQy_8FyeKhW4tgLnCThMtJFfdpwEO0DBWGAKvrMh8xCN6DpBZ6"
+  },
+  "kimi": {
+    "name": "Kimi",
+    "source": "Google Play",
+    "package": "com.moonshot.kimichat",
+    "url": "https://play-lh.googleusercontent.com/Nu6-AAFthe9Eb_6o_-tLMd6CNqQflpfJRZK1DyKuJuoO2aUR-A_men-iFKsPg68oodWviEzkoR9f6jzFalwVig"
+  },
+  "huggingface": {
+    "name": "Hugging Face Pro",
+    "source": "Google Favicon",
+    "domain": "huggingface.co",
+    "url": "https://www.google.com/s2/favicons?domain=huggingface.co&sz=128"
+  },
+  "ollama": {
+    "name": "Ollama",
+    "source": "Google Favicon",
+    "domain": "ollama.com",
+    "url": "https://www.google.com/s2/favicons?domain=ollama.com&sz=128"
+  },
+  "my_server": {
+    "name": "Мой сервер",
+    "source": "Icons8",
+    "slug": "server",
+    "url": "https://img.icons8.com/color/96/server.png"
+  },
+  "vps": {
+    "name": "VPS",
+    "source": "Icons8",
+    "slug": "server",
+    "url": "https://img.icons8.com/color/96/server.png"
+  },
+  "hetzner": {
+    "name": "Hetzner",
+    "source": "Google Play",
+    "package": "de.hetzner.robot_mobile",
+    "url": "https://play-lh.googleusercontent.com/BJ_sXfxTX-alKe6jDGIms7mzkz91nA1oRXWoaVQuSd408KGFv6NK1BllDP2TW45c_z0Vc3Vi507s4iObOJPF"
+  },
+  "digitalocean": {
+    "name": "DigitalOcean",
+    "source": "Google Favicon",
+    "domain": "digitalocean.com",
+    "url": "https://www.google.com/s2/favicons?domain=digitalocean.com&sz=128"
+  },
+  "vultr": {
+    "name": "Vultr",
+    "source": "Google Favicon",
+    "domain": "vultr.com",
+    "url": "https://www.google.com/s2/favicons?domain=vultr.com&sz=128"
+  },
+  "contabo": {
+    "name": "Contabo",
+    "source": "Google Favicon",
+    "domain": "contabo.com",
+    "url": "https://www.google.com/s2/favicons?domain=contabo.com&sz=128"
+  },
+  "hostinger": {
+    "name": "Hostinger",
+    "source": "Google Favicon",
+    "domain": "hostinger.com",
+    "url": "https://www.google.com/s2/favicons?domain=hostinger.com&sz=128"
+  },
+  "ovh": {
+    "name": "OVH",
+    "source": "Google Favicon",
+    "domain": "ovhcloud.com",
+    "url": "https://www.google.com/s2/favicons?domain=ovhcloud.com&sz=128"
+  },
+  "cloudflare": {
+    "name": "Cloudflare",
+    "source": "Google Play",
+    "package": "com.cloudflare.onedotonedotonedotone",
+    "url": "https://play-lh.googleusercontent.com/PDwXxcvulfxi2bH4UjcMGJ7i0CQ7_QNypYohkhhg02zE7FdNTNRyF21-ikrLM5kyvcmNxtr77Va-7sS3NLbpNg"
+  },
+  "timeweb": {
+    "name": "Timeweb",
+    "source": "Google Play",
+    "package": "cloud.timeweb.app",
+    "url": "https://play-lh.googleusercontent.com/GRtNC93KBcIHudi3M0pQsa0vx5N2b2169tCAE_wwB74iUlp0RRGyaTWk_38XUJHBZTzy46rrjjDc68s77J7LxQ"
+  },
+  "selectel": {
+    "name": "Selectel",
+    "source": "Google Favicon",
+    "domain": "selectel.ru",
+    "url": "https://www.google.com/s2/favicons?domain=selectel.ru&sz=128"
+  },
+  "proxmox": {
+    "name": "Proxmox",
+    "source": "Google Play",
+    "package": "com.proxmox.app.pve_flutter_frontend",
+    "url": "https://play-lh.googleusercontent.com/9H8SigVUq8BbdD1AmXYrC4-fVeVXAQmsf3JTfcB3DTrYNkKNYoEfyIJV40NU5QfspYiLSV87k2yQ48U9vu8Hug"
+  },
+  "docker": {
+    "name": "Docker Host",
+    "source": "Google Favicon",
+    "domain": "docker.com",
+    "url": "https://www.google.com/s2/favicons?domain=docker.com&sz=128"
+  },
+  "nordvpn": {
+    "name": "NordVPN",
+    "source": "Google Play",
+    "package": "com.nordvpn.android",
+    "url": "https://play-lh.googleusercontent.com/8yhQejdntBkaku4Vt-HD9f8Ujcl1EJeE1WX2ypEMEzPxY-8AG9-rLjm8OVKmIpmmBC2uWhlqCzKI8be3XkFlIDQ"
+  },
+  "mullvad": {
+    "name": "Mullvad",
+    "source": "Google Play",
+    "package": "net.mullvad.mullvadvpn",
+    "url": "https://play-lh.googleusercontent.com/vNOKwHRjDGUzQk_OaC7pMP2vfI6bg-TkurBdcC3JdFT2Dyx-ROMHPcHlkk8Ql3wOEYUWxqw-1Nc5YKUk-DUL21A"
+  },
+  "surfshark": {
+    "name": "Surfshark",
+    "source": "Google Play",
+    "package": "com.surfshark.vpnclient.android",
+    "url": "https://play-lh.googleusercontent.com/z1NtERzo1BXeZvZheqYKtSEv-3X_p0e_Ho1Bq74j4Vt5Pl_FmboPyuFHmRRmpu9qKWMnWqLXFuUYu2mCm2RZGcY"
+  },
+  "protonvpn": {
+    "name": "Proton VPN",
+    "source": "Google Play",
+    "package": "ch.protonvpn.android",
+    "url": "https://play-lh.googleusercontent.com/sNzvGfn-_S8SLmWYHxLjCn04oy53n1bzfkhxCV9Pp_qhEsQ8biu3D0XoAsUdwD-qfPvzMqZPcx-pjYIHSbp4wg"
+  },
+  "expressvpn": {
+    "name": "ExpressVPN",
+    "source": "Google Play",
+    "package": "com.expressvpn.vpn",
+    "url": "https://play-lh.googleusercontent.com/TDSNIR7vHGtqAn1oXcFXtQKULR41HEfV-mwrMNDU7OfgNFd5RBKs1mjRoGfJLa_Z4jbvy18otK-VGu66lA-rww"
+  },
+  "pia": {
+    "name": "Private Internet Access",
+    "source": "Google Play",
+    "package": "com.privateinternetaccess.android",
+    "url": "https://play-lh.googleusercontent.com/w5U4hg5F1O0aHYXSoaXRLo44mWZKroPUnUTUeHlK85sxiZJsM83bMUmjLcPTJmwexJPCbaYvz54BpeX629KURg"
+  },
+  "outline": {
+    "name": "Outline VPN",
+    "source": "Google Play",
+    "package": "org.outline.android.client",
+    "url": "https://play-lh.googleusercontent.com/rLC5bM3-nsB3zZlrz0tTXmGoomJfejRCazxJbTw4nRagIOCTWXfff2f3GLbsUNu8Pj5FBKAjRihoKDVGRGozHA"
+  },
+  "wireguard": {
+    "name": "WireGuard",
+    "source": "Google Play",
+    "package": "com.wireguard.android",
+    "url": "https://play-lh.googleusercontent.com/ggElzO1YS8fsVg5Y-lcsIV0slvKhKYiwHazffdKoAX-mLngJpiqoLXJ44gG2W05AypfyM6opCLcZQs4TU1Fd"
+  },
+  "tailscale": {
+    "name": "Tailscale",
+    "source": "Google Play",
+    "package": "com.tailscale.ipn",
+    "url": "https://play-lh.googleusercontent.com/s4pxmoQQZ4gfnE6p1BKau2e0fxSAKTDVItN-M4zu_9yXbDVtfF15xzgTsiaxYTVlILS5Mk45ic7TTa-PZdhM3Q"
+  },
+  "adguard": {
+    "name": "AdGuard VPN",
+    "source": "Google Play",
+    "package": "com.adguard.vpn",
+    "url": "https://play-lh.googleusercontent.com/wWlSsCm9F5C-C8NIMEr0puZLgG-G45pDlXEPofRdAAsZO_fekJERSO9lZEwyRwVAqCz8xXnlWmRXT72k7EKa"
+  },
+  "red_shield": {
+    "name": "Red Shield VPN",
+    "source": "Google Play",
+    "package": "com.redshieldvpn.app",
+    "url": "https://play-lh.googleusercontent.com/Kk_R7hBY_6L9XI0jivR5laVWa_ZFNZR9w0Pmb6b_LaNB3hWBoju2UV9xReUVrwwyPC2uZnHz271sz1sY3P8fins"
+  }
+}
