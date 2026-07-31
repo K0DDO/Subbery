@@ -315,6 +315,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                     children: <Widget>[
                       for (final category in SubscriptionCategory.values)
                         ChoiceChip(
+                          showCheckmark: false,
                           label: Text('${category.emoji} ${category.label}'),
                           selected: state.category == category,
                           selectedColor: category.color.withValues(alpha: 0.28),

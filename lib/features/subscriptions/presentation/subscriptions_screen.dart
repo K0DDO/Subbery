@@ -381,6 +381,7 @@ class _FilterPanelState extends State<_FilterPanel> {
                   children: <Widget>[
                     for (final category in SubscriptionCategory.values)
                       FilterChip(
+                        showCheckmark: false,
                         label: Text('${category.emoji} ${category.label}'),
                         selected: _categories.contains(category),
                         onSelected: (selected) {
@@ -409,6 +410,7 @@ class _FilterPanelState extends State<_FilterPanel> {
                       SubscriptionStatus.expired,
                     ])
                       FilterChip(
+                        showCheckmark: false,
                         label: Text(status.label),
                         selected: _statuses.contains(status),
                         onSelected: (selected) {
