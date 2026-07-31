@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -14,6 +13,7 @@ import '../../notifications/application/notification_settings_controller.dart';
 import '../../profile/application/user_profile_controller.dart';
 import '../../shell/application/tab_reset_provider.dart';
 import '../application/app_icon_controller.dart';
+import '../application/background_pattern_controller.dart';
 import '../application/theme_mode_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -115,10 +115,24 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _openIcons8() async {
-    await launchUrl(
-      Uri.parse('https://icons8.com'),
-      mode: LaunchMode.externalApplication,
+  Future<void> _showBackgroundPatternPicker(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _BackgroundPatternSheet(
+        selected: ref.read(backgroundPatternProvider),
+        onSelected: (pattern) {
+          unawaited(
+            ref.read(backgroundPatternProvider.notifier).setPattern(pattern),
+          );
+          Navigator.pop(sheetContext);
+        },
+      ),
     );
   }
 
@@ -127,6 +141,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
     final appIconState = ref.watch(appIconProvider);
+    final backgroundPattern = ref.watch(backgroundPatternProvider);
     final profile = ref.watch(userProfileProvider);
     final resetRevision = ref.watch(tabResetRevisionProvider(3));
 
@@ -166,6 +181,26 @@ class SettingsScreen extends ConsumerWidget {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.edit_rounded),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  onTap: () =>
+                      unawaited(_showBackgroundPatternPicker(context, ref)),
+                  child: _SettingsRow(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'Эмодзи на фоне',
+                    subtitle: backgroundPattern == BackgroundPatternChoice.none
+                        ? 'Без узора'
+                        : backgroundPattern.label,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _PatternPreview(pattern: backgroundPattern),
+                        const SizedBox(width: AppSpacing.xs),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
                     ),
                   ),
                 ),
@@ -304,23 +339,191 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.2.8',
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                GlassCard(
-                  onTap: _openIcons8,
-                  child: const _SettingsRow(
-                    icon: Icons.image_outlined,
-                    title: 'Иконки сервисов',
-                    subtitle: 'Icons8 и официальные иконки Google Play',
-                    trailing: Icon(Icons.open_in_new_rounded),
+                    subtitle: 'Версия 1.2.9',
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PatternPreview extends StatelessWidget {
+  const _PatternPreview({required this.pattern});
+
+  final BackgroundPatternChoice pattern;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      padding: const EdgeInsets.all(7),
+      decoration: BoxDecoration(
+        color: AppColors.coral.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: pattern.assetPath == null
+          ? const Icon(Icons.block_rounded, size: 22, color: AppColors.coral)
+          : Image.asset(
+              pattern.assetPath!,
+              color: AppColors.coral,
+              colorBlendMode: BlendMode.srcIn,
+            ),
+    );
+  }
+}
+
+class _BackgroundPatternSheet extends StatelessWidget {
+  const _BackgroundPatternSheet({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final BackgroundPatternChoice selected;
+  final ValueChanged<BackgroundPatternChoice> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      heightFactor: 0.68,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.xl),
+          ),
+          border: Border(
+            top: BorderSide(color: Theme.of(context).dividerColor),
+          ),
+        ),
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.sm,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Эмодзи на фоне',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          'Однотонный живой узор',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Закрыть',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  crossAxisSpacing: AppSpacing.sm,
+                  mainAxisSpacing: AppSpacing.sm,
+                ),
+                itemCount: BackgroundPatternChoice.values.length,
+                itemBuilder: (context, index) {
+                  final pattern = BackgroundPatternChoice.values[index];
+                  return _PatternChoiceTile(
+                    pattern: pattern,
+                    selected: pattern == selected,
+                    onTap: () => onSelected(pattern),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PatternChoiceTile extends StatelessWidget {
+  const _PatternChoiceTile({
+    required this.pattern,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final BackgroundPatternChoice pattern;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: pattern.label,
+      child: Tooltip(
+        message: pattern.label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.coral.withValues(alpha: 0.16)
+                  : Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: selected
+                    ? AppColors.coral
+                    : Theme.of(context).dividerColor,
+                width: 2,
+              ),
+            ),
+            child: pattern.assetPath == null
+                ? Icon(
+                    Icons.block_rounded,
+                    color: selected
+                        ? AppColors.coral
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  )
+                : Image.asset(
+                    pattern.assetPath!,
+                    color: AppColors.coral,
+                    colorBlendMode: BlendMode.srcIn,
+                    filterQuality: FilterQuality.medium,
+                  ),
+          ),
+        ),
       ),
     );
   }
