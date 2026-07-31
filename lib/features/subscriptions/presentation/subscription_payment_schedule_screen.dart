@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/app_background.dart';
@@ -173,6 +172,7 @@ class _ScheduleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Row(
       children: <Widget>[
         SizedBox(
@@ -184,17 +184,17 @@ class _ScheduleRow extends StatelessWidget {
               Positioned(
                 top: isFirst ? 36 : 0,
                 bottom: isLast ? 36 : 0,
-                child: Container(width: 2, color: AppColors.coral),
+                child: Container(width: 2, color: primary),
               ),
               Container(
                 width: isFirst ? 14 : 10,
                 height: isFirst ? 14 : 10,
                 decoration: BoxDecoration(
                   color: isFirst
-                      ? AppColors.coral
+                      ? primary
                       : Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.coral, width: 2),
+                  border: Border.all(color: primary, width: 2),
                 ),
               ),
             ],
@@ -211,7 +211,7 @@ class _ScheduleRow extends StatelessWidget {
                   isFirst ? 'Ближайший платёж' : 'Следующий платёж',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: isFirst
-                        ? AppColors.coral
+                        ? primary
                         : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),

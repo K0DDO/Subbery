@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../theme/app_colors.dart';
+import '../theme/app_accent_theme.dart';
 import '../theme/app_spacing.dart';
 
 class GlassButton extends StatefulWidget {
@@ -39,6 +39,7 @@ class _GlassButtonState extends State<GlassButton> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.accentTheme;
     final button = AnimatedScale(
       scale: _isPressed ? 0.975 : 1,
       duration: const Duration(milliseconds: 120),
@@ -48,10 +49,10 @@ class _GlassButtonState extends State<GlassButton> {
           borderRadius: BorderRadius.circular(AppRadius.pill),
           gradient: widget.onPressed == null
               ? const LinearGradient(colors: <Color>[Colors.grey, Colors.grey])
-              : AppColors.brandGradient,
+              : accent.gradient,
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: AppColors.coral.withValues(alpha: 0.28),
+              color: accent.primary.withValues(alpha: 0.28),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),

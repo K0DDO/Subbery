@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -113,7 +113,7 @@ class SubscriptionsScreen extends ConsumerWidget {
               tooltip: 'Добавить подписку',
               onPressed: () => context.push('/subscriptions/add'),
               style: IconButton.styleFrom(
-                backgroundColor: AppColors.coral,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.add_rounded),
@@ -474,11 +474,12 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.accentTheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        gradient: selected ? AppColors.brandGradient : null,
+        gradient: selected ? accent.gradient : null,
         color: selected
             ? null
             : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),

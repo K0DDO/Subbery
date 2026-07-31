@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/settings/application/background_pattern_controller.dart';
-import '../theme/app_colors.dart';
+import '../theme/app_accent_theme.dart';
 
 class AppBackground extends ConsumerWidget {
   const AppBackground({required this.child, super.key});
@@ -14,13 +14,14 @@ class AppBackground extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = context.accentTheme;
     final pattern = ref.watch(backgroundPatternProvider);
     final backgroundColors = isDark
-        ? const <Color>[AppColors.darkBackground, AppColors.darkBackgroundWarm]
-        : const <Color>[
-            AppColors.lightBackground,
-            AppColors.lightBackgroundWarm,
-            AppColors.lightBackgroundPeach,
+        ? <Color>[accent.backgroundStart, accent.backgroundEnd]
+        : <Color>[
+            accent.backgroundStart,
+            accent.backgroundEnd,
+            accent.backgroundAccent,
           ];
 
     return DecoratedBox(
@@ -34,24 +35,28 @@ class AppBackground extends ConsumerWidget {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          const Positioned(
+          Positioned(
             top: -150,
             right: -120,
-            child: _GlowOrb(size: 360, color: AppColors.coral, opacity: 0.23),
+            child: _GlowOrb(size: 360, color: accent.primary, opacity: 0.23),
           ),
-          const Positioned(
+          Positioned(
             bottom: -170,
             left: -150,
-            child: _GlowOrb(size: 420, color: AppColors.peach, opacity: 0.2),
+            child: _GlowOrb(size: 420, color: accent.secondary, opacity: 0.2),
           ),
           if (isDark)
-            const Positioned(
+            Positioned(
               top: 280,
               left: -100,
-              child: _GlowOrb(size: 280, color: AppColors.pink, opacity: 0.12),
+              child: _GlowOrb(size: 280, color: accent.tertiary, opacity: 0.12),
             ),
           if (pattern.assetPath case final assetPath?)
-            _EmojiPattern(assetPath: assetPath, opacity: isDark ? 0.13 : 0.09),
+            _EmojiPattern(
+              assetPath: assetPath,
+              color: accent.primary,
+              opacity: isDark ? 0.28 : 0.18,
+            ),
           child,
         ],
       ),
@@ -60,9 +65,14 @@ class AppBackground extends ConsumerWidget {
 }
 
 class _EmojiPattern extends StatefulWidget {
-  const _EmojiPattern({required this.assetPath, required this.opacity});
+  const _EmojiPattern({
+    required this.assetPath,
+    required this.color,
+    required this.opacity,
+  });
 
   final String assetPath;
+  final Color color;
   final double opacity;
 
   @override
@@ -150,7 +160,7 @@ class _EmojiPatternState extends State<_EmojiPattern>
                               widget.assetPath,
                               width: sprite.size,
                               height: sprite.size,
-                              color: AppColors.coral.withValues(
+                              color: widget.color.withValues(
                                 alpha: widget.opacity,
                               ),
                               colorBlendMode: BlendMode.srcIn,

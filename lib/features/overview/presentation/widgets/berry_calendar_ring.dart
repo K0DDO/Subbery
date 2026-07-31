@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
 import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/overview_metrics.dart';
@@ -179,6 +178,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final selected = widget.occurrences
         .where(
           (occurrence) =>
@@ -226,6 +226,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                             trackColor: Theme.of(
                               context,
                             ).dividerColor.withValues(alpha: 0.45),
+                            accentColor: primary,
                           ),
                           child: child,
                         );
@@ -265,7 +266,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                               Text(
                                 _compactMoney(total),
                                 style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(color: AppColors.coral),
+                                    ?.copyWith(color: primary),
                               ),
                             ],
                           ),
@@ -422,7 +423,9 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: borderColor, width: isSoon ? 1.8 : 1),
                 color: group.count > 1
-                    ? AppColors.coral.withValues(alpha: 0.92)
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.92)
                     : null,
               ),
               child: group.count > 1
@@ -494,6 +497,7 @@ class _CalendarRingPainter extends CustomPainter {
     required this.progress,
     required this.textColor,
     required this.trackColor,
+    required this.accentColor,
   });
 
   final int year;
@@ -505,6 +509,7 @@ class _CalendarRingPainter extends CustomPainter {
   final double progress;
   final Color textColor;
   final Color trackColor;
+  final Color accentColor;
 
   static const _shortMonths = <String>[
     'янв',
@@ -536,9 +541,7 @@ class _CalendarRingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = selected ? 24 : 18
         ..strokeCap = StrokeCap.round
-        ..color = selected
-            ? AppColors.coral.withValues(alpha: 0.95)
-            : trackColor;
+        ..color = selected ? accentColor.withValues(alpha: 0.95) : trackColor;
       canvas.drawArc(
         ringRect,
         start - index * segment - gap,
@@ -558,7 +561,7 @@ class _CalendarRingPainter extends CustomPainter {
         text: TextSpan(
           text: _shortMonths[index],
           style: TextStyle(
-            color: selected ? AppColors.coral : textColor,
+            color: selected ? accentColor : textColor,
             fontSize: 10,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
           ),
@@ -617,7 +620,7 @@ class _CalendarRingPainter extends CustomPainter {
           .clamp(0, daysInYear);
       final sweep = -daysUntil / daysInYear * math.pi * 2;
       final color = group.count > 1
-          ? AppColors.coral
+          ? accentColor
           : group.primary.subscription.category.color;
 
       canvas.drawArc(
@@ -643,6 +646,7 @@ class _CalendarRingPainter extends CustomPainter {
         oldDelegate.now != now ||
         oldDelegate.showPeriodArcs != showPeriodArcs ||
         oldDelegate.textColor != textColor ||
-        oldDelegate.trackColor != trackColor;
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.accentColor != accentColor;
   }
 }

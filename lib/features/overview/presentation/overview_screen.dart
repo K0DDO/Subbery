@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -243,12 +243,13 @@ class _AdminDateSimulator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
     return Column(
       children: <Widget>[
         Text(
           AppFormatters.fullDate(selectedDate),
           style: theme.textTheme.labelLarge?.copyWith(
-            color: AppColors.coral,
+            color: primary,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -257,10 +258,10 @@ class _AdminDateSimulator extends StatelessWidget {
             trackHeight: 3,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-            activeTrackColor: AppColors.coral,
-            inactiveTrackColor: AppColors.coral.withValues(alpha: 0.22),
-            thumbColor: AppColors.coral,
-            overlayColor: AppColors.coral.withValues(alpha: 0.16),
+            activeTrackColor: primary,
+            inactiveTrackColor: primary.withValues(alpha: 0.22),
+            thumbColor: primary,
+            overlayColor: primary.withValues(alpha: 0.16),
           ),
           child: Slider(
             value: dayOffset.toDouble(),
@@ -304,6 +305,7 @@ class _RingGalleryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Column(
       children: <Widget>[
         Padding(
@@ -333,14 +335,14 @@ class _RingGalleryPage extends StatelessWidget {
                   vertical: AppSpacing.xs,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.coral.withValues(alpha: 0.14),
+                  color: primary.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
                   '$counterValue',
                   style: Theme.of(
                     context,
-                  ).textTheme.labelLarge?.copyWith(color: AppColors.coral),
+                  ).textTheme.labelLarge?.copyWith(color: primary),
                 ),
               ),
             ],
@@ -370,6 +372,7 @@ class _GalleryPageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
@@ -381,7 +384,7 @@ class _GalleryPageIndicator extends StatelessWidget {
             height: 7,
             decoration: BoxDecoration(
               color: selectedPage == index
-                  ? AppColors.coral
+                  ? primary
                   : Theme.of(context).dividerColor,
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
@@ -401,6 +404,7 @@ class _MonthlySummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = metrics.upcomingPayments.firstOrNull;
+    final accent = context.accentTheme;
 
     return GlassCard(
       strong: true,
@@ -414,7 +418,7 @@ class _MonthlySummary extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  gradient: AppColors.brandGradient,
+                  gradient: accent.gradient,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: const Icon(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
@@ -67,6 +68,7 @@ class _AnalyticsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.accentTheme;
     if (subscriptions.isEmpty) {
       return EmptyState(
         title: 'Здесь появится аналитика',
@@ -101,7 +103,7 @@ class _AnalyticsContent extends StatelessWidget {
                 label: 'Этот месяц',
                 value: AppFormatters.money(metrics.thisMonthInCents),
                 icon: Icons.calendar_month_rounded,
-                color: AppColors.coral,
+                color: accent.primary,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -110,7 +112,7 @@ class _AnalyticsContent extends StatelessWidget {
                 label: 'Этот год',
                 value: AppFormatters.money(metrics.thisYearInCents),
                 icon: Icons.date_range_rounded,
-                color: AppColors.pink,
+                color: accent.secondary,
               ),
             ),
           ],
@@ -120,7 +122,7 @@ class _AnalyticsContent extends StatelessWidget {
           label: 'Всего потрачено',
           value: AppFormatters.money(metrics.totalSpentInCents),
           icon: Icons.savings_rounded,
-          color: AppColors.burgundy,
+          color: accent.tertiary,
           horizontal: true,
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -234,6 +236,7 @@ class _InsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.accentTheme;
     final (icon, color) = switch (insight.type) {
       AnalyticsInsightType.longevity => (
         Icons.workspace_premium_rounded,
@@ -241,11 +244,11 @@ class _InsightCard extends StatelessWidget {
       ),
       AnalyticsInsightType.totalSpent => (
         Icons.payments_rounded,
-        AppColors.coral,
+        accent.primary,
       ),
       AnalyticsInsightType.largestCategory => (
         Icons.pie_chart_rounded,
-        AppColors.pink,
+        accent.tertiary,
       ),
     };
 

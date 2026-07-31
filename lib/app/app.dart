@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_theme.dart';
 import '../features/profile/presentation/user_name_gate.dart';
+import '../features/settings/application/accent_color_controller.dart';
 import '../features/settings/application/app_icon_controller.dart';
 import '../features/settings/application/theme_mode_controller.dart';
 import 'router/app_router.dart';
@@ -14,11 +15,12 @@ class SubberryApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentColorProvider);
     return MaterialApp.router(
       title: 'Subberry',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.lightFor(accent),
+      darkTheme: AppTheme.darkFor(accent),
       themeMode: ref.watch(themeModeProvider),
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       supportedLocales: const <Locale>[Locale('ru'), Locale('en')],

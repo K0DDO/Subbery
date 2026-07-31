@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 
+import 'app_accent_theme.dart';
 import 'app_colors.dart';
 import 'glass_theme.dart';
 
 abstract final class AppTheme {
-  static ThemeData get light => _build(
+  static ThemeData get light => lightFor(AppAccentChoice.coral);
+
+  static ThemeData get dark => darkFor(AppAccentChoice.coral);
+
+  static ThemeData lightFor(AppAccentChoice accentChoice) => _build(
     brightness: Brightness.light,
-    background: AppColors.lightBackground,
     foreground: AppColors.lightText,
     muted: AppColors.lightMutedText,
+    accentChoice: accentChoice,
     glassTheme: const GlassTheme(
       surface: Color(0x73FFFFFF),
       strongSurface: Color(0xA6FFFFFF),
@@ -19,11 +24,11 @@ abstract final class AppTheme {
     ),
   );
 
-  static ThemeData get dark => _build(
+  static ThemeData darkFor(AppAccentChoice accentChoice) => _build(
     brightness: Brightness.dark,
-    background: AppColors.darkBackground,
     foreground: AppColors.darkText,
     muted: AppColors.darkMutedText,
+    accentChoice: accentChoice,
     glassTheme: const GlassTheme(
       surface: Color(0x14FFFFFF),
       strongSurface: Color(0x24FFFFFF),
@@ -36,16 +41,22 @@ abstract final class AppTheme {
 
   static ThemeData _build({
     required Brightness brightness,
-    required Color background,
     required Color foreground,
     required Color muted,
+    required AppAccentChoice accentChoice,
     required GlassTheme glassTheme,
   }) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.coral,
-      brightness: brightness,
-      surface: background,
-    );
+    final accent = AppAccentTheme.fromChoice(accentChoice, brightness);
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: accent.primary,
+          brightness: brightness,
+          surface: accent.backgroundStart,
+        ).copyWith(
+          primary: accent.primary,
+          secondary: accent.secondary,
+          tertiary: accent.tertiary,
+        );
 
     final baseTextTheme = ThemeData(
       brightness: brightness,
@@ -104,9 +115,9 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: background,
+      scaffoldBackgroundColor: accent.backgroundStart,
       textTheme: textTheme,
-      extensions: <ThemeExtension<dynamic>>[glassTheme],
+      extensions: <ThemeExtension<dynamic>>[glassTheme, accent],
       dividerColor: glassTheme.border,
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
@@ -128,7 +139,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.coral, width: 1.5),
+          borderSide: BorderSide(color: accent.primary, width: 1.5),
         ),
       ),
     );

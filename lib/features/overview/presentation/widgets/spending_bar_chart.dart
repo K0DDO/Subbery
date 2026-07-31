@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/monthly_spend_point.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_accent_theme.dart';
 
 class SpendingBarChart extends StatelessWidget {
   const SpendingBarChart({required this.points, super.key});
@@ -28,6 +28,7 @@ class SpendingBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.accentTheme;
     final maxAmount = points.fold<int>(
       0,
       (maximum, point) => math.max(maximum, point.amountInCents),
@@ -112,7 +113,7 @@ class SpendingBarChart extends StatelessWidget {
                       top: Radius.circular(9),
                       bottom: Radius.circular(4),
                     ),
-                    gradient: AppColors.brandGradient,
+                    gradient: accent.gradient,
                     backDrawRodData: BackgroundBarChartRodData(
                       show: true,
                       toY: maxY,

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../theme/app_accent_theme.dart';
 
 class SubberryLogo extends StatelessWidget {
   const SubberryLogo({this.size = 76, super.key});
@@ -12,6 +12,7 @@ class SubberryLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = size * 0.29;
+    final accent = context.accentTheme;
 
     return Semantics(
       image: true,
@@ -25,14 +26,14 @@ class SubberryLogo extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(radius),
-                gradient: AppColors.brandGradient,
+                gradient: accent.gradient,
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.62),
                   width: 1.2,
                 ),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
-                    color: AppColors.pink.withValues(alpha: 0.32),
+                    color: accent.tertiary.withValues(alpha: 0.32),
                     blurRadius: size * 0.42,
                     spreadRadius: size * 0.02,
                     offset: Offset(0, size * 0.12),
@@ -67,7 +68,7 @@ class SubberryLogo extends StatelessWidget {
                       letterSpacing: -size * 0.04,
                       shadows: <Shadow>[
                         Shadow(
-                          color: AppColors.burgundy.withValues(alpha: 0.22),
+                          color: accent.tertiary.withValues(alpha: 0.22),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),

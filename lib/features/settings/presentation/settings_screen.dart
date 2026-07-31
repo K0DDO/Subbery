@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../notifications/application/notification_settings_controller.dart';
 import '../../profile/application/user_profile_controller.dart';
 import '../../shell/application/tab_reset_provider.dart';
+import '../application/accent_color_controller.dart';
 import '../application/app_icon_controller.dart';
 import '../application/background_pattern_controller.dart';
 import '../application/theme_mode_controller.dart';
@@ -141,6 +142,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final notificationSettings = ref.watch(notificationSettingsProvider);
     final appIconState = ref.watch(appIconProvider);
+    final accentColor = ref.watch(accentColorProvider);
     final backgroundPattern = ref.watch(backgroundPatternProvider);
     final profile = ref.watch(userProfileProvider);
     final resetRevision = ref.watch(tabResetRevisionProvider(3));
@@ -181,26 +183,6 @@ class SettingsScreen extends ConsumerWidget {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.edit_rounded),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                GlassCard(
-                  onTap: () =>
-                      unawaited(_showBackgroundPatternPicker(context, ref)),
-                  child: _SettingsRow(
-                    icon: Icons.auto_awesome_rounded,
-                    title: 'Эмодзи на фоне',
-                    subtitle: backgroundPattern == BackgroundPatternChoice.none
-                        ? 'Без узора'
-                        : backgroundPattern.label,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _PatternPreview(pattern: backgroundPattern),
-                        const SizedBox(width: AppSpacing.xs),
-                        const Icon(Icons.chevron_right_rounded),
-                      ],
                     ),
                   ),
                 ),
@@ -250,6 +232,56 @@ class SettingsScreen extends ConsumerWidget {
                         },
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Цвет интерфейса',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Меняет основной цвет и его оттенки',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _AccentColorPicker(
+                        selected: accentColor,
+                        onSelected: (accent) {
+                          unawaited(
+                            ref
+                                .read(accentColorProvider.notifier)
+                                .setAccent(accent),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  onTap: () =>
+                      unawaited(_showBackgroundPatternPicker(context, ref)),
+                  child: _SettingsRow(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'Эмодзи на фоне',
+                    subtitle: backgroundPattern == BackgroundPatternChoice.none
+                        ? 'Без узора'
+                        : backgroundPattern.label,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _PatternPreview(pattern: backgroundPattern),
+                        const SizedBox(width: AppSpacing.xs),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -339,7 +371,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.2.9',
+                    subtitle: 'Версия 1.3.0',
                   ),
                 ),
               ],
@@ -351,6 +383,89 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+class _AccentColorPicker extends StatelessWidget {
+  const _AccentColorPicker({required this.selected, required this.onSelected});
+
+  final AppAccentChoice selected;
+  final ValueChanged<AppAccentChoice> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            for (final accent in AppAccentChoice.values)
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  selected: accent == selected,
+                  label: accent.label,
+                  child: Tooltip(
+                    message: accent.label,
+                    child: InkWell(
+                      onTap: () => onSelected(accent),
+                      customBorder: const CircleBorder(),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 48,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xxs,
+                        ),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: <Color>[
+                              accent.secondary,
+                              accent.primary,
+                              accent.tertiary,
+                            ],
+                          ),
+                          border: Border.all(
+                            color: accent == selected
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Colors.white.withValues(alpha: 0.45),
+                            width: accent == selected ? 3 : 1,
+                          ),
+                          boxShadow: accent == selected
+                              ? <BoxShadow>[
+                                  BoxShadow(
+                                    color: accent.primary.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                    blurRadius: 12,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: accent == selected
+                            ? const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          selected.label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PatternPreview extends StatelessWidget {
   const _PatternPreview({required this.pattern});
 
@@ -358,19 +473,20 @@ class _PatternPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Container(
       width: 38,
       height: 38,
       padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
-        color: AppColors.coral.withValues(alpha: 0.13),
+        color: primary.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: pattern.assetPath == null
-          ? const Icon(Icons.block_rounded, size: 22, color: AppColors.coral)
+          ? Icon(Icons.block_rounded, size: 22, color: primary)
           : Image.asset(
               pattern.assetPath!,
-              color: AppColors.coral,
+              color: primary,
               colorBlendMode: BlendMode.srcIn,
             ),
     );
@@ -484,6 +600,7 @@ class _PatternChoiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Semantics(
       button: true,
       selected: selected,
@@ -498,14 +615,12 @@ class _PatternChoiceTile extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: selected
-                  ? AppColors.coral.withValues(alpha: 0.16)
+                  ? primary.withValues(alpha: 0.16)
                   : Theme.of(context).colorScheme.surfaceContainerHighest
                         .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
-                color: selected
-                    ? AppColors.coral
-                    : Theme.of(context).dividerColor,
+                color: selected ? primary : Theme.of(context).dividerColor,
                 width: 2,
               ),
             ),
@@ -513,12 +628,12 @@ class _PatternChoiceTile extends StatelessWidget {
                 ? Icon(
                     Icons.block_rounded,
                     color: selected
-                        ? AppColors.coral
+                        ? primary
                         : Theme.of(context).colorScheme.onSurfaceVariant,
                   )
                 : Image.asset(
                     pattern.assetPath!,
-                    color: AppColors.coral,
+                    color: primary,
                     colorBlendMode: BlendMode.srcIn,
                     filterQuality: FilterQuality.medium,
                   ),
@@ -575,8 +690,9 @@ class _ThemeModeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final color = selected
-        ? AppColors.coral
+        ? primary
         : Theme.of(context).colorScheme.onSurfaceVariant;
     return Semantics(
       selected: selected,
@@ -591,13 +707,11 @@ class _ThemeModeTile extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.coral.withValues(alpha: 0.13)
+                ? primary.withValues(alpha: 0.13)
                 : Theme.of(context).colorScheme.surface.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(
-              color: selected
-                  ? AppColors.coral
-                  : Theme.of(context).dividerColor,
+              color: selected ? primary : Theme.of(context).dividerColor,
               width: selected ? 2 : 1,
             ),
           ),
@@ -715,6 +829,7 @@ class _AppIconTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final shortLabel = switch (choice) {
       AppIconChoice.darkGlass || AppIconChoice.lightGlass => 'Стекло',
       AppIconChoice.darkNeon || AppIconChoice.lightNeon => 'Неон',
@@ -732,13 +847,11 @@ class _AppIconTile extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.coral.withValues(alpha: 0.13)
+                ? primary.withValues(alpha: 0.13)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(
-              color: selected
-                  ? AppColors.coral
-                  : Theme.of(context).dividerColor,
+              color: selected ? primary : Theme.of(context).dividerColor,
               width: selected ? 2 : 1,
             ),
           ),
@@ -758,7 +871,7 @@ class _AppIconTile extends StatelessWidget {
                   shortLabel,
                   maxLines: 1,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected ? AppColors.coral : null,
+                    color: selected ? primary : null,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

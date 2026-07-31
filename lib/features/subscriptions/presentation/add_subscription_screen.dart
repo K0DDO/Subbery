@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/glass_button.dart';
@@ -269,9 +268,9 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                                   ),
                                 ),
                                 selected: state.billingCycle == cycle,
-                                selectedColor: AppColors.coral.withValues(
-                                  alpha: 0.28,
-                                ),
+                                selectedColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.28),
                                 onSelected: (_) =>
                                     controller.setBillingCycle(cycle),
                               ),
@@ -350,12 +349,14 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AppColors.coral.withValues(alpha: 0.14),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.calendar_month_rounded,
-                            color: AppColors.coral,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.md),
@@ -519,9 +520,9 @@ class _ServicePreview extends StatelessWidget {
             ),
           ),
           if (selectedService != null)
-            const Icon(
+            Icon(
               Icons.auto_awesome_rounded,
-              color: AppColors.coral,
+              color: Theme.of(context).colorScheme.primary,
               size: 22,
             ),
         ],

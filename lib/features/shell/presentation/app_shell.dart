@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/glass_theme.dart';
 import '../../../core/widgets/app_background.dart';
@@ -70,6 +70,7 @@ class _GlassNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final glass = Theme.of(context).extension<GlassTheme>()!;
+    final accent = context.accentTheme;
 
     return Center(
       child: ConstrainedBox(
@@ -111,13 +112,13 @@ class _GlassNavigationBar extends StatelessWidget {
                           curve: Curves.easeOutBack,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              gradient: AppColors.brandGradient,
+                              gradient: accent.gradient,
                               borderRadius: BorderRadius.circular(
                                 AppRadius.pill,
                               ),
                               boxShadow: <BoxShadow>[
                                 BoxShadow(
-                                  color: AppColors.coral.withValues(alpha: 0.3),
+                                  color: accent.primary.withValues(alpha: 0.3),
                                   blurRadius: 18,
                                   offset: const Offset(0, 7),
                                 ),

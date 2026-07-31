@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
@@ -205,6 +206,7 @@ class _DetailsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.accentTheme;
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -298,7 +300,7 @@ class _DetailsContent extends StatelessWidget {
                           subscription.status != SubscriptionStatus.active
                       ? 'Нет активной оплаты'
                       : AppFormatters.shortDate(subscription.nextPaymentDate),
-                  color: AppColors.coral,
+                  color: accent.primary,
                   onTap: () => context.pushNamed(
                     'subscription-payment-schedule',
                     pathParameters: <String, String>{'id': subscription.id},
@@ -327,7 +329,7 @@ class _DetailsContent extends StatelessWidget {
             icon: Icons.savings_rounded,
             label: 'Всего потрачено',
             value: AppFormatters.money(subscription.totalSpentInCents),
-            color: AppColors.burgundy,
+            color: accent.tertiary,
             horizontal: true,
           ),
           if (subscription.notes case final notes?
@@ -570,6 +572,7 @@ class _PaymentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Row(
@@ -578,14 +581,10 @@ class _PaymentRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.coral.withValues(alpha: 0.12),
+              color: primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.check_rounded,
-              color: AppColors.coral,
-              size: 20,
-            ),
+            child: Icon(Icons.check_rounded, color: primary, size: 20),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
