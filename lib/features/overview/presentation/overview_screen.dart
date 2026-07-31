@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/models/monthly_spend_point.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../profile/application/user_profile_controller.dart';
 import '../../shell/application/tab_reset_provider.dart';
@@ -131,7 +133,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               SizedBox(
-                height: 406,
+                height: 392,
                 child: PageView(
                   onPageChanged: (page) {
                     setState(() => _ringPage = page);
@@ -180,9 +182,9 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                   },
                 ),
               ],
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.xxs),
               _GalleryPageIndicator(selectedPage: _ringPage),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               SizedBox(
                 width: double.infinity,
                 child: AnimatedSwitcher(
@@ -220,11 +222,51 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         const SizedBox(height: AppSpacing.lg),
         const _SectionTitle(
           title: 'Расходы за 6 месяцев',
-          subtitle: 'Фактические платежи',
+          subtitle: 'Нажмите, чтобы открыть детали',
         ),
         const SizedBox(height: AppSpacing.sm),
-        GlassCard(child: SpendingBarChart(points: metrics.spendingByMonth)),
+        GlassCard(
+          onTap: () => _showSixMonthDetail(context, metrics.spendingByMonth),
+          child: SpendingBarChart(points: metrics.spendingByMonth),
+        ),
       ],
+    );
+  }
+
+  void _showSixMonthDetail(
+    BuildContext context,
+    List<MonthlySpendPoint> points,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Расходы за 6 месяцев',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SpendingBarChart(points: points),
+                const SizedBox(height: AppSpacing.md),
+                for (final point in points.reversed)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(AppFormatters.shortDate(point.month)),
+                    trailing: MoneyText(cents: point.amountInCents),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -346,15 +388,17 @@ class _RingGalleryPage extends StatelessWidget {
             ],
           ),
         ),
-        BerryCalendarRing(
-          year: year,
-          now: now,
-          occurrences: occurrences,
-          periodArcOccurrences: periodArcOccurrences,
-          selectedMonth: selectedMonth,
-          showPeriodArcs: showPeriodArcs,
-          showCalendarLogos: showCalendarLogos,
-          onMonthSelected: onMonthSelected,
+        Expanded(
+          child: BerryCalendarRing(
+            year: year,
+            now: now,
+            occurrences: occurrences,
+            periodArcOccurrences: periodArcOccurrences,
+            selectedMonth: selectedMonth,
+            showPeriodArcs: showPeriodArcs,
+            showCalendarLogos: showCalendarLogos,
+            onMonthSelected: onMonthSelected,
+          ),
         ),
       ],
     );
@@ -396,9 +440,59 @@ class _MonthlySummary extends StatelessWidget {
 
   final OverviewMetrics metrics;
 
+  Future<void> _openFocus(BuildContext context) async {
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Закрыть',
+      barrierColor: Colors.black.withValues(alpha: 0.72),
+      transitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return SafeArea(
+          child: Align(
+            alignment: const Alignment(0, -0.35),
+            child: Material(
+              color: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _MonthlySummaryCard(metrics: metrics, focused: true),
+                    const SizedBox(height: AppSpacing.md),
+                    GlassCard(
+                      strong: true,
+                      child: const HomeNumberSettingsPanel(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onLongPress: () => _openFocus(context),
+      child: _MonthlySummaryCard(metrics: metrics),
+    );
+  }
+}
+
+class _MonthlySummaryCard extends StatelessWidget {
+  const _MonthlySummaryCard({required this.metrics, this.focused = false});
+
+  final OverviewMetrics metrics;
+  final bool focused;
+
   @override
   Widget build(BuildContext context) {
     final next = metrics.upcomingPayments.firstOrNull;
+    final accent = Theme.of(context).colorScheme.primary;
 
     return GlassCard(
       strong: true,
@@ -412,7 +506,12 @@ class _MonthlySummary extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  gradient: AppColors.brandGradient,
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      Theme.of(context).colorScheme.secondary,
+                      accent,
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: const Icon(
@@ -430,34 +529,70 @@ class _MonthlySummary extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
+              if (!focused)
+                Icon(
+                  Icons.tune_rounded,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              AppFormatters.money(metrics.plannedThisMonthInCents),
+            child: MoneyText(
+              cents: metrics.plannedThisMonthInCents,
+              transparentStyle: true,
               style: Theme.of(context).textTheme.displaySmall,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Фактически потрачено: '
-            '${AppFormatters.money(metrics.actualThisMonthInCents)}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: <Widget>[
+              Text(
+                'Фактически потрачено: ',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Flexible(
+                child: MoneyText(
+                  cents: metrics.actualThisMonthInCents,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
+          // Prefix label separately — MoneyText alone loses "Фактически..."
+          // Keep label via Rich approach: show as Row
           const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
               Expanded(
                 child: _SummaryCaption(
                   label: 'Среднее',
-                  value:
-                      '${AppFormatters.money(metrics.averageMonthlyPlannedInCents)} / мес',
+                  valueWidget: Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: MoneyText(
+                          cents: metrics.averageMonthlyPlannedInCents,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      Text(
+                        ' / мес',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (next != null) ...<Widget>[
@@ -522,10 +657,12 @@ class _NextPaymentCaption extends StatelessWidget {
 }
 
 class _SummaryCaption extends StatelessWidget {
-  const _SummaryCaption({required this.label, required this.value});
+  const _SummaryCaption({required this.label, this.value, this.valueWidget})
+    : assert(value != null || valueWidget != null);
 
   final String label;
-  final String value;
+  final String? value;
+  final Widget? valueWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -539,14 +676,15 @@ class _SummaryCaption extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        valueWidget ??
+            Text(
+              value!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
       ],
     );
   }

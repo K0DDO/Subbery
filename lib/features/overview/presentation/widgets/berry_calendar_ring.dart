@@ -190,7 +190,10 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final size = math.min(constraints.maxWidth, 340.0);
+        var size = math.min(constraints.maxWidth, 340.0);
+        if (constraints.maxHeight.isFinite) {
+          size = math.min(size, constraints.maxHeight);
+        }
         return Center(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -304,12 +307,14 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
   List<Widget> _buildCalendarIcons(double size, double progress) {
     final center = Offset(size / 2, size / 2);
     final radius = size * 0.335;
+    final today = DateTime(widget.now.year, widget.now.month, widget.now.day);
     final daysInYear = DateTime(
       widget.year + 1,
     ).difference(DateTime(widget.year)).inDays;
     final sameDayCount = <int, int>{};
     final icons = <Widget>[];
     for (final occurrence in widget.occurrences) {
+      if (occurrence.date.isBefore(today)) continue;
       final day = occurrence.date.difference(DateTime(widget.year)).inDays;
       if (day < 0 || day >= daysInYear) continue;
       final stackIndex = sameDayCount.update(
@@ -318,12 +323,14 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
         ifAbsent: () => 0,
       );
       if (stackIndex > 2) continue;
-      final angle = -math.pi / 2 - day / daysInYear * math.pi * 2;
-      final pointRadius = radius + 2 + stackIndex * 10;
-      final point =
-          center +
-          Offset(math.cos(angle) * pointRadius, math.sin(angle) * pointRadius);
       const iconSize = 14.0;
+      // Same-day icons fan out along the ring instead of stacking outward.
+      final angle =
+          -math.pi / 2 -
+          day / daysInYear * math.pi * 2 -
+          stackIndex * iconSize * 0.85 / radius;
+      final point =
+          center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
       icons.add(
         Positioned(
           left: point.dx - iconSize / 2,

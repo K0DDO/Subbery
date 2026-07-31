@@ -147,6 +147,38 @@ void main() {
     expect(find.byType(ServiceLogo), findsOneWidget);
   });
 
+  testWidgets('hides calendar logos for dates before today', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 340,
+              child: BerryCalendarRing(
+                year: 2026,
+                now: DateTime(2026, 7, 29),
+                occurrences: <PaymentOccurrence>[
+                  PaymentOccurrence(
+                    subscription: _subscription('past'),
+                    date: DateTime(2026, 7, 28),
+                  ),
+                  PaymentOccurrence(
+                    subscription: _subscription('future'),
+                    date: DateTime(2026, 8, 3),
+                  ),
+                ],
+                selectedMonth: 8,
+                onMonthSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(ServiceLogo), findsOneWidget);
+  });
+
   testWidgets('uses separate sources for calendar logos and period arcs', (
     tester,
   ) async {
