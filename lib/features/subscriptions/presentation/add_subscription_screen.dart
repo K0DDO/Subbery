@@ -239,11 +239,16 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                           suffixText: '₽',
                         ),
                       ),
-                      if (state.renewalMode == RenewalMode.automatic) ...<Widget>[
+                      if (state.renewalMode ==
+                          RenewalMode.automatic) ...<Widget>[
                         const SizedBox(height: AppSpacing.md),
-                        Wrap(
-                          spacing: AppSpacing.xs,
-                          runSpacing: AppSpacing.xs,
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: AppSpacing.xs,
+                          crossAxisSpacing: AppSpacing.xs,
+                          childAspectRatio: 3.4,
                           children: <Widget>[
                             for (final cycle in const <BillingCycle>[
                               BillingCycle.monthly,
@@ -254,7 +259,15 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                               BillingCycle.custom,
                             ])
                               ChoiceChip(
-                                label: Text(cycle.label),
+                                showCheckmark: false,
+                                labelPadding: EdgeInsets.zero,
+                                label: SizedBox(
+                                  width: double.infinity,
+                                  child: Text(
+                                    cycle.label,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
                                 selected: state.billingCycle == cycle,
                                 selectedColor: AppColors.coral.withValues(
                                   alpha: 0.28,
@@ -264,7 +277,8 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                               ),
                           ],
                         ),
-                        if (state.billingCycle == BillingCycle.custom) ...<Widget>[
+                        if (state.billingCycle ==
+                            BillingCycle.custom) ...<Widget>[
                           const SizedBox(height: AppSpacing.md),
                           TextField(
                             keyboardType: TextInputType.number,

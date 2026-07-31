@@ -40,11 +40,11 @@ extension SubscriptionCategoryUi on SubscriptionCategory {
 
 extension BillingCycleUi on BillingCycle {
   String get label => switch (this) {
-    BillingCycle.monthly => 'Раз в месяц',
-    BillingCycle.quarterly => 'Раз в 3 месяца',
-    BillingCycle.semiannual => 'Раз в полгода',
-    BillingCycle.yearly => 'Раз в год',
-    BillingCycle.biennial => 'Раз в 2 года',
+    BillingCycle.monthly => 'Месяц',
+    BillingCycle.quarterly => '3 месяца',
+    BillingCycle.semiannual => 'Полгода',
+    BillingCycle.yearly => 'Год',
+    BillingCycle.biennial => '2 года',
     BillingCycle.custom => 'Свой период',
   };
 

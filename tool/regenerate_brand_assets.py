@@ -17,14 +17,10 @@ ICON_NAMES = (
     "light_neon",
 )
 
-# The dark glass artwork is full bleed, so the launcher variant is scaled down and
-# padded to keep the berry tile clear of adaptive icon and iOS corner masks.
-LAUNCHER_ICON = "dark_glass_launcher"
-LAUNCHER_SCALE = 0.60
-LAUNCHER_BACKGROUND = (0x18, 0x07, 0x0E)
+FRAME_CROP_RATIO = 0.055
 
 IOS_SETS = {
-    "AppIcon.appiconset": LAUNCHER_ICON,
+    "AppIcon.appiconset": "dark_glass",
     "DarkMinimal.appiconset": "dark_minimal",
     "DarkNeon.appiconset": "dark_neon",
     "LightGlass.appiconset": "light_glass",
@@ -33,24 +29,21 @@ IOS_SETS = {
 }
 
 ANDROID_NAMES = {
-    "ic_launcher.png": LAUNCHER_ICON,
+    "ic_launcher.png": "dark_glass",
     "ic_launcher_dark_minimal.png": "dark_minimal",
     "ic_launcher_dark_neon.png": "dark_neon",
     "ic_launcher_light_glass.png": "light_glass",
     "ic_launcher_light_minimal.png": "light_minimal",
     "ic_launcher_light_neon.png": "light_neon",
-    "ic_launcher_foreground.png": LAUNCHER_ICON,
+    "ic_launcher_foreground.png": "dark_glass",
 }
 
 
-def _launcher_variant(icon: Image.Image, scale: float = LAUNCHER_SCALE) -> Image.Image:
-    canvas = Image.new("RGB", icon.size, LAUNCHER_BACKGROUND)
-    inner = (round(icon.width * scale), round(icon.height * scale))
-    canvas.paste(
-        icon.resize(inner, Image.Resampling.LANCZOS),
-        ((icon.width - inner[0]) // 2, (icon.height - inner[1]) // 2),
-    )
-    return canvas
+def _remove_outer_frame(icon: Image.Image) -> Image.Image:
+    """Crop the baked rounded tile so the launcher applies its only mask."""
+    inset = round(min(icon.size) * FRAME_CROP_RATIO)
+    cropped = icon.crop((inset, inset, icon.width - inset, icon.height - inset))
+    return cropped.resize(icon.size, Image.Resampling.LANCZOS)
 
 
 def _wordmark_with_alpha(source: Image.Image) -> Image.Image:
@@ -119,12 +112,9 @@ def regenerate(root: Path, generated: Path) -> None:
     icons: dict[str, Image.Image] = {}
     for name in ICON_NAMES:
         source = generated / f"subberry_{name}_new.png"
-        icon = Image.open(source).convert("RGB")
+        icon = _remove_outer_frame(Image.open(source).convert("RGB"))
         icons[name] = icon
         icon.save(destination / f"subberry_{name}.png")
-
-    icons[LAUNCHER_ICON] = _launcher_variant(icons["dark_glass"])
-    icons[LAUNCHER_ICON].save(destination / "subberry_dark_glass_launcher.png")
 
     for theme in ("dark", "light"):
         source = Image.open(generated / f"subberry_wordmark_{theme}_new.png")
@@ -136,13 +126,12 @@ def regenerate(root: Path, generated: Path) -> None:
 
 
 def regenerate_launcher(root: Path) -> None:
-    """Rebuild only the launcher icons from the committed dark glass artwork."""
+    """Rebuild launcher resources from the six committed borderless artworks."""
     destination = root / "assets" / "icons"
-    with Image.open(destination / "subberry_dark_glass.png") as source:
-        launcher = _launcher_variant(source.convert("RGB"))
-    launcher.save(destination / "subberry_dark_glass_launcher.png")
-
-    icons = {LAUNCHER_ICON: launcher}
+    icons = {
+        name: Image.open(destination / f"subberry_{name}.png").convert("RGB")
+        for name in ICON_NAMES
+    }
     _replace_android_icons(root, icons)
     _replace_ios_icons(root, icons)
 
@@ -158,7 +147,7 @@ def main() -> None:
     parser.add_argument(
         "--launcher-only",
         action="store_true",
-        help="Only rescale the launcher icons from the committed dark glass artwork.",
+        help="Only sync launcher resources from the committed icon artworks.",
     )
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

@@ -33,7 +33,7 @@ void main() {
     expect(selectedMonth, 10);
   });
 
-  test('groups equal dates and keeps farthest arcs outside', () {
+  test('groups equal dates and keeps soon payment above other arcs', () {
     final groups = buildPeriodArcGroups(<PaymentOccurrence>[
       PaymentOccurrence(
         subscription: _subscription('a'),
@@ -67,13 +67,12 @@ void main() {
 
     expect(groups, hasLength(4));
     expect(groups.map((group) => group.date).toList(), <DateTime>[
-      DateTime(2026, 8, 1),
       DateTime(2026, 8, 10),
       DateTime(2026, 8, 20),
       DateTime(2026, 9, 1),
+      DateTime(2026, 8, 1),
     ]);
-    expect(groups.first.count, 2);
-    expect(groups.first.date.isBefore(groups.last.date), isTrue);
+    expect(groups.last.count, 2);
   });
 
   testWidgets('limits payment arcs and shows service logos', (tester) async {

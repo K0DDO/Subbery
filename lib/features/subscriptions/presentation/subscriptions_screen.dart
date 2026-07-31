@@ -29,8 +29,7 @@ class SubscriptionFilterState {
   final Set<SubscriptionCategory> categories;
   final Set<SubscriptionStatus> statuses;
 
-  bool get hasAdvancedFilters =>
-      categories.isNotEmpty || statuses.isNotEmpty;
+  bool get hasAdvancedFilters => categories.isNotEmpty || statuses.isNotEmpty;
 
   SubscriptionFilterState copyWith({
     SubscriptionListFilter? quick,
@@ -45,8 +44,9 @@ class SubscriptionFilterState {
   }
 }
 
-final subscriptionFilterProvider =
-    StateProvider<SubscriptionFilterState>((ref) => const SubscriptionFilterState());
+final subscriptionFilterProvider = StateProvider<SubscriptionFilterState>(
+  (ref) => const SubscriptionFilterState(),
+);
 
 List<Subscription> filterSubscriptions(
   List<Subscription> subscriptions,
@@ -123,8 +123,8 @@ class SubscriptionsScreen extends ConsumerWidget {
             state: filterState,
             routeCategory: initialCategory,
             onQuickSelected: (filter) {
-              ref.read(subscriptionFilterProvider.notifier).state =
-                  filterState.copyWith(quick: filter);
+              ref.read(subscriptionFilterProvider.notifier).state = filterState
+                  .copyWith(quick: filter);
             },
             onAdvancedChanged: (next) {
               ref.read(subscriptionFilterProvider.notifier).state = next;
@@ -245,7 +245,7 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-class _AdvancedFilterButton extends StatelessWidget {
+class _AdvancedFilterButton extends StatefulWidget {
   const _AdvancedFilterButton({
     required this.state,
     required this.routeCategory,
@@ -257,20 +257,71 @@ class _AdvancedFilterButton extends StatelessWidget {
   final ValueChanged<SubscriptionFilterState> onChanged;
 
   @override
+  State<_AdvancedFilterButton> createState() => _AdvancedFilterButtonState();
+}
+
+class _AdvancedFilterButtonState extends State<_AdvancedFilterButton> {
+  final _buttonKey = GlobalKey();
+
+  Future<void> _openFilters() async {
+    final renderBox =
+        _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final origin = renderBox.localToGlobal(Offset.zero);
+    final anchor = origin & renderBox.size;
+    final screenSize = MediaQuery.sizeOf(context);
+    final popupWidth = (screenSize.width - AppSpacing.lg * 2).clamp(
+      280.0,
+      380.0,
+    );
+    final popupLeft = (anchor.right - popupWidth).clamp(
+      AppSpacing.md,
+      screenSize.width - popupWidth - AppSpacing.md,
+    );
+    final popupTop = anchor.bottom + AppSpacing.xs;
+
+    final next = await showGeneralDialog<SubscriptionFilterState>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Закрыть фильтры',
+      barrierColor: Colors.black.withValues(alpha: 0.18),
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return Stack(
+          children: <Widget>[
+            Positioned(
+              left: popupLeft,
+              top: popupTop,
+              width: popupWidth,
+              child: FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  alignment: Alignment.topRight,
+                  scale: Tween<double>(begin: 0.82, end: 1).animate(curved),
+                  child: _FilterPanel(initial: widget.state),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (next != null) widget.onChanged(next);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final active =
-        state.hasAdvancedFilters || routeCategory != null;
+        widget.state.hasAdvancedFilters || widget.routeCategory != null;
     return IconButton(
+      key: _buttonKey,
       tooltip: 'Фильтры',
-      onPressed: () async {
-        final next = await showModalBottomSheet<SubscriptionFilterState>(
-          context: context,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (context) => _FilterSheet(initial: state),
-        );
-        if (next != null) onChanged(next);
-      },
+      onPressed: _openFilters,
       icon: Badge(
         isLabelVisible: active,
         smallSize: 8,
@@ -282,16 +333,16 @@ class _AdvancedFilterButton extends StatelessWidget {
   }
 }
 
-class _FilterSheet extends StatefulWidget {
-  const _FilterSheet({required this.initial});
+class _FilterPanel extends StatefulWidget {
+  const _FilterPanel({required this.initial});
 
   final SubscriptionFilterState initial;
 
   @override
-  State<_FilterSheet> createState() => _FilterSheetState();
+  State<_FilterPanel> createState() => _FilterPanelState();
 }
 
-class _FilterSheetState extends State<_FilterSheet> {
+class _FilterPanelState extends State<_FilterPanel> {
   late Set<SubscriptionCategory> _categories;
   late Set<SubscriptionStatus> _statuses;
 
@@ -304,98 +355,104 @@ class _FilterSheetState extends State<_FilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text('Фильтры', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: AppSpacing.md),
-            Text('Категории', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: AppSpacing.xs),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
+    return Material(
+      color: Colors.transparent,
+      child: GlassCard(
+        strong: true,
+        padding: EdgeInsets.zero,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 520),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                for (final category in SubscriptionCategory.values)
-                  FilterChip(
-                    label: Text('${category.emoji} ${category.label}'),
-                    selected: _categories.contains(category),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _categories.add(category);
-                        } else {
-                          _categories.remove(category);
-                        }
-                      });
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text('Статус', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: AppSpacing.xs),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: <Widget>[
-                for (final status in const <SubscriptionStatus>[
-                  SubscriptionStatus.active,
-                  SubscriptionStatus.paused,
-                  SubscriptionStatus.cancelled,
-                  SubscriptionStatus.expired,
-                ])
-                  FilterChip(
-                    label: Text(status.label),
-                    selected: _statuses.contains(status),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _statuses.add(status);
-                        } else {
-                          _statuses.remove(status);
-                        }
-                      });
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _categories.clear();
-                      _statuses.clear();
-                    });
-                  },
-                  child: const Text('Сбросить'),
+                Text('Фильтры', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Категории',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(
-                      context,
-                      widget.initial.copyWith(
-                        categories: _categories,
-                        statuses: _statuses,
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    for (final category in SubscriptionCategory.values)
+                      FilterChip(
+                        label: Text('${category.emoji} ${category.label}'),
+                        selected: _categories.contains(category),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _categories.add(category);
+                            } else {
+                              _categories.remove(category);
+                            }
+                          });
+                        },
                       ),
-                    );
-                  },
-                  child: const Text('Готово'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text('Статус', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    for (final status in const <SubscriptionStatus>[
+                      SubscriptionStatus.active,
+                      SubscriptionStatus.paused,
+                      SubscriptionStatus.cancelled,
+                      SubscriptionStatus.expired,
+                    ])
+                      FilterChip(
+                        label: Text(status.label),
+                        selected: _statuses.contains(status),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _statuses.add(status);
+                            } else {
+                              _statuses.remove(status);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _categories.clear();
+                          _statuses.clear();
+                        });
+                      },
+                      child: const Text('Сбросить'),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.pop(
+                          context,
+                          widget.initial.copyWith(
+                            categories: _categories,
+                            statuses: _statuses,
+                          ),
+                        );
+                      },
+                      child: const Text('Готово'),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -618,10 +675,7 @@ class _SubscriptionsError extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.lg),
-            GlassButton(
-              label: 'Повторить',
-              onPressed: onRetry,
-            ),
+            GlassButton(label: 'Повторить', onPressed: onRetry),
           ],
         ),
       ),

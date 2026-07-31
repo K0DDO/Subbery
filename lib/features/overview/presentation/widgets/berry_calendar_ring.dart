@@ -11,10 +11,7 @@ const _maxPeriodArcs = 4;
 
 @visibleForTesting
 class PeriodArcGroup {
-  const PeriodArcGroup({
-    required this.date,
-    required this.occurrences,
-  });
+  const PeriodArcGroup({required this.date, required this.occurrences});
 
   final DateTime date;
   final List<PaymentOccurrence> occurrences;
@@ -51,16 +48,22 @@ List<PeriodArcGroup> buildPeriodArcGroups(
   final groups =
       byDate.entries
           .map(
-            (entry) => PeriodArcGroup(
-              date: entry.key,
-              occurrences: entry.value,
-            ),
+            (entry) =>
+                PeriodArcGroup(date: entry.key, occurrences: entry.value),
           )
           .toList()
         ..sort((left, right) => left.date.compareTo(right.date));
 
-  // Nearest dates first so they stay on the inner radii; farthest stay outside.
-  return groups.take(_maxPeriodArcs).toList(growable: false);
+  final visible = groups.take(_maxPeriodArcs).toList();
+  // A payment due within three days pulses. Keep it last so its arc and icon
+  // use the outermost radius and paint above every other subscription.
+  visible.sort((left, right) {
+    final leftIsSoon = left.date.difference(today).inDays <= 3;
+    final rightIsSoon = right.date.difference(today).inDays <= 3;
+    if (leftIsSoon != rightIsSoon) return leftIsSoon ? 1 : -1;
+    return left.date.compareTo(right.date);
+  });
+  return visible;
 }
 
 class BerryCalendarRing extends StatefulWidget {
@@ -608,7 +611,10 @@ class _CalendarRingPainter extends CustomPainter {
       final group = periods[index];
       final periodRadius = innermostRadius + spacing * index;
       final rect = Rect.fromCircle(center: center, radius: periodRadius);
-      final daysUntil = group.date.difference(today).inDays.clamp(0, daysInYear);
+      final daysUntil = group.date
+          .difference(today)
+          .inDays
+          .clamp(0, daysInYear);
       final sweep = -daysUntil / daysInYear * math.pi * 2;
       final color = group.count > 1
           ? AppColors.coral
