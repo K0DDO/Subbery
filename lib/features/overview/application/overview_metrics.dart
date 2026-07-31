@@ -27,32 +27,30 @@ class OverviewMetrics {
     required List<Payment> payments,
     required DateTime now,
   }) {
+    final today = SubscriptionSchedule.dateOnly(now);
     final activeSubscriptions = subscriptions
         .where((item) => item.status == SubscriptionStatus.active)
         .toList(growable: false);
     final annualPlan = activeSubscriptions.fold<int>(
       0,
-      (total, item) =>
-          total +
-          switch (item.renewalMode) {
-            RenewalMode.manual => 0,
-            RenewalMode.automatic => switch (item.billingCycle) {
-              BillingCycle.monthly => item.priceInCents * 12,
-              BillingCycle.yearly => item.priceInCents,
-            },
-          },
+      (total, item) => total + item.annualPlanInCents,
     );
     final currentMonth = DateTime(now.year, now.month);
     final nextMonth = _addMonths(currentMonth, 1);
     final plannedThisMonth = activeSubscriptions
-        .where(
-          (subscription) =>
-              subscription.startDate.isBefore(nextMonth) &&
-              ((subscription.renewalMode == RenewalMode.automatic &&
-                      subscription.billingCycle == BillingCycle.monthly) ||
-                  (subscription.nextPaymentDate.month == now.month &&
-                      subscription.nextPaymentDate.year == now.year)),
-        )
+        .where((subscription) {
+          if (!subscription.startDate.isBefore(nextMonth)) return false;
+          final next = nextOccurrence(subscription, now);
+          if (subscription.renewalMode == RenewalMode.manual &&
+              next.isBefore(today)) {
+            return false;
+          }
+          if (subscription.renewalMode == RenewalMode.automatic &&
+              subscription.billingCycle == BillingCycle.monthly) {
+            return true;
+          }
+          return next.month == now.month && next.year == now.year;
+        })
         .fold<int>(
           0,
           (total, subscription) => total + subscription.priceInCents,
@@ -73,6 +71,13 @@ class OverviewMetrics {
                 date: nextOccurrence(subscription, now),
               ),
             )
+            .where((occurrence) {
+              if (occurrence.subscription.renewalMode == RenewalMode.manual &&
+                  occurrence.date.isBefore(today)) {
+                return false;
+              }
+              return true;
+            })
             .toList()
           ..sort((left, right) => left.date.compareTo(right.date));
 
@@ -99,9 +104,7 @@ class OverviewMetrics {
       upcomingYearOccurrences: upcoming
           .where(
             (occurrence) =>
-                !occurrence.date.isBefore(
-                  DateTime(now.year, now.month, now.day),
-                ) &&
+                !occurrence.date.isBefore(today) &&
                 occurrence.date.year == now.year,
           )
           .toList(growable: false),
@@ -126,6 +129,8 @@ class OverviewMetrics {
     int year,
   ) {
     final occurrences = <PaymentOccurrence>[];
+    final yearStart = DateTime(year);
+    final yearEnd = DateTime(year + 1);
     for (final subscription in subscriptions) {
       if (subscription.renewalMode == RenewalMode.manual) {
         final date = SubscriptionSchedule.dateOnly(
@@ -138,39 +143,91 @@ class OverviewMetrics {
         }
         continue;
       }
+
       final anchorDay =
           subscription.billingAnchorDay ?? subscription.nextPaymentDate.day;
       final startDate = SubscriptionSchedule.dateOnly(subscription.startDate);
-      switch (subscription.billingCycle) {
-        case BillingCycle.monthly:
-          final firstMonth = startDate.year == year ? startDate.month : 1;
-          if (startDate.year > year) continue;
-          for (var month = firstMonth; month <= 12; month++) {
-            final candidate = SubscriptionSchedule.safeDate(
-              year,
-              month,
-              anchorDay,
-            );
-            if (candidate.isBefore(startDate)) continue;
-            occurrences.add(
-              PaymentOccurrence(subscription: subscription, date: candidate),
-            );
-          }
-        case BillingCycle.yearly:
+      if (startDate.year > year) continue;
+
+      if (subscription.billingCycle == BillingCycle.monthly) {
+        final firstMonth = startDate.year == year ? startDate.month : 1;
+        for (var month = firstMonth; month <= 12; month++) {
           final candidate = SubscriptionSchedule.safeDate(
             year,
-            subscription.nextPaymentDate.month,
+            month,
             anchorDay,
           );
-          if (!candidate.isBefore(startDate)) {
-            occurrences.add(
-              PaymentOccurrence(subscription: subscription, date: candidate),
-            );
-          }
+          if (candidate.isBefore(startDate)) continue;
+          occurrences.add(
+            PaymentOccurrence(subscription: subscription, date: candidate),
+          );
+        }
+        continue;
+      }
+
+      var cursor = SubscriptionSchedule.dateOnly(subscription.nextPaymentDate);
+      // Walk back until before the year (or start), then walk forward.
+      var guard = 0;
+      while (cursor.isAfter(yearStart) && guard < 200) {
+        guard++;
+        final previous = _stepBackward(
+          cursor,
+          subscription.billingCycle,
+          anchorDay: anchorDay,
+          customIntervalDays: subscription.customIntervalDays,
+        );
+        if (!previous.isBefore(cursor)) break;
+        cursor = previous;
+      }
+      if (cursor.isBefore(startDate)) {
+        cursor = SubscriptionSchedule.normalizedNextPayment(
+          subscription,
+          startDate,
+        );
+      }
+      guard = 0;
+      while (cursor.isBefore(yearEnd) && guard < 200) {
+        guard++;
+        if (!cursor.isBefore(startDate) && cursor.year == year) {
+          occurrences.add(
+            PaymentOccurrence(subscription: subscription, date: cursor),
+          );
+        }
+        cursor = SubscriptionSchedule.nextAfter(
+          cursor,
+          subscription.billingCycle,
+          anchorDay: anchorDay,
+          customIntervalDays: subscription.customIntervalDays,
+        );
       }
     }
     occurrences.sort((left, right) => left.date.compareTo(right.date));
     return occurrences;
+  }
+
+  static DateTime _stepBackward(
+    DateTime date,
+    BillingCycle billingCycle, {
+    required int anchorDay,
+    int? customIntervalDays,
+  }) {
+    return switch (billingCycle) {
+      BillingCycle.monthly => _addMonthsSafe(date, -1, anchorDay),
+      BillingCycle.quarterly => _addMonthsSafe(date, -3, anchorDay),
+      BillingCycle.semiannual => _addMonthsSafe(date, -6, anchorDay),
+      BillingCycle.yearly => _addMonthsSafe(date, -12, anchorDay),
+      BillingCycle.biennial => _addMonthsSafe(date, -24, anchorDay),
+      BillingCycle.custom => date.subtract(
+        Duration(days: (customIntervalDays ?? 30).clamp(1, 3650)),
+      ),
+    };
+  }
+
+  static DateTime _addMonthsSafe(DateTime date, int months, int anchorDay) {
+    final zeroBased = date.month - 1 + months;
+    final year = date.year + (zeroBased / 12).floor();
+    final month = ((zeroBased % 12) + 12) % 12 + 1;
+    return SubscriptionSchedule.safeDate(year, month, anchorDay);
   }
 
   static List<MonthlySpendPoint> _lastSixMonths({
@@ -202,7 +259,17 @@ class OverviewMetrics {
   }
 
   static DateTime _safeDate(int year, int month, int day) {
-    final lastDay = DateTime(year, month + 1, 0).day;
-    return DateTime(year, month, day.clamp(1, lastDay));
+    var y = year;
+    var m = month;
+    while (m < 1) {
+      m += 12;
+      y -= 1;
+    }
+    while (m > 12) {
+      m -= 12;
+      y += 1;
+    }
+    final lastDay = DateTime(y, m + 1, 0).day;
+    return DateTime(y, m, day.clamp(1, lastDay));
   }
 }

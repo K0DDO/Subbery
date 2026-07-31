@@ -40,14 +40,30 @@ extension SubscriptionCategoryUi on SubscriptionCategory {
 
 extension BillingCycleUi on BillingCycle {
   String get label => switch (this) {
-    BillingCycle.monthly => 'Ежемесячно',
-    BillingCycle.yearly => 'Ежегодно',
+    BillingCycle.monthly => 'Раз в месяц',
+    BillingCycle.quarterly => 'Раз в 3 месяца',
+    BillingCycle.semiannual => 'Раз в полгода',
+    BillingCycle.yearly => 'Раз в год',
+    BillingCycle.biennial => 'Раз в 2 года',
+    BillingCycle.custom => 'Свой период',
   };
 
   String get shortLabel => switch (this) {
     BillingCycle.monthly => 'месяц',
+    BillingCycle.quarterly => '3 мес.',
+    BillingCycle.semiannual => 'полгода',
     BillingCycle.yearly => 'год',
+    BillingCycle.biennial => '2 года',
+    BillingCycle.custom => 'период',
   };
+
+  String periodLabel({int? customIntervalDays}) {
+    if (this == BillingCycle.custom) {
+      final days = customIntervalDays ?? 0;
+      return 'каждые $days дн.';
+    }
+    return shortLabel;
+  }
 }
 
 extension RenewalModeUi on RenewalMode {

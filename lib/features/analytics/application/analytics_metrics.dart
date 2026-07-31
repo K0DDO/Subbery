@@ -116,14 +116,18 @@ class AnalyticsMetrics {
 
   static int _monthlyEstimate(Subscription subscription, DateTime now) {
     if (subscription.renewalMode == RenewalMode.manual) {
-      return subscription.nextPaymentDate.year == now.year &&
-              subscription.nextPaymentDate.month == now.month
+      final today = DateTime(now.year, now.month, now.day);
+      final date = DateTime(
+        subscription.nextPaymentDate.year,
+        subscription.nextPaymentDate.month,
+        subscription.nextPaymentDate.day,
+      );
+      if (date.isBefore(today)) return 0;
+      return date.year == now.year && date.month == now.month
           ? subscription.priceInCents
           : 0;
     }
-    return subscription.billingCycle == BillingCycle.monthly
-        ? subscription.priceInCents
-        : (subscription.priceInCents / 12).round();
+    return (subscription.annualPlanInCents / 12).round();
   }
 
   static List<MonthlySpendPoint> _sixMonthSpending(
@@ -159,7 +163,29 @@ class AnalyticsMetrics {
     final active = subscriptions
         .where((item) => item.status == SubscriptionStatus.active)
         .toList();
+    final paused = subscriptions
+        .where((item) => item.status == SubscriptionStatus.paused)
+        .length;
+    final cancelled = subscriptions
+        .where((item) => item.status == SubscriptionStatus.cancelled)
+        .length;
+
     if (active.isNotEmpty) {
+      final monthlyLoad = active.fold<int>(
+        0,
+        (total, item) => total + _monthlyEstimate(item, now),
+      );
+      insights.add(
+        AnalyticsInsight(
+          type: AnalyticsInsightType.totalSpent,
+          title:
+              'Сейчас активны ${active.length} ${_subscriptionWord(active.length)}',
+          detail:
+              'Около ${_formatRubles(monthlyLoad)} в месяц; '
+              'приостановлено $paused, отменено $cancelled',
+        ),
+      );
+
       active.sort((left, right) => left.startDate.compareTo(right.startDate));
       final oldest = active.first;
       final months = _monthsBetween(oldest.startDate, now).clamp(0, 999);
@@ -167,32 +193,57 @@ class AnalyticsMetrics {
         AnalyticsInsight(
           type: AnalyticsInsightType.longevity,
           title:
-              '${oldest.name} используется уже $months ${_monthWord(months)}',
-          detail: 'Самая продолжительная активная подписка',
+              '${oldest.name} с вами уже $months ${_monthWord(months)}',
+          detail: months >= 12
+              ? 'Долгоживущая подписка — стоит пересмотреть тариф'
+              : 'Самая продолжительная активная подписка',
+        ),
+      );
+    } else {
+      insights.add(
+        AnalyticsInsight(
+          type: AnalyticsInsightType.totalSpent,
+          title: 'Нет активных подписок',
+          detail: 'Добавьте сервисы или возобновите приостановленные',
         ),
       );
     }
 
-    insights.add(
-      AnalyticsInsight(
-        type: AnalyticsInsightType.totalSpent,
-        title: 'Всего потрачено ${_formatRubles(totalSpentInCents)}',
-        detail: 'За всё время по записанным платежам',
-      ),
-    );
-
     if (categories.isNotEmpty) {
+      final top = categories.first;
+      final share = categories.fold<int>(0, (s, c) => s + c.amountInCents);
+      final percent = share == 0
+          ? 0
+          : ((top.amountInCents / share) * 100).round();
       insights.add(
         AnalyticsInsight(
           type: AnalyticsInsightType.largestCategory,
-          title:
-              'Главная категория — ${_categoryName(categories.first.category)}',
+          title: '${_categoryName(top.category)} — $percent% нагрузки',
           detail:
-              '${_formatRubles(categories.first.amountInCents)} в среднем за месяц',
+              '${_formatRubles(top.amountInCents)} в среднем за месяц. '
+              'Всего по платежам ${_formatRubles(totalSpentInCents)}',
+        ),
+      );
+    } else if (totalSpentInCents > 0) {
+      insights.add(
+        AnalyticsInsight(
+          type: AnalyticsInsightType.largestCategory,
+          title: 'Всего потрачено ${_formatRubles(totalSpentInCents)}',
+          detail: 'Записей по категориям пока мало — копите историю платежей',
         ),
       );
     }
-    return insights;
+    return insights.take(3).toList(growable: false);
+  }
+
+  static String _subscriptionWord(int count) {
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) return 'подписка';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      return 'подписки';
+    }
+    return 'подписок';
   }
 
   static int _sumPayments(

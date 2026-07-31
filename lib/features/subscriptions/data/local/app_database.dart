@@ -20,6 +20,7 @@ class Subscriptions extends Table {
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get nextPaymentDate => dateTime()();
   IntColumn get billingAnchorDay => integer().nullable()();
+  IntColumn get customIntervalDays => integer().nullable()();
   TextColumn get status => text()();
   IntColumn get totalSpentInCents => integer().withDefault(const Constant(0))();
   BoolColumn get reminderEnabled =>
@@ -49,7 +50,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -59,6 +60,12 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await migrator.addColumn(subscriptions, subscriptions.renewalMode);
+      }
+      if (from < 4) {
+        await migrator.addColumn(
+          subscriptions,
+          subscriptions.customIntervalDays,
+        );
       }
     },
     beforeOpen: (details) async {

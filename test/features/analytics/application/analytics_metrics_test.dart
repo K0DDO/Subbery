@@ -62,10 +62,18 @@ void main() {
       now: DateTime(2026, 7, 29),
     );
 
-    expect(metrics.insights.first.title, contains('14 месяцев'));
+    expect(metrics.insights.first.title, contains('активн'));
     expect(
       metrics.insights.any(
-        (insight) => insight.title.contains('Всего потрачено'),
+        (insight) => insight.title.contains('Netflix'),
+      ),
+      isTrue,
+    );
+    expect(
+      metrics.insights.any(
+        (insight) =>
+            insight.title.contains('Развлечения') ||
+            insight.detail.contains('Всего по платежам'),
       ),
       isTrue,
     );

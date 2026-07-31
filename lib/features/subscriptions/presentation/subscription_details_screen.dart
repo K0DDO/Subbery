@@ -245,7 +245,7 @@ class _DetailsContent extends StatelessWidget {
                       TextSpan(
                         text: subscription.renewalMode == RenewalMode.manual
                             ? ' · единичная оплата'
-                            : ' / ${subscription.billingCycle.shortLabel}',
+                            : ' / ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),

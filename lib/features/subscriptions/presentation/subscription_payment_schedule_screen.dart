@@ -68,7 +68,14 @@ class _ScheduleContent extends StatelessWidget {
         : SubscriptionSchedule.upcomingDates(
             subscription,
             DateTime.now(),
-            count: subscription.billingCycle == BillingCycle.monthly ? 12 : 5,
+            count: switch (subscription.billingCycle) {
+              BillingCycle.monthly => 12,
+              BillingCycle.quarterly => 8,
+              BillingCycle.semiannual => 6,
+              BillingCycle.yearly => 5,
+              BillingCycle.biennial => 4,
+              BillingCycle.custom => 12,
+            },
           );
     return SafeArea(
       child: ListView(
@@ -103,7 +110,7 @@ class _ScheduleContent extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         '${AppFormatters.money(subscription.priceInCents)}'
-                        '${subscription.renewalMode == RenewalMode.manual ? ' · единично' : ' / ${subscription.billingCycle.shortLabel}'}',
+                        '${subscription.renewalMode == RenewalMode.manual ? ' · единично' : ' / ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}'}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),

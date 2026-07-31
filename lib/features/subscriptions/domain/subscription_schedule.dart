@@ -22,6 +22,7 @@ abstract final class SubscriptionSchedule {
         candidate,
         subscription.billingCycle,
         anchorDay: anchorDay,
+        customIntervalDays: subscription.customIntervalDays,
       );
     }
     return candidate;
@@ -46,6 +47,7 @@ abstract final class SubscriptionSchedule {
         candidate,
         subscription.billingCycle,
         anchorDay: anchorDay,
+        customIntervalDays: subscription.customIntervalDays,
       );
     }
     return dates;
@@ -55,19 +57,29 @@ abstract final class SubscriptionSchedule {
     DateTime date,
     BillingCycle billingCycle, {
     required int anchorDay,
+    int? customIntervalDays,
   }) {
     return switch (billingCycle) {
-      BillingCycle.monthly => _safeDate(
-        date.month == 12 ? date.year + 1 : date.year,
-        date.month == 12 ? 1 : date.month + 1,
-        anchorDay,
+      BillingCycle.monthly => _addCalendarMonths(date, 1, anchorDay),
+      BillingCycle.quarterly => _addCalendarMonths(date, 3, anchorDay),
+      BillingCycle.semiannual => _addCalendarMonths(date, 6, anchorDay),
+      BillingCycle.yearly => _addCalendarMonths(date, 12, anchorDay),
+      BillingCycle.biennial => _addCalendarMonths(date, 24, anchorDay),
+      BillingCycle.custom => date.add(
+        Duration(days: (customIntervalDays ?? 30).clamp(1, 3650)),
       ),
-      BillingCycle.yearly => _safeDate(date.year + 1, date.month, anchorDay),
     };
   }
 
   static DateTime safeDate(int year, int month, int day) {
     return _safeDate(year, month, day);
+  }
+
+  static DateTime _addCalendarMonths(DateTime date, int months, int anchorDay) {
+    final zeroBased = date.month - 1 + months;
+    final year = date.year + (zeroBased / 12).floor();
+    final month = zeroBased % 12 + 1;
+    return _safeDate(year, month, anchorDay);
   }
 
   static DateTime _safeDate(int year, int month, int day) {

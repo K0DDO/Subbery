@@ -141,6 +141,33 @@ void main() {
     expect(metrics.yearOccurrences, hasLength(1));
     expect(metrics.yearOccurrences.single.date, DateTime(2026, 7, 31));
   });
+
+  test('excludes past one-time payments from upcoming', () {
+    final pastOneTime = _subscription(
+      id: 'past-one',
+      priceInCents: 50000,
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 7, 1),
+    ).copyWith(renewalMode: RenewalMode.manual);
+    final futureMonthly = _subscription(
+      id: 'monthly',
+      priceInCents: 79900,
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 8, 3),
+    );
+
+    final metrics = OverviewMetrics.calculate(
+      subscriptions: <Subscription>[pastOneTime, futureMonthly],
+      payments: const <Payment>[],
+      now: DateTime(2026, 7, 30),
+    );
+
+    expect(
+      metrics.upcomingPayments.map((item) => item.subscription.id),
+      <String>['monthly'],
+    );
+    expect(metrics.plannedThisMonthInCents, 79900);
+  });
 }
 
 Subscription _subscription({

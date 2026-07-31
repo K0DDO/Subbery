@@ -115,6 +115,16 @@ class $SubscriptionsTable extends Subscriptions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _customIntervalDaysMeta =
+      const VerificationMeta('customIntervalDays');
+  @override
+  late final GeneratedColumn<int> customIntervalDays = GeneratedColumn<int>(
+    'custom_interval_days',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -172,6 +182,7 @@ class $SubscriptionsTable extends Subscriptions
     startDate,
     nextPaymentDate,
     billingAnchorDay,
+    customIntervalDays,
     status,
     totalSpentInCents,
     reminderEnabled,
@@ -275,6 +286,15 @@ class $SubscriptionsTable extends Subscriptions
         ),
       );
     }
+    if (data.containsKey('custom_interval_days')) {
+      context.handle(
+        _customIntervalDaysMeta,
+        customIntervalDays.isAcceptableOrUnknown(
+          data['custom_interval_days']!,
+          _customIntervalDaysMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -356,6 +376,10 @@ class $SubscriptionsTable extends Subscriptions
         DriftSqlType.int,
         data['${effectivePrefix}billing_anchor_day'],
       ),
+      customIntervalDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}custom_interval_days'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -393,6 +417,7 @@ class SubscriptionRecord extends DataClass
   final DateTime startDate;
   final DateTime nextPaymentDate;
   final int? billingAnchorDay;
+  final int? customIntervalDays;
   final String status;
   final int totalSpentInCents;
   final bool reminderEnabled;
@@ -408,6 +433,7 @@ class SubscriptionRecord extends DataClass
     required this.startDate,
     required this.nextPaymentDate,
     this.billingAnchorDay,
+    this.customIntervalDays,
     required this.status,
     required this.totalSpentInCents,
     required this.reminderEnabled,
@@ -429,6 +455,9 @@ class SubscriptionRecord extends DataClass
     map['next_payment_date'] = Variable<DateTime>(nextPaymentDate);
     if (!nullToAbsent || billingAnchorDay != null) {
       map['billing_anchor_day'] = Variable<int>(billingAnchorDay);
+    }
+    if (!nullToAbsent || customIntervalDays != null) {
+      map['custom_interval_days'] = Variable<int>(customIntervalDays);
     }
     map['status'] = Variable<String>(status);
     map['total_spent_in_cents'] = Variable<int>(totalSpentInCents);
@@ -453,6 +482,9 @@ class SubscriptionRecord extends DataClass
       billingAnchorDay: billingAnchorDay == null && nullToAbsent
           ? const Value.absent()
           : Value(billingAnchorDay),
+      customIntervalDays: customIntervalDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customIntervalDays),
       status: Value(status),
       totalSpentInCents: Value(totalSpentInCents),
       reminderEnabled: Value(reminderEnabled),
@@ -478,6 +510,7 @@ class SubscriptionRecord extends DataClass
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       nextPaymentDate: serializer.fromJson<DateTime>(json['nextPaymentDate']),
       billingAnchorDay: serializer.fromJson<int?>(json['billingAnchorDay']),
+      customIntervalDays: serializer.fromJson<int?>(json['customIntervalDays']),
       status: serializer.fromJson<String>(json['status']),
       totalSpentInCents: serializer.fromJson<int>(json['totalSpentInCents']),
       reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
@@ -498,6 +531,7 @@ class SubscriptionRecord extends DataClass
       'startDate': serializer.toJson<DateTime>(startDate),
       'nextPaymentDate': serializer.toJson<DateTime>(nextPaymentDate),
       'billingAnchorDay': serializer.toJson<int?>(billingAnchorDay),
+      'customIntervalDays': serializer.toJson<int?>(customIntervalDays),
       'status': serializer.toJson<String>(status),
       'totalSpentInCents': serializer.toJson<int>(totalSpentInCents),
       'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
@@ -516,6 +550,7 @@ class SubscriptionRecord extends DataClass
     DateTime? startDate,
     DateTime? nextPaymentDate,
     Value<int?> billingAnchorDay = const Value.absent(),
+    Value<int?> customIntervalDays = const Value.absent(),
     String? status,
     int? totalSpentInCents,
     bool? reminderEnabled,
@@ -533,6 +568,9 @@ class SubscriptionRecord extends DataClass
     billingAnchorDay: billingAnchorDay.present
         ? billingAnchorDay.value
         : this.billingAnchorDay,
+    customIntervalDays: customIntervalDays.present
+        ? customIntervalDays.value
+        : this.customIntervalDays,
     status: status ?? this.status,
     totalSpentInCents: totalSpentInCents ?? this.totalSpentInCents,
     reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -560,6 +598,9 @@ class SubscriptionRecord extends DataClass
       billingAnchorDay: data.billingAnchorDay.present
           ? data.billingAnchorDay.value
           : this.billingAnchorDay,
+      customIntervalDays: data.customIntervalDays.present
+          ? data.customIntervalDays.value
+          : this.customIntervalDays,
       status: data.status.present ? data.status.value : this.status,
       totalSpentInCents: data.totalSpentInCents.present
           ? data.totalSpentInCents.value
@@ -584,6 +625,7 @@ class SubscriptionRecord extends DataClass
           ..write('startDate: $startDate, ')
           ..write('nextPaymentDate: $nextPaymentDate, ')
           ..write('billingAnchorDay: $billingAnchorDay, ')
+          ..write('customIntervalDays: $customIntervalDays, ')
           ..write('status: $status, ')
           ..write('totalSpentInCents: $totalSpentInCents, ')
           ..write('reminderEnabled: $reminderEnabled, ')
@@ -604,6 +646,7 @@ class SubscriptionRecord extends DataClass
     startDate,
     nextPaymentDate,
     billingAnchorDay,
+    customIntervalDays,
     status,
     totalSpentInCents,
     reminderEnabled,
@@ -623,6 +666,7 @@ class SubscriptionRecord extends DataClass
           other.startDate == this.startDate &&
           other.nextPaymentDate == this.nextPaymentDate &&
           other.billingAnchorDay == this.billingAnchorDay &&
+          other.customIntervalDays == this.customIntervalDays &&
           other.status == this.status &&
           other.totalSpentInCents == this.totalSpentInCents &&
           other.reminderEnabled == this.reminderEnabled &&
@@ -640,6 +684,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
   final Value<DateTime> startDate;
   final Value<DateTime> nextPaymentDate;
   final Value<int?> billingAnchorDay;
+  final Value<int?> customIntervalDays;
   final Value<String> status;
   final Value<int> totalSpentInCents;
   final Value<bool> reminderEnabled;
@@ -656,6 +701,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     this.startDate = const Value.absent(),
     this.nextPaymentDate = const Value.absent(),
     this.billingAnchorDay = const Value.absent(),
+    this.customIntervalDays = const Value.absent(),
     this.status = const Value.absent(),
     this.totalSpentInCents = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
@@ -673,6 +719,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     required DateTime startDate,
     required DateTime nextPaymentDate,
     this.billingAnchorDay = const Value.absent(),
+    this.customIntervalDays = const Value.absent(),
     required String status,
     this.totalSpentInCents = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
@@ -697,6 +744,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     Expression<DateTime>? startDate,
     Expression<DateTime>? nextPaymentDate,
     Expression<int>? billingAnchorDay,
+    Expression<int>? customIntervalDays,
     Expression<String>? status,
     Expression<int>? totalSpentInCents,
     Expression<bool>? reminderEnabled,
@@ -714,6 +762,8 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
       if (startDate != null) 'start_date': startDate,
       if (nextPaymentDate != null) 'next_payment_date': nextPaymentDate,
       if (billingAnchorDay != null) 'billing_anchor_day': billingAnchorDay,
+      if (customIntervalDays != null)
+        'custom_interval_days': customIntervalDays,
       if (status != null) 'status': status,
       if (totalSpentInCents != null) 'total_spent_in_cents': totalSpentInCents,
       if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
@@ -733,6 +783,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     Value<DateTime>? startDate,
     Value<DateTime>? nextPaymentDate,
     Value<int?>? billingAnchorDay,
+    Value<int?>? customIntervalDays,
     Value<String>? status,
     Value<int>? totalSpentInCents,
     Value<bool>? reminderEnabled,
@@ -750,6 +801,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
       startDate: startDate ?? this.startDate,
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
       billingAnchorDay: billingAnchorDay ?? this.billingAnchorDay,
+      customIntervalDays: customIntervalDays ?? this.customIntervalDays,
       status: status ?? this.status,
       totalSpentInCents: totalSpentInCents ?? this.totalSpentInCents,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -791,6 +843,9 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
     if (billingAnchorDay.present) {
       map['billing_anchor_day'] = Variable<int>(billingAnchorDay.value);
     }
+    if (customIntervalDays.present) {
+      map['custom_interval_days'] = Variable<int>(customIntervalDays.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -822,6 +877,7 @@ class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRecord> {
           ..write('startDate: $startDate, ')
           ..write('nextPaymentDate: $nextPaymentDate, ')
           ..write('billingAnchorDay: $billingAnchorDay, ')
+          ..write('customIntervalDays: $customIntervalDays, ')
           ..write('status: $status, ')
           ..write('totalSpentInCents: $totalSpentInCents, ')
           ..write('reminderEnabled: $reminderEnabled, ')
@@ -1192,6 +1248,7 @@ typedef $$SubscriptionsTableCreateCompanionBuilder =
       required DateTime startDate,
       required DateTime nextPaymentDate,
       Value<int?> billingAnchorDay,
+      Value<int?> customIntervalDays,
       required String status,
       Value<int> totalSpentInCents,
       Value<bool> reminderEnabled,
@@ -1210,6 +1267,7 @@ typedef $$SubscriptionsTableUpdateCompanionBuilder =
       Value<DateTime> startDate,
       Value<DateTime> nextPaymentDate,
       Value<int?> billingAnchorDay,
+      Value<int?> customIntervalDays,
       Value<String> status,
       Value<int> totalSpentInCents,
       Value<bool> reminderEnabled,
@@ -1301,6 +1359,11 @@ class $$SubscriptionsTableFilterComposer
 
   ColumnFilters<int> get billingAnchorDay => $composableBuilder(
     column: $table.billingAnchorDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get customIntervalDays => $composableBuilder(
+    column: $table.customIntervalDays,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1409,6 +1472,11 @@ class $$SubscriptionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get customIntervalDays => $composableBuilder(
+    column: $table.customIntervalDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -1476,6 +1544,11 @@ class $$SubscriptionsTableAnnotationComposer
 
   GeneratedColumn<int> get billingAnchorDay => $composableBuilder(
     column: $table.billingAnchorDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get customIntervalDays => $composableBuilder(
+    column: $table.customIntervalDays,
     builder: (column) => column,
   );
 
@@ -1559,6 +1632,7 @@ class $$SubscriptionsTableTableManager
                 Value<DateTime> startDate = const Value.absent(),
                 Value<DateTime> nextPaymentDate = const Value.absent(),
                 Value<int?> billingAnchorDay = const Value.absent(),
+                Value<int?> customIntervalDays = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> totalSpentInCents = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
@@ -1575,6 +1649,7 @@ class $$SubscriptionsTableTableManager
                 startDate: startDate,
                 nextPaymentDate: nextPaymentDate,
                 billingAnchorDay: billingAnchorDay,
+                customIntervalDays: customIntervalDays,
                 status: status,
                 totalSpentInCents: totalSpentInCents,
                 reminderEnabled: reminderEnabled,
@@ -1593,6 +1668,7 @@ class $$SubscriptionsTableTableManager
                 required DateTime startDate,
                 required DateTime nextPaymentDate,
                 Value<int?> billingAnchorDay = const Value.absent(),
+                Value<int?> customIntervalDays = const Value.absent(),
                 required String status,
                 Value<int> totalSpentInCents = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
@@ -1609,6 +1685,7 @@ class $$SubscriptionsTableTableManager
                 startDate: startDate,
                 nextPaymentDate: nextPaymentDate,
                 billingAnchorDay: billingAnchorDay,
+                customIntervalDays: customIntervalDays,
                 status: status,
                 totalSpentInCents: totalSpentInCents,
                 reminderEnabled: reminderEnabled,

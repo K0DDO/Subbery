@@ -11,7 +11,14 @@ enum SubscriptionCategory {
   other,
 }
 
-enum BillingCycle { monthly, yearly }
+enum BillingCycle {
+  monthly,
+  quarterly,
+  semiannual,
+  yearly,
+  biennial,
+  custom,
+}
 
 enum RenewalMode { automatic, manual }
 
@@ -31,6 +38,7 @@ class Subscription extends Equatable {
     required this.reminderEnabled,
     this.renewalMode = RenewalMode.automatic,
     this.billingAnchorDay,
+    this.customIntervalDays,
     this.logo,
     this.notes,
   });
@@ -48,10 +56,28 @@ class Subscription extends Equatable {
   final bool reminderEnabled;
   final RenewalMode renewalMode;
   final int? billingAnchorDay;
+  final int? customIntervalDays;
   final String? notes;
 
   double get price => priceInCents / 100;
   double get totalSpent => totalSpentInCents / 100;
+
+  /// Approximate annual cost for active recurring subscriptions.
+  int get annualPlanInCents {
+    if (renewalMode == RenewalMode.manual) return 0;
+    return switch (billingCycle) {
+      BillingCycle.monthly => priceInCents * 12,
+      BillingCycle.quarterly => priceInCents * 4,
+      BillingCycle.semiannual => priceInCents * 2,
+      BillingCycle.yearly => priceInCents,
+      BillingCycle.biennial => (priceInCents / 2).round(),
+      BillingCycle.custom => () {
+        final days = customIntervalDays ?? 30;
+        if (days <= 0) return 0;
+        return ((priceInCents * 365) / days).round();
+      }(),
+    };
+  }
 
   Subscription copyWith({
     String? id,
@@ -68,6 +94,8 @@ class Subscription extends Equatable {
     bool? reminderEnabled,
     RenewalMode? renewalMode,
     int? billingAnchorDay,
+    int? customIntervalDays,
+    bool clearCustomIntervalDays = false,
     String? notes,
     bool clearNotes = false,
   }) {
@@ -85,6 +113,9 @@ class Subscription extends Equatable {
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       renewalMode: renewalMode ?? this.renewalMode,
       billingAnchorDay: billingAnchorDay ?? this.billingAnchorDay,
+      customIntervalDays: clearCustomIntervalDays
+          ? null
+          : customIntervalDays ?? this.customIntervalDays,
       notes: clearNotes ? null : notes ?? this.notes,
     );
   }
@@ -104,6 +135,7 @@ class Subscription extends Equatable {
     reminderEnabled,
     renewalMode,
     billingAnchorDay,
+    customIntervalDays,
     notes,
   ];
 }

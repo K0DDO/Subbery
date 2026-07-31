@@ -30,6 +30,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _notesController = TextEditingController();
+  final _customDaysController = TextEditingController();
   final _nameFocusNode = FocusNode();
   bool _initializedControllers = false;
 
@@ -38,6 +39,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
     _nameController.dispose();
     _priceController.dispose();
     _notesController.dispose();
+    _customDaysController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
   }
@@ -98,6 +100,7 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
       _nameController.text = state.serviceName;
       _priceController.text = state.priceText;
       _notesController.text = state.notesText;
+      _customDaysController.text = '${state.customIntervalDays}';
     }
     final selectedService = state.selectedService;
 
@@ -211,13 +214,14 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                 const SizedBox(height: AppSpacing.lg),
                 _SectionLabel(
                   title: state.renewalMode == RenewalMode.manual
-                      ? 'Ожидаемая стоимость и период'
+                      ? 'Ожидаемая стоимость'
                       : 'Стоимость и период',
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 GlassCard(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       TextField(
                         controller: _priceController,
@@ -235,29 +239,51 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                           suffixText: '₽',
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<BillingCycle>(
-                          segments: const <ButtonSegment<BillingCycle>>[
-                            ButtonSegment(
-                              value: BillingCycle.monthly,
-                              label: Text('Ежемесячно'),
-                              icon: Icon(Icons.calendar_view_month_rounded),
-                            ),
-                            ButtonSegment(
-                              value: BillingCycle.yearly,
-                              label: Text('Ежегодно'),
-                              icon: Icon(Icons.event_repeat_rounded),
-                            ),
+                      if (state.renewalMode == RenewalMode.automatic) ...<Widget>[
+                        const SizedBox(height: AppSpacing.md),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: <Widget>[
+                            for (final cycle in const <BillingCycle>[
+                              BillingCycle.monthly,
+                              BillingCycle.quarterly,
+                              BillingCycle.semiannual,
+                              BillingCycle.yearly,
+                              BillingCycle.biennial,
+                              BillingCycle.custom,
+                            ])
+                              ChoiceChip(
+                                label: Text(cycle.label),
+                                selected: state.billingCycle == cycle,
+                                selectedColor: AppColors.coral.withValues(
+                                  alpha: 0.28,
+                                ),
+                                onSelected: (_) =>
+                                    controller.setBillingCycle(cycle),
+                              ),
                           ],
-                          selected: <BillingCycle>{state.billingCycle},
-                          showSelectedIcon: false,
-                          onSelectionChanged: (selection) {
-                            controller.setBillingCycle(selection.first);
-                          },
                         ),
-                      ),
+                        if (state.billingCycle == BillingCycle.custom) ...<Widget>[
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
+                            keyboardType: TextInputType.number,
+                            controller: _customDaysController,
+                            onChanged: (value) {
+                              final days = int.tryParse(value.trim());
+                              if (days != null) {
+                                controller.setCustomIntervalDays(days);
+                              }
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Период в днях',
+                              hintText: '30',
+                              prefixIcon: Icon(Icons.timelapse_rounded),
+                              suffixText: 'дн.',
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),

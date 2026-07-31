@@ -68,6 +68,7 @@ void main() {
 
     expect(migrated.id, 'legacy');
     expect(migrated.renewalMode, 'automatic');
-    expect(database.schemaVersion, 3);
+    expect(migrated.customIntervalDays, isNull);
+    expect(database.schemaVersion, 4);
   });
 }

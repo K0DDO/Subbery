@@ -123,6 +123,16 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
         'Subscription price cannot be negative.',
       );
     }
+    if (subscription.billingCycle == BillingCycle.custom) {
+      final days = subscription.customIntervalDays;
+      if (days == null || days < 1 || days > 3650) {
+        throw ArgumentError.value(
+          days,
+          'subscription.customIntervalDays',
+          'Custom interval must be between 1 and 3650 days.',
+        );
+      }
+    }
   }
 
   static SubscriptionsCompanion _subscriptionCompanion(
@@ -141,6 +151,7 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
       billingAnchorDay: Value(
         subscription.billingAnchorDay ?? subscription.nextPaymentDate.day,
       ),
+      customIntervalDays: Value(subscription.customIntervalDays),
       status: subscription.status.name,
       totalSpentInCents: Value(subscription.totalSpentInCents),
       reminderEnabled: Value(subscription.reminderEnabled),
@@ -172,6 +183,7 @@ class DriftSubscriptionRepository implements SubscriptionRepository {
       startDate: record.startDate,
       nextPaymentDate: record.nextPaymentDate,
       billingAnchorDay: record.billingAnchorDay,
+      customIntervalDays: record.customIntervalDays,
       status: _enumByName(
         SubscriptionStatus.values,
         record.status,
