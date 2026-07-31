@@ -21,9 +21,18 @@ FRAME_CROP_RATIO = 0.055
 
 # Adaptive icons only keep the inner ~66% of the foreground, so the default icon
 # needs far more breathing room than the masked legacy and iOS rasters.
-ADAPTIVE_SCALE = 0.62
+ADAPTIVE_SCALE = 0.52
 LEGACY_SCALE = 0.80
 IOS_SCALE = 0.88
+
+ICON_PLATES = {
+    "dark_glass": ((0x18, 0x07, 0x0E), (0x35, 0x08, 0x16), False),
+    "dark_minimal": ((0x11, 0x06, 0x09), (0x25, 0x09, 0x10), False),
+    "dark_neon": ((0x14, 0x01, 0x05), (0x2B, 0x03, 0x0B), False),
+    "light_glass": ((0xFC, 0xB7, 0x9D), (0xFF, 0xD0, 0xBE), True),
+    "light_minimal": ((0xFD, 0xDC, 0xCF), (0xFF, 0xEE, 0xE5), True),
+    "light_neon": ((0xFC, 0xCD, 0xB9), (0xFF, 0xE1, 0xD3), True),
+}
 
 IOS_SETS = {
     "AppIcon.appiconset": "dark_glass",
@@ -52,6 +61,65 @@ def _remove_outer_frame(icon: Image.Image) -> Image.Image:
     inset = round(min(icon.size) * FRAME_CROP_RATIO)
     cropped = icon.crop((inset, inset, icon.width - inset, icon.height - inset))
     return cropped.resize(icon.size, Image.Resampling.LANCZOS)
+
+
+def _logo_on_clean_plate(
+    icon: Image.Image,
+    base_color: tuple[int, int, int],
+    center_color: tuple[int, int, int],
+    light: bool,
+) -> Image.Image:
+    """Keep the berry S and leaves, replacing the framed tile with a clean plate."""
+    source = np.asarray(icon.convert("RGB"), dtype=np.int16)
+    red = source[:, :, 0]
+    green = source[:, :, 1]
+    blue = source[:, :, 2]
+    height, width = red.shape
+    y, x = np.ogrid[:height, :width]
+
+    # The decorative frame also contains bright red pixels. Restrict extraction
+    # to the central logo ellipse so its corners and perimeter cannot enter mask.
+    logo_region = (
+        ((x - width * 0.5) / (width * 0.43)) ** 2
+        + ((y - height * 0.5) / (height * 0.50)) ** 2
+        <= 1
+    )
+    red_green_gap = 45 if light else 22
+    red_blue_gap = 30 if light else 12
+    berry_seed = (
+        (red > 78)
+        & (red - green > red_green_gap)
+        & (red - blue > red_blue_gap)
+        & logo_region
+    )
+    leaf_seed = (
+        (green > 65)
+        & (green - red > 8)
+        & (green - blue > 18)
+        & logo_region
+    )
+    mask = Image.fromarray(
+        ((berry_seed | leaf_seed).astype(np.uint8) * 255),
+        mode="L",
+    )
+    mask = mask.filter(ImageFilter.MaxFilter(45))
+    mask = mask.filter(ImageFilter.GaussianBlur(9))
+
+    base = np.array(base_color, dtype=np.float32)
+    center = np.array(center_color, dtype=np.float32)
+    distance = np.sqrt(
+        ((x - width * 0.5) / (width * 0.72)) ** 2
+        + ((y - height * 0.52) / (height * 0.72)) ** 2
+    )
+    glow = np.clip(1 - distance, 0, 1)[:, :, None]
+    plate = Image.fromarray(
+        np.clip(base + (center - base) * glow, 0, 255).astype(np.uint8),
+        mode="RGB",
+    ).convert("RGBA")
+
+    logo = icon.convert("RGBA")
+    logo.putalpha(mask)
+    return Image.alpha_composite(plate, logo).convert("RGB")
 
 
 def _plate_color(icon: Image.Image) -> tuple[int, int, int]:
@@ -153,6 +221,7 @@ def regenerate(root: Path, generated: Path) -> None:
     for name in ICON_NAMES:
         source = generated / f"subberry_{name}_new.png"
         icon = _remove_outer_frame(Image.open(source).convert("RGB"))
+        icon = _logo_on_clean_plate(icon, *ICON_PLATES[name])
         icons[name] = icon
         icon.save(destination / f"subberry_{name}.png")
 
