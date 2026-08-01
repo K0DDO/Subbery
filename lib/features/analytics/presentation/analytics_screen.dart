@@ -230,7 +230,7 @@ class _AnalyticsContent extends ConsumerWidget {
         const SizedBox(height: AppSpacing.lg),
         const _SectionTitle(
           title: 'Умные подсказки',
-          subtitle: 'OpenRouter · GPT-4o с локальным запасным вариантом',
+          subtitle: 'На основе ваших подписок и платежей',
         ),
         const SizedBox(height: AppSpacing.sm),
         ...aiInsights.when(

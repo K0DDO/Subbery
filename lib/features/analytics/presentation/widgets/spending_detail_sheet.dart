@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/models/monthly_spend_point.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_formatters.dart';
-import '../../../../core/widgets/glass_card.dart';
-import '../../../shell/presentation/app_shell.dart';
+import '../../../shell/presentation/hotbar_morph_sheet.dart';
 import '../../../subscriptions/domain/entities/payment.dart';
 import '../../../subscriptions/domain/entities/subscription.dart';
 import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
@@ -16,20 +15,8 @@ import '../../application/analytics_metrics.dart';
 Future<void> _showDropletSheet({
   required BuildContext context,
   required WidgetBuilder builder,
-}) async {
-  await showModalBottomSheet<void>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.42),
-    sheetAnimationStyle: const AnimationStyle(
-      duration: Duration(milliseconds: 520),
-      reverseDuration: Duration(milliseconds: 420),
-    ),
-    builder: builder,
-  );
+}) {
+  return showHotbarMorphSheet<void>(context: context, builder: builder);
 }
 
 Future<void> showPeriodSpendingSheet({
@@ -290,98 +277,73 @@ class _SpendingDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.82;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        0,
         AppSpacing.md,
         AppSpacing.md,
+        AppSpacing.sm,
       ),
-      child: Hero(
-        tag: appShellMorphHeroTag,
-        transitionOnUserGestures: true,
-        createRectTween: (begin, end) =>
-            MaterialRectArcTween(begin: begin, end: end),
-        flightShuttleBuilder: buildAppShellMorphFlight,
-        child: Material(
-          type: MaterialType.transparency,
-          child: GlassCard(
-            strong: true,
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Center(
-                    child: Container(
-                      width: 42,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(title, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  if (actualInCents != null &&
-                      plannedInCents != null) ...<Widget>[
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: _AmountSummary(
-                            label: 'Фактически',
-                            amountInCents: actualInCents!,
-                            color: Theme.of(context).colorScheme.primary,
-                            filled: true,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _AmountSummary(
-                            label: 'По плану',
-                            amountInCents: plannedInCents!,
-                            color: Theme.of(context).colorScheme.secondary,
-                            filled: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (footnote != null) ...<Widget>[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      footnote!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.sm),
-                  Flexible(child: SingleChildScrollView(child: child)),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          if (actualInCents != null && plannedInCents != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _AmountSummary(
+                    label: 'Фактически',
+                    amountInCents: actualInCents!,
+                    color: Theme.of(context).colorScheme.primary,
+                    filled: true,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _AmountSummary(
+                    label: 'По плану',
+                    amountInCents: plannedInCents!,
+                    color: Theme.of(context).colorScheme.secondary,
+                    filled: false,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (footnote != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              footnote!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(child: SingleChildScrollView(child: child)),
+        ],
       ),
     );
   }

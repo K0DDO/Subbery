@@ -3,34 +3,50 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum BackgroundPatternChoice {
-  none('Без узора', null),
-  fingers('Жест', 'fingers'),
-  cupid('Купидон', 'cupid'),
-  rose('Роза', 'rose'),
-  loveButterfly('Бабочка', 'love_butterfly'),
-  coupleBunnies('Кролики', 'couple_bunnies'),
-  teddy('Мишка', 'teddy'),
-  seashell('Ракушка', 'seashell'),
-  palm('Пальма', 'palm'),
-  pineapple('Ананас', 'pineapple'),
-  umbrella('Зонтик', 'umbrella'),
-  wave('Волна', 'wave'),
-  dolphin('Дельфин', 'dolphin'),
-  strawberry('Клубника', 'strawberry'),
-  bunny('Кролик', 'bunny'),
-  cupcake('Кекс', 'cupcake'),
-  star('Звезда', 'star'),
-  heart('Сердце', 'heart'),
-  flowerBunny('Цветочный кролик', 'flower_bunny');
+import 'background_pattern_catalog.dart';
 
-  const BackgroundPatternChoice(this.label, this.assetName);
+class BackgroundPatternChoice {
+  const BackgroundPatternChoice._({
+    required this.id,
+    required this.label,
+    this.assetName,
+  });
 
+  static const none = BackgroundPatternChoice._(id: 'none', label: 'Без узора');
+
+  static BackgroundPatternChoice get cupid => byId('cupid');
+  static BackgroundPatternChoice get strawberry => byId('strawberry');
+
+  factory BackgroundPatternChoice.fromAsset(BackgroundPatternAsset asset) {
+    return BackgroundPatternChoice._(
+      id: asset.id,
+      label: asset.label,
+      assetName: asset.id,
+    );
+  }
+
+  final String id;
   final String label;
   final String? assetName;
 
   String? get assetPath =>
       assetName == null ? null : 'assets/background_patterns/$assetName.png';
+
+  static final List<BackgroundPatternChoice> values = <BackgroundPatternChoice>[
+    none,
+    ...backgroundPatternAssets.map(BackgroundPatternChoice.fromAsset),
+  ];
+
+  static BackgroundPatternChoice byId(String? id) {
+    return values.firstWhere((pattern) => pattern.id == id, orElse: () => none);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is BackgroundPatternChoice && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 final backgroundPatternProvider =
@@ -49,16 +65,47 @@ class BackgroundPatternController
   Future<void> _restore() async {
     final preferences = await SharedPreferences.getInstance();
     final storedPattern = preferences.getString(_storageKey);
-    state = BackgroundPatternChoice.values.firstWhere(
-      (pattern) => pattern.name == storedPattern,
-      orElse: () => BackgroundPatternChoice.none,
-    );
+    // Legacy enum-style names used the Dart identifier; prefer id, then name map.
+    state = BackgroundPatternChoice.byId(storedPattern);
+    if (state == BackgroundPatternChoice.none &&
+        storedPattern != null &&
+        storedPattern != 'none') {
+      final legacy = BackgroundPatternChoice.values.firstWhere(
+        (pattern) => pattern.assetName == _legacyAssetName(storedPattern),
+        orElse: () => BackgroundPatternChoice.none,
+      );
+      state = legacy;
+    }
   }
 
   Future<void> setPattern(BackgroundPatternChoice pattern) async {
     if (state == pattern) return;
     state = pattern;
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_storageKey, pattern.name);
+    await preferences.setString(_storageKey, pattern.id);
+  }
+
+  static String? _legacyAssetName(String stored) {
+    const map = <String, String>{
+      'fingers': 'fingers',
+      'cupid': 'cupid',
+      'rose': 'rose',
+      'loveButterfly': 'love_butterfly',
+      'coupleBunnies': 'couple_bunnies',
+      'teddy': 'teddy',
+      'seashell': 'seashell',
+      'palm': 'palm',
+      'pineapple': 'pineapple',
+      'umbrella': 'umbrella',
+      'wave': 'wave',
+      'dolphin': 'dolphin',
+      'strawberry': 'strawberry',
+      'bunny': 'bunny',
+      'cupcake': 'cupcake',
+      'star': 'star',
+      'heart': 'heart',
+      'flowerBunny': 'flower_bunny',
+    };
+    return map[stored];
   }
 }

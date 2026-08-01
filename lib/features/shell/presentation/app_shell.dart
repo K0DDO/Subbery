@@ -13,53 +13,41 @@ import '../../../core/widgets/app_background.dart';
 import '../../subscriptions/presentation/subscriptions_screen.dart';
 import '../application/tab_reset_provider.dart';
 
-const appShellMorphHeroTag = 'app-shell-hotbar-morph';
+abstract final class AppShellHotbar {
+  static final GlobalKey key = GlobalKey(debugLabel: 'app-shell-hotbar');
+  static final ValueNotifier<bool> visible = ValueNotifier<bool>(true);
+  static int _hiddenRoutes = 0;
 
-Widget buildAppShellMorphFlight(
-  BuildContext flightContext,
-  Animation<double> animation,
-  HeroFlightDirection flightDirection,
-  BuildContext fromHeroContext,
-  BuildContext toHeroContext,
-) {
-  final glass = Theme.of(flightContext).extension<GlassTheme>()!;
-  final accent = flightContext.accentTheme.primary;
-  return AnimatedBuilder(
-    animation: animation,
-    builder: (context, child) {
-      final progress = Curves.easeInOutCubic.transform(animation.value);
-      final radius = lerpDouble(AppRadius.pill, AppRadius.lg, progress)!;
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: glass.strongSurface,
-          borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: glass.border),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: accent.withValues(alpha: 0.25 * (1 - progress * 0.5)),
-              blurRadius: 30 + 18 * progress,
-              offset: Offset(0, 12 - 6 * progress),
-            ),
-          ],
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              glass.highlight.withValues(alpha: 0.24),
-              accent.withValues(alpha: 0.08 + 0.05 * progress),
-              glass.strongSurface,
-            ],
-          ),
-        ),
-        child: Center(
-          child: Opacity(
-            opacity: (1 - progress * 1.7).clamp(0, 1),
-            child: Icon(Icons.auto_graph_rounded, color: accent, size: 24),
-          ),
-        ),
-      );
-    },
-  );
+  static Rect? currentRect() {
+    final context = key.currentContext;
+    if (context == null) return null;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    final origin = box.localToGlobal(Offset.zero);
+    return origin & box.size;
+  }
+
+  static Rect fallbackRect(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    const height = 72.0;
+    return Rect.fromLTWH(
+      AppSpacing.md,
+      size.height - padding.bottom - AppSpacing.sm - height,
+      size.width - AppSpacing.md * 2,
+      height,
+    );
+  }
+
+  static void hide() {
+    _hiddenRoutes++;
+    visible.value = false;
+  }
+
+  static void show() {
+    _hiddenRoutes = (_hiddenRoutes - 1).clamp(0, 999);
+    if (_hiddenRoutes == 0) visible.value = true;
+  }
 }
 
 class AppShell extends ConsumerWidget {
@@ -84,16 +72,19 @@ class AppShell extends ConsumerWidget {
         child: Stack(
           children: <Widget>[
             Positioned.fill(child: navigationShell),
-            Positioned(
-              left: AppSpacing.md,
-              right: AppSpacing.md,
-              bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.sm,
-              child: Hero(
-                tag: appShellMorphHeroTag,
-                transitionOnUserGestures: true,
-                createRectTween: (begin, end) =>
-                    MaterialRectArcTween(begin: begin, end: end),
-                flightShuttleBuilder: buildAppShellMorphFlight,
+            ValueListenableBuilder<bool>(
+              valueListenable: AppShellHotbar.visible,
+              builder: (context, visible, child) => Positioned(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.sm,
+                child: IgnorePointer(
+                  ignoring: !visible,
+                  child: Opacity(opacity: visible ? 1 : 0, child: child),
+                ),
+              ),
+              child: KeyedSubtree(
+                key: AppShellHotbar.key,
                 child: _GlassNavigationBar(
                   currentIndex: navigationShell.currentIndex,
                   onSelected: (index) => _openBranch(ref, index),

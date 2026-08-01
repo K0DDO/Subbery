@@ -371,7 +371,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.3.2',
+                    subtitle: 'Версия 1.3.3',
                   ),
                 ),
               ],
@@ -505,7 +505,7 @@ class _BackgroundPatternSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FractionallySizedBox(
-      heightFactor: 0.68,
+      heightFactor: 0.82,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,

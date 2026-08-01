@@ -7,7 +7,7 @@ void main() {
 
   test('restores the saved background pattern', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'background_pattern': BackgroundPatternChoice.cupid.name,
+      'background_pattern': BackgroundPatternChoice.cupid.id,
     });
     final controller = BackgroundPatternController();
 
@@ -28,8 +28,16 @@ void main() {
     expect(controller.state, BackgroundPatternChoice.strawberry);
     expect(
       preferences.getString('background_pattern'),
-      BackgroundPatternChoice.strawberry.name,
+      BackgroundPatternChoice.strawberry.id,
     );
     controller.dispose();
+  });
+
+  test('loads the full emoji pattern catalog', () {
+    expect(BackgroundPatternChoice.values.length, greaterThan(100));
+    expect(
+      BackgroundPatternChoice.values.any((pattern) => pattern.id == 'none'),
+      isTrue,
+    );
   });
 }
