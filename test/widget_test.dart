@@ -211,55 +211,63 @@ void main() {
     expect(find.text('Annual'), findsOneWidget);
   });
 
-  testWidgets('monthly summary hints on tap and opens privacy on hold', (
-    tester,
-  ) async {
-    appRouter.go('/');
-    await tester.pumpWidget(
-      _emptyApp(
-        subscriptions: <Subscription>[
-          _subscription('Netflix', BillingCycle.monthly),
-        ],
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
-    final summaryTitle = find.text('Запланировано в этом месяце');
-    final summaryCard = find.ancestor(
-      of: summaryTitle,
-      matching: find.byType(GlassCard),
-    );
-    final frostedValues = tester
-        .widgetList<MoneyText>(
-          find.descendant(of: summaryCard, matching: find.byType(MoneyText)),
-        )
-        .where((money) => money.frost);
-    expect(frostedValues, hasLength(3));
+  testWidgets(
+    'monthly summary hints only from pencil and opens privacy on hold',
+    (tester) async {
+      appRouter.go('/');
+      await tester.pumpWidget(
+        _emptyApp(
+          subscriptions: <Subscription>[
+            _subscription('Netflix', BillingCycle.monthly),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+      final summaryTitle = find.text('Запланировано в этом месяце');
+      final summaryCard = find.ancestor(
+        of: summaryTitle,
+        matching: find.byType(GlassCard),
+      );
+      final frostedValues = tester
+          .widgetList<MoneyText>(
+            find.descendant(of: summaryCard, matching: find.byType(MoneyText)),
+          )
+          .where((money) => money.frost);
+      expect(frostedValues, hasLength(3));
 
-    await tester.tap(summaryTitle);
-    await tester.pump();
-    expect(
-      find.text('Чтобы изменить данные, удерживайте блок'),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('monthly-summary-hint')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('monthly-summary-hint')),
-        matching: find.byType(BackdropFilter),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
+      await tester.tap(summaryTitle);
+      await tester.pump();
+      expect(
+        find.text('Чтобы изменить данные, удерживайте блок'),
+        findsNothing,
+      );
 
-    await tester.longPress(summaryTitle);
-    await tester.pumpAndSettle();
-    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
-    expect(find.text('Прозрачный баланс'), findsOneWidget);
-  });
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pump();
+      expect(
+        find.text('Чтобы изменить данные, удерживайте блок'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('monthly-summary-hint')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('monthly-summary-hint')),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
+
+      await tester.longPress(summaryTitle);
+      await tester.pumpAndSettle();
+      expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+      expect(find.text('Прозрачный баланс'), findsOneWidget);
+    },
+  );
 
   testWidgets('only overview dynamics card opens analytical details', (
     tester,

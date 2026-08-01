@@ -462,7 +462,6 @@ class _MonthlySummary extends StatelessWidget {
       key: cardKey,
       strong: true,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      onTap: () => _showHoldHint(context),
       onLongPress: () async {
         final box = cardKey.currentContext?.findRenderObject() as RenderBox?;
         if (box == null || !box.hasSize) return;
@@ -501,7 +500,7 @@ class _MonthlySummary extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
-              const _GlassEditHintIcon(),
+              _GlassEditHintIcon(onTap: () => _showHoldHint(context)),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -580,19 +579,28 @@ class _MonthlySummary extends StatelessWidget {
 }
 
 class _GlassEditHintIcon extends StatelessWidget {
-  const _GlassEditHintIcon();
+  const _GlassEditHintIcon({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.subberryTheme;
-    return Icon(
-      Icons.edit_outlined,
-      size: 14,
-      color: Color.lerp(
-        palette.mutedTextColor,
-        palette.primary,
-        0.38,
-      )!.withValues(alpha: 0.72),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(
+          Icons.edit_outlined,
+          size: 14,
+          color: Color.lerp(
+            palette.mutedTextColor,
+            palette.primary,
+            0.38,
+          )!.withValues(alpha: 0.72),
+        ),
+      ),
     );
   }
 }

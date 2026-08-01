@@ -286,6 +286,7 @@ class _EngravedGlassTextPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // strength 0 = strongest glass (almost hidden), 1 = fully readable.
     final glassAmount = 1 - strength;
     final bounds = Offset.zero & size;
 
@@ -294,10 +295,10 @@ class _EngravedGlassTextPainter extends CustomPainter {
       canvas,
       size,
       Paint()
-        ..color = glowColor.withValues(alpha: 0.08 + glassAmount * 0.18)
+        ..color = glowColor.withValues(alpha: 0.06 + glassAmount * 0.28)
         ..maskFilter = MaskFilter.blur(
           BlurStyle.normal,
-          2.2 + glassAmount * 3.8,
+          2.8 + glassAmount * 5.2,
         ),
       Offset.zero,
     );
@@ -307,15 +308,19 @@ class _EngravedGlassTextPainter extends CustomPainter {
       canvas,
       size,
       Paint()
-        ..color = recessColor.withValues(alpha: 0.2 + glassAmount * 0.42)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 0.5),
-      Offset(0.75 + glassAmount * 0.65, 1 + glassAmount * 0.8),
+        ..color = recessColor.withValues(alpha: 0.14 + glassAmount * 0.52)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 0.55),
+      Offset(0.85 + glassAmount * 0.85, 1.1 + glassAmount * 1.0),
     );
 
-    // Visibility follows a stable vertical glass profile: solid edges,
-    // dissolved center, then solid edges again. Strength flattens that profile
-    // towards a fully readable value instead of fading the whole glyph.
-    double visibility(double minimum) => minimum + (1 - minimum) * strength;
+    // At minimum strength the vertical profile is 100→50→20→50→100, but
+    // scaled down for a stronger dissolve. Raising strength flattens every
+    // stop toward fully opaque readable text.
+    double visibility(double glassStop) =>
+        glassStop + (1 - glassStop) * strength;
+    const edge = 0.42; // 100% of the glass profile
+    const mid = 0.21; // 50%
+    const center = 0.08; // 20%
     _paintText(
       canvas,
       size,
@@ -327,24 +332,24 @@ class _EngravedGlassTextPainter extends CustomPainter {
             Color.lerp(
               baseColor,
               highlightColor,
-              0.42,
-            )!.withValues(alpha: visibility(0.96)),
+              0.42 * glassAmount,
+            )!.withValues(alpha: visibility(edge)),
             Color.lerp(
               baseColor,
               highlightColor,
-              0.12,
-            )!.withValues(alpha: visibility(0.5)),
-            baseColor.withValues(alpha: visibility(0.18)),
+              0.16 * glassAmount,
+            )!.withValues(alpha: visibility(mid)),
+            baseColor.withValues(alpha: visibility(center)),
             Color.lerp(
               baseColor,
               recessColor,
-              0.08,
-            )!.withValues(alpha: visibility(0.5)),
+              0.12 * glassAmount,
+            )!.withValues(alpha: visibility(mid)),
             Color.lerp(
               baseColor,
               recessColor,
-              0.18,
-            )!.withValues(alpha: visibility(0.96)),
+              0.22 * glassAmount,
+            )!.withValues(alpha: visibility(edge)),
           ],
           const <double>[0, 0.25, 0.5, 0.75, 1],
         ),
@@ -356,16 +361,16 @@ class _EngravedGlassTextPainter extends CustomPainter {
     _paintDirectionalEdge(
       canvas: canvas,
       size: size,
-      offset: Offset(-0.65 - glassAmount * 0.65, -0.7 - glassAmount * 0.55),
-      color: highlightColor.withValues(alpha: 0.42 + glassAmount * 0.42),
-      blur: 0.2 + glassAmount * 0.45,
+      offset: Offset(-0.75 - glassAmount * 0.85, -0.8 - glassAmount * 0.7),
+      color: highlightColor.withValues(alpha: 0.28 + glassAmount * 0.55),
+      blur: 0.25 + glassAmount * 0.55,
     );
     _paintDirectionalEdge(
       canvas: canvas,
       size: size,
-      offset: Offset(0.65 + glassAmount * 0.5, 0.85 + glassAmount * 0.55),
-      color: recessColor.withValues(alpha: 0.28 + glassAmount * 0.38),
-      blur: 0.35 + glassAmount * 0.35,
+      offset: Offset(0.75 + glassAmount * 0.65, 0.95 + glassAmount * 0.7),
+      color: recessColor.withValues(alpha: 0.2 + glassAmount * 0.48),
+      blur: 0.4 + glassAmount * 0.45,
     );
   }
 
