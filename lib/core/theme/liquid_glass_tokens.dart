@@ -22,6 +22,8 @@ class LiquidGlassTokens {
     required this.shadowSpread,
     required this.highlightStrength,
     required this.borderAlpha,
+    required this.edgeThickness,
+    required this.refractionStrength,
     required this.sheenEnabled,
     required this.sheenAlpha,
   });
@@ -39,6 +41,8 @@ class LiquidGlassTokens {
   final double shadowSpread;
   final double highlightStrength;
   final double borderAlpha;
+  final double edgeThickness;
+  final double refractionStrength;
   final bool sheenEnabled;
   final double sheenAlpha;
 
@@ -58,16 +62,19 @@ class LiquidGlassTokens {
     // Opacity, not brightness, is the primary transition. At maximum the
     // background remains clearly visible through the blurred material.
     final materialT = Curves.easeInOutCubic.transform(t);
-    final targetBlur = isDark ? 6.0 : 5.0;
+    final opticalT = Curves.easeInOutCubic.transform(
+      ((t - 0.18) / 0.82).clamp(0.0, 1.0),
+    );
+    final targetBlur = isDark ? 1.4 : 1.1;
     final blur = glass.blur + (targetBlur - glass.blur) * materialT;
-    final targetFillAlpha = (isDark ? 0.07 : 0.055) + (strong ? 0.035 : 0);
+    final targetFillAlpha = (isDark ? 0.028 : 0.022) + (strong ? 0.018 : 0);
     final fill = Color.lerp(
       base,
       palette.glassTint.withValues(alpha: targetFillAlpha),
       materialT,
     )!;
 
-    final highlightStrength = 0.14 + t * 0.16;
+    final highlightStrength = 0.14 + opticalT * 0.2;
     final borderAlpha = Color.lerp(
       glass.border,
       glass.border.withValues(alpha: isDark ? 0.1 : 0.12),
@@ -77,12 +84,12 @@ class LiquidGlassTokens {
       glass.highlight,
       palette.primaryLight,
       t * 0.25,
-    )!.withValues(alpha: (isDark ? 0.13 : 0.16) - t * 0.035);
+    )!.withValues(alpha: (isDark ? 0.13 : 0.16) + opticalT * 0.025);
     final rimShadow = Color.lerp(
       glass.border,
       palette.primaryDark,
       t * 0.35,
-    )!.withValues(alpha: (isDark ? 0.12 : 0.1) + t * 0.025);
+    )!.withValues(alpha: (isDark ? 0.12 : 0.1) + opticalT * 0.035);
 
     final shadowBlur = 30 + t * 14 + p * 6;
     final shadowOffsetY = 12 + t * 5 + p * 3;
@@ -123,6 +130,8 @@ class LiquidGlassTokens {
       shadowSpread: shadowSpread,
       highlightStrength: highlightStrength,
       borderAlpha: borderAlpha,
+      edgeThickness: opticalT * 9,
+      refractionStrength: opticalT,
       sheenEnabled: t >= 0.6,
       sheenAlpha: ((t - 0.6) / 0.4).clamp(0.0, 1.0) * (isDark ? 0.022 : 0.03),
     );

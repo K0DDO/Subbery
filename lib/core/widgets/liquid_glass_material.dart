@@ -93,6 +93,16 @@ class LiquidGlassMaterial extends StatelessWidget {
           ),
           child: Stack(
             children: <Widget>[
+              if (tokens.refractionStrength > 0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _RefractiveEdgeLayer(
+                      radius: radius,
+                      thickness: tokens.edgeThickness,
+                      strength: tokens.refractionStrength,
+                    ),
+                  ),
+                ),
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
@@ -100,6 +110,7 @@ class LiquidGlassMaterial extends StatelessWidget {
                       radius: radius,
                       innerGlow: tokens.innerGlow,
                       edgeShade: tokens.edgeShade,
+                      edgeThickness: tokens.edgeThickness,
                       strength: strength,
                     ),
                   ),
@@ -113,6 +124,7 @@ class LiquidGlassMaterial extends StatelessWidget {
                       highlight: tokens.rimHighlight,
                       shadow: tokens.rimShadow,
                       strength: tokens.highlightStrength,
+                      opticalStrength: tokens.refractionStrength,
                     ),
                   ),
                 ),
@@ -164,23 +176,133 @@ class LiquidGlassMaterial extends StatelessWidget {
   }
 }
 
+class _RefractiveEdgeLayer extends StatelessWidget {
+  const _RefractiveEdgeLayer({
+    required this.radius,
+    required this.thickness,
+    required this.strength,
+  });
+
+  final double radius;
+  final double thickness;
+  final double strength;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        if (!width.isFinite || !height.isFinite || width <= 0 || height <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        // A near-circular surface behaves more like a lens, while a large
+        // panel receives gentler edge refraction.
+        final shapeFactor = ((radius * 2) / math.min(width, height)).clamp(
+          0.0,
+          1.0,
+        );
+        final scale = 1 + strength * (0.006 + shapeFactor * 0.012);
+        final matrix = Matrix4.identity()
+          ..translateByDouble(width / 2, height / 2, 0, 1)
+          ..scaleByDouble(scale, scale, 1, 1)
+          ..translateByDouble(-width / 2, -height / 2, 0, 1);
+
+        return ClipPath(
+          clipper: _EdgeBandClipper(radius: radius, thickness: thickness),
+          child: BackdropFilter(
+            filter: ImageFilter.matrix(
+              matrix.storage,
+              filterQuality: FilterQuality.medium,
+            ),
+            child: const SizedBox.expand(),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EdgeBandClipper extends CustomClipper<Path> {
+  const _EdgeBandClipper({required this.radius, required this.thickness});
+
+  final double radius;
+  final double thickness;
+
+  @override
+  Path getClip(Size size) {
+    final rect = Offset.zero & size;
+    final outer = Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+    final innerRect = rect.deflate(thickness);
+    if (innerRect.isEmpty) return outer;
+    final inner = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          innerRect,
+          Radius.circular(math.max(0, radius - thickness * 0.72)),
+        ),
+      );
+    return Path.combine(PathOperation.difference, outer, inner);
+  }
+
+  @override
+  bool shouldReclip(covariant _EdgeBandClipper oldClipper) {
+    return oldClipper.radius != radius || oldClipper.thickness != thickness;
+  }
+}
+
 class _GlassDepthPainter extends CustomPainter {
   const _GlassDepthPainter({
     required this.radius,
     required this.innerGlow,
     required this.edgeShade,
+    required this.edgeThickness,
     required this.strength,
   });
 
   final double radius;
   final Color innerGlow;
   final Color edgeShade;
+  final double edgeThickness;
   final double strength;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    final innerRect = rect.deflate(edgeThickness);
+
+    if (!innerRect.isEmpty) {
+      final outerPath = Path()..addRRect(rrect);
+      final innerPath = Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(
+            innerRect,
+            Radius.circular(math.max(0, radius - edgeThickness * 0.72)),
+          ),
+        );
+      final edgeBand = Path.combine(
+        PathOperation.difference,
+        outerPath,
+        innerPath,
+      );
+      final thicknessPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            innerGlow.withValues(alpha: innerGlow.a * (0.72 + strength * 0.28)),
+            innerGlow.withValues(alpha: innerGlow.a * 0.24),
+            edgeShade.withValues(alpha: edgeShade.a * 0.32),
+            edgeShade.withValues(alpha: edgeShade.a * 0.92),
+          ],
+          stops: const <double>[0, 0.28, 0.68, 1],
+        ).createShader(rect)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.4);
+      canvas.drawPath(edgeBand, thicknessPaint);
+    }
 
     final edgeDepth = Paint()
       ..shader = RadialGradient(
@@ -215,6 +337,7 @@ class _GlassDepthPainter extends CustomPainter {
     return oldDelegate.radius != radius ||
         oldDelegate.innerGlow != innerGlow ||
         oldDelegate.edgeShade != edgeShade ||
+        oldDelegate.edgeThickness != edgeThickness ||
         oldDelegate.strength != strength;
   }
 }
@@ -225,35 +348,92 @@ class _SpecularRimPainter extends CustomPainter {
     required this.highlight,
     required this.shadow,
     required this.strength,
+    required this.opticalStrength,
   });
 
   final double radius;
   final Color highlight;
   final Color shadow;
   final double strength;
+  final double opticalStrength;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
-    final path = Path()..addRRect(rrect);
+    final width = size.width;
+    final height = size.height;
+    final resolvedRadius = math.min(radius, math.min(width, height) / 2);
+    const inset = 0.8;
 
-    final rim = Paint()
+    if (opticalStrength < 1) {
+      final rect = Offset.zero & size;
+      final legacyPath = Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(rect, Radius.circular(resolvedRadius)),
+        );
+      final legacyRim = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.62 + strength * 0.14
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            highlight.withValues(alpha: highlight.a * (1 - opticalStrength)),
+            highlight.withValues(
+              alpha: highlight.a * 0.12 * (1 - opticalStrength),
+            ),
+            Colors.transparent,
+            shadow.withValues(alpha: shadow.a * 0.14 * (1 - opticalStrength)),
+            shadow.withValues(alpha: shadow.a * (1 - opticalStrength)),
+          ],
+          stops: const <double>[0, 0.22, 0.5, 0.76, 1],
+        ).createShader(rect);
+      canvas.drawPath(legacyPath, legacyRim);
+    }
+
+    final topPath = Path()
+      ..moveTo(inset, resolvedRadius)
+      ..quadraticBezierTo(inset, inset, resolvedRadius, inset)
+      ..lineTo(width - resolvedRadius, inset)
+      ..quadraticBezierTo(width - inset, inset, width - inset, resolvedRadius);
+    final topRim = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.62 + strength * 0.14
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[
-          highlight,
-          highlight.withValues(alpha: highlight.a * 0.12),
-          Colors.transparent,
-          shadow.withValues(alpha: shadow.a * 0.14),
-          shadow,
-        ],
-        stops: const <double>[0, 0.22, 0.5, 0.76, 1],
-      ).createShader(rect);
-    canvas.drawPath(path, rim);
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 0.7 + strength * 0.7
+      ..color = highlight.withValues(alpha: highlight.a * opticalStrength)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.45);
+    canvas.drawPath(topPath, topRim);
+
+    final sidePath = Path()
+      ..moveTo(inset, resolvedRadius)
+      ..lineTo(inset, height - resolvedRadius)
+      ..moveTo(width - inset, resolvedRadius)
+      ..lineTo(width - inset, height - resolvedRadius);
+    final sideRim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.55 + strength * 0.32
+      ..color = highlight.withValues(
+        alpha: highlight.a * 0.34 * opticalStrength,
+      )
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.7);
+    canvas.drawPath(sidePath, sideRim);
+
+    final bottomPath = Path()
+      ..moveTo(inset, height - resolvedRadius)
+      ..quadraticBezierTo(inset, height - inset, resolvedRadius, height - inset)
+      ..lineTo(width - resolvedRadius, height - inset)
+      ..quadraticBezierTo(
+        width - inset,
+        height - inset,
+        width - inset,
+        height - resolvedRadius,
+      );
+    final bottomRim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 0.65 + strength * 0.42
+      ..color = shadow.withValues(alpha: shadow.a * opticalStrength)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.65);
+    canvas.drawPath(bottomPath, bottomRim);
   }
 
   @override
@@ -261,7 +441,8 @@ class _SpecularRimPainter extends CustomPainter {
     return oldDelegate.radius != radius ||
         oldDelegate.highlight != highlight ||
         oldDelegate.shadow != shadow ||
-        oldDelegate.strength != strength;
+        oldDelegate.strength != strength ||
+        oldDelegate.opticalStrength != opticalStrength;
   }
 }
 

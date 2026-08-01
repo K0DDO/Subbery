@@ -35,13 +35,17 @@ void main() {
       final max = tokensFor(1);
       expect(mid.blur, lessThan(zero.blur));
       expect(max.blur, lessThan(mid.blur));
-      expect(max.blur, inInclusiveRange(5, 6));
+      expect(max.blur, inInclusiveRange(1.1, 1.4));
       expect(max.sheenEnabled, isTrue);
       expect(mid.fill.a, lessThan(zero.fill.a));
       expect(max.fill.a, lessThan(mid.fill.a));
       expect(max.fill.a, lessThan(0.08));
-      expect(max.rimHighlight.a, lessThan(0.17));
+      expect(max.rimHighlight.a, lessThan(0.2));
       expect(max.sheenAlpha, lessThanOrEqualTo(0.03));
+      expect(zero.refractionStrength, 0);
+      expect(mid.refractionStrength, greaterThan(0));
+      expect(max.refractionStrength, 1);
+      expect(max.edgeThickness, greaterThan(mid.edgeThickness));
     });
   });
 

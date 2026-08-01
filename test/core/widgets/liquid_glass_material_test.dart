@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subberry/core/theme/app_theme.dart';
+import 'package:subberry/core/widgets/glass_button.dart';
 import 'package:subberry/core/widgets/glass_card.dart';
 import 'package:subberry/core/widgets/liquid_glass_material.dart';
 import 'package:subberry/core/widgets/liquid_glass_runtime_host.dart';
@@ -59,5 +60,29 @@ void main() {
       expect(find.text('Карточка'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('pill buttons become shape-aware glass lenses at maximum', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: LiquidGlassConfig(
+          strength: 1,
+          child: Scaffold(
+            body: GlassButton(label: 'Создать', onPressed: () {}),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byType(GlassButton),
+        matching: find.byType(LiquidGlassMaterial),
+      ),
+      findsOneWidget,
+    );
   });
 }
