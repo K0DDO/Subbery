@@ -107,13 +107,18 @@ class _Leaf extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     return Transform.rotate(
       angle: angle,
       child: Container(
         width: size * 0.48,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFF77B879),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[palette.primaryLight, palette.primaryDark],
+          ),
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(size),
             topRight: Radius.circular(size),

@@ -11,7 +11,7 @@ final accentColorProvider =
     );
 
 class AccentColorController extends StateNotifier<AppAccentChoice> {
-  AccentColorController() : super(AppAccentChoice.coral) {
+  AccentColorController() : super(AppAccentChoice.peach) {
     unawaited(_restore());
   }
 
@@ -22,7 +22,7 @@ class AccentColorController extends StateNotifier<AppAccentChoice> {
     final storedAccent = preferences.getString(_storageKey);
     state = AppAccentChoice.values.firstWhere(
       (accent) => accent.name == storedAccent,
-      orElse: () => AppAccentChoice.coral,
+      orElse: () => AppAccentChoice.peach,
     );
   }
 

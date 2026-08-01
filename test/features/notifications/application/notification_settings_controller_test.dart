@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:subberry/features/notifications/application/notification_settings_controller.dart';
@@ -61,5 +62,6 @@ class _FakeNotificationGateway implements NotificationGateway {
     required List<Subscription> subscriptions,
     required int daysBefore,
     required bool enabled,
+    required Color accentColor,
   }) async {}
 }

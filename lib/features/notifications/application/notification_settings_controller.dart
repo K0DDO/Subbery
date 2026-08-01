@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../settings/application/accent_color_controller.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../data/local_notification_service.dart';
 
@@ -32,12 +33,14 @@ final notificationCoordinatorProvider = Provider<void>((ref) {
           subscriptions: subscriptions,
           daysBefore: settings.daysBefore,
           enabled: settings.enabled,
+          accentColor: ref.read(accentColorProvider).seed,
         );
   }
 
   ref
     ..listen(subscriptionsProvider, (_, _) => unawaited(reschedule()))
-    ..listen(notificationSettingsProvider, (_, _) => unawaited(reschedule()));
+    ..listen(notificationSettingsProvider, (_, _) => unawaited(reschedule()))
+    ..listen(accentColorProvider, (_, _) => unawaited(reschedule()));
 });
 
 class NotificationSettingsState extends Equatable {

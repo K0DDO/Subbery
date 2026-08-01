@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_accent_theme.dart';
 import 'sheet_controller.dart';
 
 class SheetGestureHandler extends StatefulWidget {
@@ -117,6 +118,7 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = context.subberryTheme;
     return PrimaryScrollController(
       controller: widget.controller.scrollController,
       child: NotificationListener<ScrollNotification>(
@@ -177,9 +179,7 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
                           borderRadius: BorderRadius.circular(99),
                           boxShadow: <BoxShadow>[
                             BoxShadow(
-                              color: const Color(
-                                0xFFDC586D,
-                              ).withValues(alpha: 0.18),
+                              color: palette.glowColor.withValues(alpha: 0.18),
                               blurRadius: 10,
                             ),
                           ],

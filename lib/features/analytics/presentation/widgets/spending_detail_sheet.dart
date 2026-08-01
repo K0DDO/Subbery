@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/monthly_spend_point.dart';
+import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/glass_theme.dart';
 import '../../../../core/utils/app_formatters.dart';
@@ -16,9 +17,6 @@ import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/analytics_breakdown.dart';
 import '../../application/analytics_metrics.dart';
 import 'category_spending_chart.dart';
-
-const _actualSpendColor = Color(0xFFFF7665);
-const _expectedSpendColor = Color(0xFFFFB894);
 
 Future<void> _showDropletSheet({
   required BuildContext context,
@@ -175,7 +173,7 @@ Future<void> showCategorySubscriptionsSheet({
     builder: (sheetContext) => _SheetScaffold(
       title: category.label,
       subtitle: 'Около ${AppFormatters.money(amountInCents)} в месяц',
-      accent: category.color,
+      accent: category.color(context),
       children: <Widget>[
         if (rows.isEmpty)
           const _EmptyDetail(message: 'В категории пока пусто')
@@ -225,18 +223,19 @@ class _SheetScaffold extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.children,
-    this.accent = _actualSpendColor,
+    this.accent,
     this.hero,
   });
 
   final String title;
   final String subtitle;
-  final Color accent;
+  final Color? accent;
   final Widget? hero;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveAccent = accent ?? context.subberryTheme.primary;
     return ListView(
       shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(
@@ -257,7 +256,7 @@ class _SheetScaffold extends StatelessWidget {
         Text(
           subtitle,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: accent,
+            color: effectiveAccent,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -291,6 +290,7 @@ class _MonthAnalyticsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     final target = month ?? DateTime(now.year, now.month);
     final kind = _monthKind(target, now);
     final actual = AnalyticsBreakdown.sumRows(rows);
@@ -305,13 +305,13 @@ class _MonthAnalyticsSheet extends StatelessWidget {
         _MonthKind.future => 'Ожидаемые расходы',
       },
       accent: kind == _MonthKind.future
-          ? _expectedSpendColor
-          : _actualSpendColor,
+          ? palette.primaryLight
+          : palette.primary,
       hero: switch (kind) {
         _MonthKind.past => _SpendHeroCard(
           label: 'Фактически',
           amountInCents: actual,
-          color: _actualSpendColor,
+          color: palette.primary,
         ),
         _MonthKind.current => _CurrentMonthHero(
           actualInCents: actual,
@@ -321,7 +321,7 @@ class _MonthAnalyticsSheet extends StatelessWidget {
         _MonthKind.future => _SpendHeroCard(
           label: 'Ожидается',
           amountInCents: plannedInCents,
-          color: _expectedSpendColor,
+          color: palette.primaryLight,
         ),
       },
       children: <Widget>[
@@ -355,7 +355,7 @@ class _MonthAnalyticsSheet extends StatelessWidget {
               title: row.name,
               subtitle: AppFormatters.shortDate(row.payment.date),
               trailing: AppFormatters.money(row.payment.amountInCents),
-              trailingColor: _actualSpendColor,
+              trailingColor: palette.primary,
               onTap: () => onPaymentTap(row),
             ),
       ],
@@ -378,6 +378,7 @@ class _YearAnalyticsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     final visible = points
         .where((point) {
           final kind = _monthKind(point.month, now);
@@ -404,11 +405,11 @@ class _YearAnalyticsSheet extends StatelessWidget {
     return _SheetScaffold(
       title: 'Траты за $year',
       subtitle: 'Помесячная картина года',
-      accent: _actualSpendColor,
+      accent: palette.primary,
       hero: _SpendHeroCard(
         label: 'Факт за год',
         amountInCents: yearActual,
-        color: _actualSpendColor,
+        color: palette.primary,
       ),
       children: <Widget>[
         _SectionLabel('Месяцы'),
@@ -445,6 +446,7 @@ class _YearMonthGlassRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     final glass = Theme.of(context).extension<GlassTheme>()!;
     final kind = _monthKind(point.month, now);
     final actual = point.amountInCents;
@@ -455,8 +457,8 @@ class _YearMonthGlassRow extends StatelessWidget {
       _MonthKind.future => point.plannedAmountInCents,
     };
     final barColor = kind == _MonthKind.future
-        ? _expectedSpendColor
-        : _actualSpendColor;
+        ? palette.primaryLight
+        : palette.primary;
     final ratio = (displayAmount / maxAmountInCents).clamp(0.0, 1.0);
 
     return Material(
@@ -518,7 +520,7 @@ class _YearMonthGlassRow extends StatelessWidget {
                           children: <Widget>[
                             Positioned.fill(
                               child: ColoredBox(
-                                color: _expectedSpendColor.withValues(
+                                color: palette.primaryLight.withValues(
                                   alpha: 0.14,
                                 ),
                               ),
@@ -528,7 +530,7 @@ class _YearMonthGlassRow extends StatelessWidget {
                               top: 0,
                               bottom: 0,
                               width: actualWidth,
-                              child: const ColoredBox(color: _actualSpendColor),
+                              child: ColoredBox(color: palette.primary),
                             ),
                             Positioned(
                               left: actualWidth,
@@ -536,7 +538,7 @@ class _YearMonthGlassRow extends StatelessWidget {
                               bottom: 0,
                               width: expectedWidth,
                               child: ColoredBox(
-                                color: _expectedSpendColor.withValues(
+                                color: palette.primaryLight.withValues(
                                   alpha: 0.85,
                                 ),
                               ),
@@ -594,6 +596,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     final total = AnalyticsBreakdown.sumRows(rows);
     final totals = <String, ({PaymentSpendRow row, int amount})>{};
     for (final row in rows) {
@@ -610,11 +613,11 @@ class _TotalAnalyticsSheet extends StatelessWidget {
     return _SheetScaffold(
       title: 'Все траты',
       subtitle: 'История и самые дорогие подписки',
-      accent: _actualSpendColor,
+      accent: palette.primary,
       hero: _SpendHeroCard(
         label: 'Всего потрачено',
         amountInCents: total,
-        color: _actualSpendColor,
+        color: palette.primary,
       ),
       children: <Widget>[
         _SectionLabel('Топ подписок'),
@@ -632,7 +635,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
               ),
               title: item.row.name,
               trailing: AppFormatters.money(item.amount),
-              trailingColor: _actualSpendColor,
+              trailingColor: palette.primary,
               onTap: item.row.subscription == null
                   ? null
                   : () => onPaymentTap(item.row),
@@ -651,7 +654,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
             title: row.name,
             subtitle: AppFormatters.shortDate(row.payment.date),
             trailing: AppFormatters.money(row.payment.amountInCents),
-            trailingColor: _actualSpendColor,
+            trailingColor: palette.primary,
             onTap: () => onPaymentTap(row),
           ),
       ],
@@ -678,6 +681,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     final count = _period.clamp(1, widget.points.length);
     final visible = widget.points.sublist(widget.points.length - count);
     final latest = visible.last.amountInCents;
@@ -685,14 +689,12 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
         ? visible[visible.length - 2].amountInCents
         : latest;
     final difference = latest - previous;
-    final differenceColor = difference <= 0
-        ? const Color(0xFF63C987)
-        : _actualSpendColor;
+    final differenceColor = difference <= 0 ? palette.success : palette.primary;
 
     return _SheetScaffold(
       title: 'Динамика расходов',
       subtitle: 'Большой график и фильтр периода',
-      accent: _actualSpendColor,
+      accent: palette.primary,
       children: <Widget>[
         Align(
           alignment: Alignment.centerLeft,
@@ -768,7 +770,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
           _GlassPaymentRow(
             leading: Icon(
               Icons.calendar_month_rounded,
-              color: _actualSpendColor.withValues(alpha: 0.9),
+              color: palette.primary.withValues(alpha: 0.9),
             ),
             title: AnalyticsBreakdown.monthLabel(point.month),
             subtitle:
@@ -816,11 +818,13 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
                 width: 14,
                 height: 14,
                 decoration: BoxDecoration(
-                  color: category.category.color,
+                  color: category.category.color(context),
                   shape: BoxShape.circle,
                   boxShadow: <BoxShadow>[
                     BoxShadow(
-                      color: category.category.color.withValues(alpha: 0.35),
+                      color: category.category
+                          .color(context)
+                          .withValues(alpha: 0.35),
                       blurRadius: 10,
                     ),
                   ],
@@ -831,7 +835,7 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
                   ? '0%'
                   : '${((category.amountInCents / total) * 100).round()}% нагрузки',
               trailing: AppFormatters.money(category.amountInCents),
-              trailingColor: category.category.color,
+              trailingColor: category.category.color(context),
               onTap: () => onCategorySelected(category),
             ),
         ],
@@ -853,6 +857,7 @@ class _CurrentMonthHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     return Column(
       children: <Widget>[
         Row(
@@ -861,7 +866,7 @@ class _CurrentMonthHero extends StatelessWidget {
               child: _SpendHeroCard(
                 label: 'Фактически',
                 amountInCents: actualInCents,
-                color: _actualSpendColor,
+                color: palette.primary,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -869,7 +874,7 @@ class _CurrentMonthHero extends StatelessWidget {
               child: _SpendHeroCard(
                 label: 'Ожидается',
                 amountInCents: expectedInCents,
-                color: _expectedSpendColor,
+                color: palette.primaryLight,
               ),
             ),
           ],
@@ -878,7 +883,7 @@ class _CurrentMonthHero extends StatelessWidget {
         _SpendHeroCard(
           label: 'Прогноз',
           amountInCents: forecastInCents,
-          color: Color.lerp(_actualSpendColor, _expectedSpendColor, 0.35)!,
+          color: Color.lerp(palette.primary, palette.primaryLight, 0.35)!,
         ),
       ],
     );
@@ -973,10 +978,10 @@ class _PaymentCategoryChips extends StatelessWidget {
               vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: category.key.color.withValues(alpha: 0.14),
+              color: category.key.color(context).withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(AppRadius.pill),
               border: Border.all(
-                color: category.key.color.withValues(alpha: 0.3),
+                color: category.key.color(context).withValues(alpha: 0.3),
               ),
             ),
             child: Text(
@@ -984,7 +989,7 @@ class _PaymentCategoryChips extends StatelessWidget {
               '${((category.value / total) * 100).round()}% · '
               '${AppFormatters.money(category.value)}',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: category.key.color,
+                color: category.key.color(context),
                 fontWeight: FontWeight.w700,
               ),
             ),

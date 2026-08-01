@@ -40,6 +40,7 @@ class _GlassButtonState extends State<GlassButton> {
   @override
   Widget build(BuildContext context) {
     final accent = context.accentTheme;
+    final foreground = Theme.of(context).colorScheme.onPrimary;
     final button = AnimatedScale(
       scale: _isPressed ? 0.975 : 1,
       duration: const Duration(milliseconds: 120),
@@ -48,11 +49,20 @@ class _GlassButtonState extends State<GlassButton> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.pill),
           gradient: widget.onPressed == null
-              ? const LinearGradient(colors: <Color>[Colors.grey, Colors.grey])
+              ? LinearGradient(
+                  colors: <Color>[
+                    accent.mutedTextColor.withValues(alpha: 0.55),
+                    accent.mutedTextColor.withValues(alpha: 0.38),
+                  ],
+                )
+              : _isPressed
+              ? LinearGradient(
+                  colors: <Color>[accent.primaryDark, accent.primary],
+                )
               : accent.gradient,
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: accent.primary.withValues(alpha: 0.28),
+              color: accent.glowColor,
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -83,14 +93,14 @@ class _GlassButtonState extends State<GlassButton> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   if (widget.icon case final icon?) ...<Widget>[
-                    Icon(icon, size: 20, color: Colors.white),
+                    Icon(icon, size: 20, color: foreground),
                     const SizedBox(width: AppSpacing.xs),
                   ],
                   Text(
                     widget.label,
                     style: Theme.of(
                       context,
-                    ).textTheme.labelLarge?.copyWith(color: Colors.white),
+                    ).textTheme.labelLarge?.copyWith(color: foreground),
                   ),
                 ],
               ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_accent_theme.dart';
 import '../domain/entities/subscription.dart';
 
 extension SubscriptionCategoryUi on SubscriptionCategory {
@@ -26,16 +26,8 @@ extension SubscriptionCategoryUi on SubscriptionCategory {
     SubscriptionCategory.other => '📦',
   };
 
-  Color get color => switch (this) {
-    SubscriptionCategory.entertainment => AppColors.entertainment,
-    SubscriptionCategory.music => AppColors.music,
-    SubscriptionCategory.work => AppColors.work,
-    SubscriptionCategory.cloud => AppColors.cloud,
-    SubscriptionCategory.gaming => AppColors.gaming,
-    SubscriptionCategory.education => AppColors.education,
-    SubscriptionCategory.health => AppColors.health,
-    SubscriptionCategory.other => AppColors.other,
-  };
+  Color color(BuildContext context) =>
+      context.subberryTheme.categoryColor(index);
 }
 
 extension BillingCycleUi on BillingCycle {

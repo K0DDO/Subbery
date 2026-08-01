@@ -1,52 +1,60 @@
 import 'package:flutter/material.dart';
 
 import 'app_accent_theme.dart';
-import 'app_colors.dart';
 import 'glass_theme.dart';
 
 abstract final class AppTheme {
-  static ThemeData get light => lightFor(AppAccentChoice.coral);
+  static ThemeData get light => lightFor(AppAccentChoice.peach);
 
-  static ThemeData get dark => darkFor(AppAccentChoice.coral);
+  static ThemeData get dark => darkFor(AppAccentChoice.peach);
 
-  static ThemeData lightFor(AppAccentChoice accentChoice) => _build(
-    brightness: Brightness.light,
-    foreground: AppColors.lightText,
-    muted: AppColors.lightMutedText,
-    accentChoice: accentChoice,
-    glassTheme: const GlassTheme(
-      surface: Color(0x73FFFFFF),
-      strongSurface: Color(0xA6FFFFFF),
-      border: Color(0x99FFFFFF),
-      highlight: Color(0xCCFFFFFF),
-      shadow: Color(0x267D3E45),
-      blur: 22,
-    ),
-  );
+  static ThemeData lightFor(AppAccentChoice accentChoice) =>
+      _build(brightness: Brightness.light, accentChoice: accentChoice);
 
-  static ThemeData darkFor(AppAccentChoice accentChoice) => _build(
-    brightness: Brightness.dark,
-    foreground: AppColors.darkText,
-    muted: AppColors.darkMutedText,
-    accentChoice: accentChoice,
-    glassTheme: const GlassTheme(
-      surface: Color(0x14FFFFFF),
-      strongSurface: Color(0x24FFFFFF),
-      border: Color(0x29FFFFFF),
-      highlight: Color(0x38FFFFFF),
-      shadow: Color(0x66000000),
-      blur: 24,
-    ),
-  );
+  static ThemeData darkFor(AppAccentChoice accentChoice) =>
+      _build(brightness: Brightness.dark, accentChoice: accentChoice);
 
   static ThemeData _build({
     required Brightness brightness,
-    required Color foreground,
-    required Color muted,
     required AppAccentChoice accentChoice,
-    required GlassTheme glassTheme,
   }) {
-    final accent = AppAccentTheme.fromChoice(accentChoice, brightness);
+    final accent = SubberryTheme.fromChoice(accentChoice, brightness);
+    final isDark = brightness == Brightness.dark;
+    final foreground = isDark
+        ? const Color(0xFFFFF8F5)
+        : const Color(0xFF291C1C);
+    final muted = accent.mutedTextColor;
+    final glassTheme = GlassTheme(
+      surface: Color.lerp(
+        isDark ? const Color(0x14FFFFFF) : const Color(0x73FFFFFF),
+        accent.glassTint,
+        isDark ? 0.42 : 0.32,
+      )!,
+      strongSurface: Color.lerp(
+        isDark ? const Color(0x24FFFFFF) : const Color(0xA6FFFFFF),
+        accent.glassTint,
+        isDark ? 0.5 : 0.28,
+      )!,
+      border: Color.lerp(
+        isDark ? const Color(0x29FFFFFF) : const Color(0x99FFFFFF),
+        accent.borderColor,
+        isDark ? 0.7 : 0.46,
+      )!,
+      highlight: Color.lerp(
+        isDark ? const Color(0x38FFFFFF) : const Color(0xCCFFFFFF),
+        accent.primaryLight.withValues(alpha: isDark ? 0.24 : 0.4),
+        0.28,
+      )!,
+      shadow: Color.lerp(
+        isDark ? const Color(0x66000000) : const Color(0x267D3E45),
+        accent.glowColor,
+        isDark ? 0.42 : 0.32,
+      )!,
+      blur: isDark ? 24 : 22,
+    );
+    final onPrimary = accent.primary.computeLuminance() > 0.48
+        ? const Color(0xFF211719)
+        : const Color(0xFFFFFBFA);
     final colorScheme =
         ColorScheme.fromSeed(
           seedColor: accent.primary,
@@ -54,8 +62,14 @@ abstract final class AppTheme {
           surface: accent.backgroundStart,
         ).copyWith(
           primary: accent.primary,
-          secondary: accent.secondary,
-          tertiary: accent.tertiary,
+          onPrimary: onPrimary,
+          primaryContainer: accent.softBackgroundTint,
+          secondary: accent.primaryLight,
+          secondaryContainer: accent.primaryLight.withValues(alpha: 0.18),
+          tertiary: accent.primaryDark,
+          error: accent.error,
+          outline: accent.borderColor,
+          outlineVariant: accent.borderColor.withValues(alpha: 0.55),
         );
 
     final baseTextTheme = ThemeData(
@@ -121,9 +135,33 @@ abstract final class AppTheme {
       dividerColor: glassTheme.border,
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
+      iconTheme: IconThemeData(color: accent.primary),
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return muted.withValues(alpha: 0.34);
+            }
+            if (states.contains(WidgetState.pressed) ||
+                states.contains(WidgetState.hovered)) {
+              return accent.primaryDark;
+            }
+            return accent.primary;
+          }),
+          foregroundColor: WidgetStatePropertyAll(onPrimary),
+          overlayColor: WidgetStatePropertyAll(
+            accent.primaryLight.withValues(alpha: 0.14),
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        selectedColor: accent.softBackgroundTint,
+        side: BorderSide(color: accent.borderColor),
+        secondaryLabelStyle: TextStyle(color: accent.primaryDark),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: glassTheme.surface,
+        fillColor: Color.alphaBlend(accent.glassTint, glassTheme.surface),
         hintStyle: textTheme.bodyLarge?.copyWith(color: muted),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,

@@ -317,10 +317,12 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                           showCheckmark: false,
                           label: Text('${category.emoji} ${category.label}'),
                           selected: state.category == category,
-                          selectedColor: category.color.withValues(alpha: 0.28),
+                          selectedColor: category
+                              .color(context)
+                              .withValues(alpha: 0.28),
                           side: BorderSide(
                             color: state.category == category
-                                ? category.color
+                                ? category.color(context)
                                 : Theme.of(context).dividerColor,
                           ),
                           onSelected: (_) => controller.setCategory(category),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -18,6 +19,7 @@ abstract interface class NotificationGateway {
     required List<Subscription> subscriptions,
     required int daysBefore,
     required bool enabled,
+    required Color accentColor,
   });
 }
 
@@ -82,6 +84,7 @@ class LocalNotificationService implements NotificationGateway {
     required List<Subscription> subscriptions,
     required int daysBefore,
     required bool enabled,
+    required Color accentColor,
   }) async {
     await initialize();
     await _plugin.cancelAll();
@@ -115,15 +118,16 @@ class LocalNotificationService implements NotificationGateway {
             'Через $daysBefore ${_dayWord(daysBefore)} будет списание '
             '${AppFormatters.money(subscription.priceInCents)}',
         scheduledDate: reminderDate,
-        notificationDetails: const NotificationDetails(
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,
             _channelName,
             channelDescription: 'Предупреждения о предстоящих списаниях',
             importance: Importance.high,
             priority: Priority.high,
+            color: accentColor,
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,

@@ -52,7 +52,7 @@ class ServiceLogo extends StatelessWidget {
     }
 
     final color = knownService == null
-        ? category.color
+        ? category.color(context)
         : Color(knownService.brandColorValue);
     final monogram =
         knownService?.monogram ??

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
+import '../../../../core/theme/app_accent_theme.dart';
 import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/overview_metrics.dart';
 
@@ -227,6 +227,8 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                               context,
                             ).dividerColor.withValues(alpha: 0.45),
                             accentColor: primary,
+                            categoryColors:
+                                context.subberryTheme.categoryColors,
                           ),
                           child: child,
                         );
@@ -404,7 +406,11 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     const iconSize = 18.0;
     final isSoon = daysUntil <= 3;
     final borderColor = isSoon
-        ? Color.lerp(const Color(0xFFFF8A80), const Color(0xFF8B1020), pulse)!
+        ? Color.lerp(
+            context.subberryTheme.error.withValues(alpha: 0.62),
+            context.subberryTheme.error,
+            pulse,
+          )!
         : Colors.white.withValues(alpha: 0.72);
     final subscription = group.primary.subscription;
     return Positioned(
@@ -498,6 +504,7 @@ class _CalendarRingPainter extends CustomPainter {
     required this.textColor,
     required this.trackColor,
     required this.accentColor,
+    required this.categoryColors,
   });
 
   final int year;
@@ -510,6 +517,7 @@ class _CalendarRingPainter extends CustomPainter {
   final Color textColor;
   final Color trackColor;
   final Color accentColor;
+  final List<Color> categoryColors;
 
   static const _shortMonths = <String>[
     'янв',
@@ -621,7 +629,8 @@ class _CalendarRingPainter extends CustomPainter {
       final sweep = -daysUntil / daysInYear * math.pi * 2;
       final color = group.count > 1
           ? accentColor
-          : group.primary.subscription.category.color;
+          : categoryColors[group.primary.subscription.category.index %
+                categoryColors.length];
 
       canvas.drawArc(
         rect,
@@ -647,6 +656,7 @@ class _CalendarRingPainter extends CustomPainter {
         oldDelegate.showPeriodArcs != showPeriodArcs ||
         oldDelegate.textColor != textColor ||
         oldDelegate.trackColor != trackColor ||
-        oldDelegate.accentColor != accentColor;
+        oldDelegate.accentColor != accentColor ||
+        oldDelegate.categoryColors != categoryColors;
   }
 }

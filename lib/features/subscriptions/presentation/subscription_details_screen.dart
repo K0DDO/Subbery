@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_accent_theme.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/app_background.dart';
@@ -310,7 +309,7 @@ class _DetailsContent extends StatelessWidget {
                   icon: Icons.category_rounded,
                   label: 'Категория',
                   value: subscription.category.label,
-                  color: subscription.category.color,
+                  color: subscription.category.color(context),
                   onTap: () => context.goNamed(
                     'subscriptions',
                     queryParameters: <String, String>{
@@ -397,11 +396,12 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
     final color = switch (status) {
-      SubscriptionStatus.active => const Color(0xFF63C987),
-      SubscriptionStatus.paused => AppColors.education,
-      SubscriptionStatus.cancelled => AppColors.health,
-      SubscriptionStatus.expired => AppColors.other,
+      SubscriptionStatus.active => palette.success,
+      SubscriptionStatus.paused => palette.warning,
+      SubscriptionStatus.cancelled => palette.error,
+      SubscriptionStatus.expired => palette.mutedTextColor,
     };
 
     return PopupMenuButton<_StatusAction>(

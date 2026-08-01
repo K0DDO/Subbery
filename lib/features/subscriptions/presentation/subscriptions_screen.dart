@@ -521,12 +521,13 @@ class _SubscriptionCard extends StatelessWidget {
   final int animationIndex;
   final VoidCallback onTap;
 
-  Color get _statusDotColor {
+  Color _statusDotColor(BuildContext context) {
+    final palette = context.subberryTheme;
     return switch (subscription.status) {
-      SubscriptionStatus.active => const Color(0xFF63C987),
-      SubscriptionStatus.paused => const Color(0xFFF0C14E),
-      SubscriptionStatus.cancelled => const Color(0xFFE57373),
-      SubscriptionStatus.expired => const Color(0xFF9E9E9E),
+      SubscriptionStatus.active => palette.success,
+      SubscriptionStatus.paused => palette.warning,
+      SubscriptionStatus.cancelled => palette.error,
+      SubscriptionStatus.expired => palette.mutedTextColor,
     };
   }
 
@@ -581,7 +582,7 @@ class _SubscriptionCard extends StatelessWidget {
                         height: 7,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _statusDotColor,
+                          color: _statusDotColor(context),
                         ),
                       ),
                     ],

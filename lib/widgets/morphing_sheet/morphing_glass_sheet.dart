@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_accent_theme.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/glass_theme.dart';
 import 'sheet_animation.dart';
@@ -360,10 +361,11 @@ class _LiquidGlassSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final glass = theme.extension<GlassTheme>()!;
-    const coral = Color(0xFFDC586D);
-    final luxurySurface = theme.brightness == Brightness.dark
-        ? const Color(0xF2171214)
-        : const Color(0xF2F8EDEB);
+    final palette = context.subberryTheme;
+    final luxurySurface = Color.alphaBlend(
+      palette.glassTint,
+      theme.colorScheme.surface.withValues(alpha: 0.95),
+    );
     final surface = Color.lerp(glass.strongSurface, luxurySurface, progress)!;
     final radius = MorphingSheetGeometry.value(
       settings.startRadius,
@@ -383,17 +385,13 @@ class _LiquidGlassSurface extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Color.lerp(
-              glass.shadow,
-              coral.withValues(alpha: 0.28),
-              progress,
-            )!,
+            color: Color.lerp(glass.shadow, palette.glowColor, progress)!,
             blurRadius: shadowBlur,
             spreadRadius: 1 + progress * 3,
             offset: Offset(0, shadowOffset),
           ),
           BoxShadow(
-            color: coral.withValues(alpha: 0.10 * progress),
+            color: palette.primary.withValues(alpha: 0.1 * progress),
             blurRadius: 36,
             offset: const Offset(0, 8),
           ),
@@ -410,7 +408,9 @@ class _LiquidGlassSurface extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: <Color>[
                   Color.alphaBlend(
-                    coral.withValues(alpha: 0.14 * progress),
+                    palette.glassTint.withValues(
+                      alpha: palette.glassTint.a * progress,
+                    ),
                     surface,
                   ),
                   Color.alphaBlend(
@@ -431,7 +431,7 @@ class _LiquidGlassSurface extends StatelessWidget {
                     Colors.white.withValues(
                       alpha: theme.brightness == Brightness.dark ? 0.18 : 0.72,
                     ),
-                    coral.withValues(alpha: 0.35),
+                    palette.borderColor,
                     0.18,
                   ),
                   progress,
@@ -465,7 +465,9 @@ class _LiquidGlassSurface extends StatelessWidget {
                           colors: <Color>[
                             Colors.transparent,
                             glass.highlight.withValues(alpha: 0.9),
-                            coral.withValues(alpha: 0.35 * progress),
+                            palette.primaryLight.withValues(
+                              alpha: 0.35 * progress,
+                            ),
                             Colors.transparent,
                           ],
                         ),

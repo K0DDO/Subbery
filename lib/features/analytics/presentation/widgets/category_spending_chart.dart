@@ -55,7 +55,7 @@ class CategorySpendingChart extends StatelessWidget {
                     for (final category in categories)
                       PieChartSectionData(
                         value: category.amountInCents.toDouble(),
-                        color: category.category.color,
+                        color: category.category.color(context),
                         radius: 30,
                         showTitle: false,
                         badgePositionPercentageOffset: 0.98,
@@ -118,7 +118,7 @@ class _LegendItem extends StatelessWidget {
           width: 9,
           height: 9,
           decoration: BoxDecoration(
-            color: category.category.color,
+            color: category.category.color(context),
             shape: BoxShape.circle,
           ),
         ),
