@@ -4,9 +4,9 @@ import 'app_accent_theme.dart';
 import 'glass_theme.dart';
 
 abstract final class AppTheme {
-  static ThemeData get light => lightFor(AppAccentChoice.peach);
+  static ThemeData get light => lightFor(AppAccentChoice.coral);
 
-  static ThemeData get dark => darkFor(AppAccentChoice.peach);
+  static ThemeData get dark => darkFor(AppAccentChoice.coral);
 
   static ThemeData lightFor(AppAccentChoice accentChoice) =>
       _build(brightness: Brightness.light, accentChoice: accentChoice);

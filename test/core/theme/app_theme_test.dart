@@ -54,12 +54,12 @@ void main() {
     expect(coral.dividerColor, isNot(purple.dividerColor));
   });
 
-  test('keeps the default light peach palette warm and subdued', () {
+  test('keeps the default light coral palette warm and subdued', () {
     final theme = AppTheme.light;
     final palette = theme.extension<SubberryTheme>()!;
     final glass = theme.extension<GlassTheme>()!;
 
-    expect(theme.colorScheme.primary, const Color(0xFFEC9564));
+    expect(theme.colorScheme.primary, const Color(0xFFE67F73));
     expect(palette.backgroundStart.computeLuminance(), lessThan(0.65));
     expect(palette.backgroundEnd.computeLuminance(), lessThan(0.65));
 

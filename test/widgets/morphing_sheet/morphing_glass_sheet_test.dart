@@ -212,6 +212,35 @@ void main() {
     expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
   });
 
+  testWidgets('pins scroll offset while content dismisses from the top', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const _Harness(
+        themeMode: ThemeMode.light,
+        contentHeight: 900,
+        scrollable: true,
+      ),
+    );
+    await _open(tester);
+
+    final content = find.byKey(MorphingGlassSheetKeys.content);
+    final gesture = await tester.startGesture(tester.getCenter(content));
+    await gesture.moveBy(const Offset(0, 40));
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, 60));
+    await tester.pump();
+
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: content, matching: find.byType(Scrollable)).first,
+    );
+    expect(scrollable.position.pixels, 0);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+  });
+
   testWidgets('supports internal page navigation with back', (tester) async {
     await tester.pumpWidget(const _NavigatorHarness());
     await tester.tap(find.text('Открыть'));

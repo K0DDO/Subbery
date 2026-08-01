@@ -6,13 +6,13 @@ import 'package:subberry/features/settings/application/accent_color_controller.d
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('uses peach orange as the default accent', () async {
+  test('uses coral as the default accent', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final controller = AccentColorController();
 
     await Future<void>.delayed(Duration.zero);
 
-    expect(controller.state, AppAccentChoice.peach);
+    expect(controller.state, AppAccentChoice.coral);
     controller.dispose();
   });
 

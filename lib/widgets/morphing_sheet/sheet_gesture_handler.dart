@@ -89,8 +89,7 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
     if (notification.metrics.axis != Axis.vertical) return false;
     if (widget.controller.isClosing) return false;
 
-    // When the pointer path already owns the sheet drag, only pin/lock the
-    // scrollable so content cannot translate independently of the shell.
+    // Pointer path owns settle/dismiss; notifications only pin the list.
     if (_pointerDrivenSheet) {
       _resetScrollPosition();
       return true;
@@ -118,7 +117,12 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
 
     if (notification is ScrollEndNotification &&
         widget.controller.sheetDragging.value) {
-      widget.controller.endDrag(notification.dragDetails?.primaryVelocity ?? 0);
+      // Pointer-up owns endDrag when the content Listener is driving.
+      if (!_pointerDrivenSheet) {
+        widget.controller.endDrag(
+          notification.dragDetails?.primaryVelocity ?? 0,
+        );
+      }
       return true;
     }
     return false;
@@ -132,16 +136,11 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
       controller: widget.controller.scrollController,
       child: NotificationListener<ScrollNotification>(
         onNotification: _handleScroll,
-        child: ValueListenableBuilder<bool>(
-          valueListenable: widget.controller.sheetDragging,
-          builder: (context, dragging, child) {
-            return ScrollConfiguration(
-              behavior: dragging
-                  ? const _LockedScrollBehavior()
-                  : ScrollConfiguration.of(context),
-              child: child!,
-            );
-          },
+        child: ScrollConfiguration(
+          behavior: _SheetScrollBehavior(
+            sheetDragging: widget.controller.sheetDragging,
+            parent: ScrollConfiguration.of(context),
+          ),
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
@@ -206,13 +205,14 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
   }
 }
 
-class _LockedScrollBehavior extends ScrollBehavior {
-  const _LockedScrollBehavior();
+class _SheetScrollBehavior extends ScrollBehavior {
+  const _SheetScrollBehavior({
+    required this.sheetDragging,
+    required this.parent,
+  });
 
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const NeverScrollableScrollPhysics();
-  }
+  final ValueNotifier<bool> sheetDragging;
+  final ScrollBehavior parent;
 
   @override
   Widget buildOverscrollIndicator(
@@ -220,6 +220,48 @@ class _LockedScrollBehavior extends ScrollBehavior {
     Widget child,
     ScrollableDetails details,
   ) {
-    return child;
+    return parent.buildOverscrollIndicator(context, child, details);
+  }
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return parent.buildScrollbar(context, child, details);
+  }
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return _SheetAwareScrollPhysics(
+      sheetDragging: sheetDragging,
+      parent: parent.getScrollPhysics(context),
+    );
+  }
+}
+
+/// Reads [sheetDragging] live so the same pointer event that starts a sheet
+/// drag also zeroes further scroll offsets without waiting for a rebuild.
+class _SheetAwareScrollPhysics extends ScrollPhysics {
+  const _SheetAwareScrollPhysics({
+    required this.sheetDragging,
+    super.parent,
+  });
+
+  final ValueNotifier<bool> sheetDragging;
+
+  @override
+  _SheetAwareScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _SheetAwareScrollPhysics(
+      sheetDragging: sheetDragging,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    if (sheetDragging.value) return 0;
+    return super.applyPhysicsToUserOffset(position, offset);
   }
 }
