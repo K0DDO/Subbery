@@ -29,6 +29,26 @@ class _HotbarMorphRoute<T> extends PopupRoute<T> {
   final Rect origin;
   final WidgetBuilder builder;
 
+  void updateFromDrag(double delta, double travel) {
+    final animationController = controller;
+    if (animationController == null) return;
+    animationController.stop();
+    final distance = travel.clamp(160.0, 900.0);
+    animationController.value = (animationController.value - delta / distance)
+        .clamp(0.0, 1.0);
+  }
+
+  void endDrag(double velocity) {
+    final animationController = controller;
+    if (animationController == null) return;
+    if (velocity > 650 ||
+        (velocity >= -650 && animationController.value < 0.72)) {
+      navigator?.pop();
+      return;
+    }
+    animationController.forward();
+  }
+
   @override
   Color? get barrierColor => Colors.black.withValues(alpha: 0.42);
 
@@ -39,10 +59,10 @@ class _HotbarMorphRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => 'Закрыть';
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 520);
+  Duration get transitionDuration => const Duration(milliseconds: 760);
 
   @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 380);
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 520);
 
   @override
   Widget buildPage(
@@ -60,82 +80,116 @@ class _HotbarMorphRoute<T> extends PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+    return _MeasuredHotbarMorph(
+      route: this,
+      origin: origin,
+      animation: animation,
+      child: child,
     );
+  }
+}
+
+class _MeasuredHotbarMorph extends StatefulWidget {
+  const _MeasuredHotbarMorph({
+    required this.route,
+    required this.origin,
+    required this.animation,
+    required this.child,
+  });
+
+  final _HotbarMorphRoute<dynamic> route;
+  final Rect origin;
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  State<_MeasuredHotbarMorph> createState() => _MeasuredHotbarMorphState();
+}
+
+class _MeasuredHotbarMorphState extends State<_MeasuredHotbarMorph> {
+  final GlobalKey _contentKey = GlobalKey();
+  double? _targetHeight;
+
+  void _measureContent() {
+    if (_targetHeight != null || !mounted) return;
+    final box = _contentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    setState(() => _targetHeight = box.size.height);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    final maxHeight = widget.origin.bottom - padding.top - AppSpacing.lg;
+
+    if (_targetHeight == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _measureContent());
+      return Stack(
+        children: <Widget>[
+          Positioned(
+            left: AppSpacing.md,
+            right: AppSpacing.md,
+            bottom: size.height - widget.origin.bottom,
+            child: Offstage(
+              child: UnconstrainedBox(
+                constrainedAxis: Axis.horizontal,
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(
+                  width: size.width - AppSpacing.md * 2,
+                  child: KeyedSubtree(key: _contentKey, child: widget.child),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fromRect(
+            rect: widget.origin,
+            child: const _MorphingSurface(
+              progress: 0,
+              navOpacity: 1,
+              contentOpacity: 0,
+              dragTravel: 160,
+              child: SizedBox.shrink(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final targetHeight = _targetHeight!.clamp(widget.origin.height, maxHeight);
     return AnimatedBuilder(
-      animation: curved,
+      animation: widget.animation,
       builder: (context, _) {
-        final t = curved.value;
-        final size = MediaQuery.sizeOf(context);
-        final padding = MediaQuery.paddingOf(context);
-        final end = Rect.fromLTRB(
-          AppSpacing.md,
-          padding.top + AppSpacing.lg,
+        final raw = widget.animation.value;
+        // Keep geometry linear so it follows the finger without drift.
+        final t = raw;
+        final left = lerpDouble(widget.origin.left, AppSpacing.md, t)!;
+        final right = lerpDouble(
+          widget.origin.right,
           size.width - AppSpacing.md,
-          size.height - AppSpacing.md,
+          t,
+        )!;
+        final height = lerpDouble(widget.origin.height, targetHeight, t)!;
+        final navOpacity = (1 - raw / 0.38).clamp(0.0, 1.0);
+        final contentOpacity = Curves.easeInOut.transform(
+          ((raw - 0.22) / 0.62).clamp(0.0, 1.0),
         );
-        // Keep the bottom edge anchored so the bar grows upward.
-        final bottom = origin.bottom;
-        final top = lerpDouble(origin.top, end.top, t)!;
-        final left = lerpDouble(origin.left, end.left, t)!;
-        final right = lerpDouble(origin.right, end.right, t)!;
-        final height = (bottom - top).clamp(origin.height, size.height);
-        final rect = Rect.fromLTRB(left, bottom - height, right, bottom);
-        final radius = lerpDouble(AppRadius.pill, AppRadius.lg, t)!;
-        final navOpacity = (1 - t / 0.32).clamp(0.0, 1.0);
-        final contentOpacity = ((t - 0.22) / 0.42).clamp(0.0, 1.0);
-        final glass = Theme.of(context).extension<GlassTheme>()!;
 
         return Stack(
           children: <Widget>[
             Positioned(
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              height: rect.height,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: glass.blur,
-                    sigmaY: glass.blur,
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: glass.strongSurface,
-                      borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(color: glass.border),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: glass.shadow,
-                          blurRadius: 28 + 10 * t,
-                          offset: Offset(0, 14 - 4 * t),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        IgnorePointer(
-                          child: Opacity(
-                            opacity: navOpacity,
-                            child: const _MorphingHotbarGhost(),
-                          ),
-                        ),
-                        Opacity(
-                          opacity: contentOpacity,
-                          child: Material(
-                            type: MaterialType.transparency,
-                            child: child,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              left: left,
+              right: size.width - right,
+              bottom: size.height - widget.origin.bottom,
+              height: height,
+              child: _MorphingSurface(
+                progress: t,
+                navOpacity: navOpacity,
+                contentOpacity: contentOpacity,
+                dragTravel: targetHeight - widget.origin.height,
+                onDragUpdate: widget.route.updateFromDrag,
+                onDragEnd: widget.route.endDrag,
+                child: widget.child,
               ),
             ),
           ],
@@ -145,46 +199,99 @@ class _HotbarMorphRoute<T> extends PopupRoute<T> {
   }
 }
 
-class _MorphingHotbarGhost extends StatelessWidget {
-  const _MorphingHotbarGhost();
+class _MorphingSurface extends StatelessWidget {
+  const _MorphingSurface({
+    required this.progress,
+    required this.navOpacity,
+    required this.contentOpacity,
+    required this.dragTravel,
+    this.onDragUpdate,
+    this.onDragEnd,
+    required this.child,
+  });
 
-  static const _items = <(String, IconData)>[
-    ('Обзор', Icons.space_dashboard_rounded),
-    ('Подписки', Icons.layers_rounded),
-    ('Аналитика', Icons.auto_graph_rounded),
-    ('Настройки', Icons.tune_rounded),
-  ];
+  final double progress;
+  final double navOpacity;
+  final double contentOpacity;
+  final double dragTravel;
+  final void Function(double delta, double travel)? onDragUpdate;
+  final ValueChanged<double>? onDragEnd;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SizedBox(
-        height: 72,
-        child: Row(
-          children: <Widget>[
-            for (final item in _items)
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Icon(item.$2, color: muted, size: 23),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.$1,
-                      maxLines: 1,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: muted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+    final glass = Theme.of(context).extension<GlassTheme>()!;
+    final radius = lerpDouble(AppRadius.pill, AppRadius.lg, progress)!;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: glass.blur, sigmaY: glass.blur),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: glass.strongSurface,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: glass.border),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: glass.shadow,
+                blurRadius: 28 + 10 * progress,
+                offset: Offset(0, 14 - 4 * progress),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: <Widget>[
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 72,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: navOpacity,
+                    child: const _MorphingHotbarGhost(),
+                  ),
                 ),
               ),
-          ],
+              Opacity(
+                opacity: contentOpacity,
+                child: Material(type: MaterialType.transparency, child: child),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 36,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: onDragUpdate == null
+                      ? null
+                      : (details) => onDragUpdate!(
+                          details.primaryDelta ?? 0,
+                          dragTravel,
+                        ),
+                  onVerticalDragEnd: onDragEnd == null
+                      ? null
+                      : (details) => onDragEnd!(details.primaryVelocity ?? 0),
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _MorphingHotbarGhost extends StatelessWidget {
+  const _MorphingHotbarGhost();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AppHotbarContents(
+        currentIndex: AppShellHotbar.currentIndex,
+        onSelected: (_) {},
       ),
     );
   }

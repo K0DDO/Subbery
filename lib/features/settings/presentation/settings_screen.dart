@@ -12,6 +12,7 @@ import '../../../core/widgets/screen_header.dart';
 import '../../notifications/application/notification_settings_controller.dart';
 import '../../profile/application/user_profile_controller.dart';
 import '../../shell/application/tab_reset_provider.dart';
+import '../../shell/presentation/hotbar_morph_sheet.dart';
 import '../application/accent_color_controller.dart';
 import '../application/app_icon_controller.dart';
 import '../application/background_pattern_controller.dart';
@@ -120,11 +121,8 @@ class SettingsScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    await showModalBottomSheet<void>(
+    await showHotbarMorphSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
       builder: (sheetContext) => _BackgroundPatternSheet(
         selected: ref.read(backgroundPatternProvider),
         onSelected: (pattern) {
@@ -371,7 +369,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.3.3',
+                    subtitle: 'Версия 1.3.4',
                   ),
                 ),
               ],
@@ -504,8 +502,8 @@ class _BackgroundPatternSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      heightFactor: 0.82,
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.78,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,

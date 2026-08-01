@@ -17,6 +17,7 @@ abstract final class AppShellHotbar {
   static final GlobalKey key = GlobalKey(debugLabel: 'app-shell-hotbar');
   static final ValueNotifier<bool> visible = ValueNotifier<bool>(true);
   static int _hiddenRoutes = 0;
+  static int currentIndex = 0;
 
   static Rect? currentRect() {
     final context = key.currentContext;
@@ -65,6 +66,7 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    AppShellHotbar.currentIndex = navigationShell.currentIndex;
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -117,7 +119,6 @@ class _GlassNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final glass = Theme.of(context).extension<GlassTheme>()!;
-    final accent = context.accentTheme;
 
     return Center(
       child: ConstrainedBox(
@@ -144,56 +145,78 @@ class _GlassNavigationBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                   border: Border.all(color: glass.border),
                 ),
-                child: LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) {
-                    final itemWidth = constraints.maxWidth / _items.length;
-
-                    return Stack(
-                      children: <Widget>[
-                        AnimatedPositioned(
-                          left: currentIndex * itemWidth + 4,
-                          top: 4,
-                          bottom: 4,
-                          width: itemWidth - 8,
-                          duration: const Duration(milliseconds: 360),
-                          curve: Curves.easeOutBack,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: accent.gradient,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.pill,
-                              ),
-                              boxShadow: <BoxShadow>[
-                                BoxShadow(
-                                  color: accent.primary.withValues(alpha: 0.3),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 7),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Row(
-                          children: <Widget>[
-                            for (var index = 0; index < _items.length; index++)
-                              Expanded(
-                                child: _NavigationButton(
-                                  item: _items[index],
-                                  selected: currentIndex == index,
-                                  onTap: () => onSelected(index),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
+                child: AppHotbarContents(
+                  currentIndex: currentIndex,
+                  onSelected: onSelected,
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class AppHotbarContents extends StatelessWidget {
+  const AppHotbarContents({
+    required this.currentIndex,
+    required this.onSelected,
+    super.key,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = context.accentTheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth =
+            constraints.maxWidth / _GlassNavigationBar._items.length;
+        return Stack(
+          children: <Widget>[
+            AnimatedPositioned(
+              left: currentIndex * itemWidth + 4,
+              top: 4,
+              bottom: 4,
+              width: itemWidth - 8,
+              duration: const Duration(milliseconds: 360),
+              curve: Curves.easeOutBack,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: accent.gradient,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: accent.primary.withValues(alpha: 0.3),
+                      blurRadius: 18,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Row(
+              children: <Widget>[
+                for (
+                  var index = 0;
+                  index < _GlassNavigationBar._items.length;
+                  index++
+                )
+                  Expanded(
+                    child: _NavigationButton(
+                      item: _GlassNavigationBar._items[index],
+                      selected: currentIndex == index,
+                      onTap: () => onSelected(index),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

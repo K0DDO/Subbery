@@ -277,74 +277,72 @@ class _SpendingDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ListView(
+      shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.md,
         AppSpacing.md,
         AppSpacing.sm,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Center(
-            child: Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(99),
-              ),
+      children: <Widget>[
+        Center(
+          child: Container(
+            width: 42,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(99),
             ),
           ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        if (actualInCents != null && plannedInCents != null) ...<Widget>[
           const SizedBox(height: AppSpacing.md),
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 2),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _AmountSummary(
+                  label: 'Фактически',
+                  amountInCents: actualInCents!,
+                  color: Theme.of(context).colorScheme.primary,
+                  filled: true,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _AmountSummary(
+                  label: 'По плану',
+                  amountInCents: plannedInCents!,
+                  color: Theme.of(context).colorScheme.secondary,
+                  filled: false,
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (footnote != null) ...<Widget>[
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            subtitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
+            footnote!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-          if (actualInCents != null && plannedInCents != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _AmountSummary(
-                    label: 'Фактически',
-                    amountInCents: actualInCents!,
-                    color: Theme.of(context).colorScheme.primary,
-                    filled: true,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _AmountSummary(
-                    label: 'По плану',
-                    amountInCents: plannedInCents!,
-                    color: Theme.of(context).colorScheme.secondary,
-                    filled: false,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (footnote != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              footnote!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(child: SingleChildScrollView(child: child)),
         ],
-      ),
+        const SizedBox(height: AppSpacing.sm),
+        child,
+      ],
     );
   }
 }
