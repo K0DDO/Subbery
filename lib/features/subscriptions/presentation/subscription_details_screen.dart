@@ -12,6 +12,7 @@ import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../shell/presentation/hotbar_morph_sheet.dart';
 import '../application/subscription_details_controller.dart';
 import '../application/subscription_providers.dart';
 import '../domain/entities/payment.dart';
@@ -39,10 +40,8 @@ class SubscriptionDetailsScreen extends ConsumerWidget {
 
     if (action == _StatusAction.resume &&
         subscription.renewalMode == RenewalMode.manual) {
-      final draft = await showModalBottomSheet<_PaymentDraft>(
+      final draft = await showHotbarMorphSheet<_PaymentDraft>(
         context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
         builder: (context) =>
             _AddPaymentSheet(subscription: subscription, isPlanning: true),
       );
@@ -103,10 +102,8 @@ class SubscriptionDetailsScreen extends ConsumerWidget {
     WidgetRef ref,
     Subscription subscription,
   ) async {
-    final draft = await showModalBottomSheet<_PaymentDraft>(
+    final draft = await showHotbarMorphSheet<_PaymentDraft>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => _AddPaymentSheet(subscription: subscription),
     );
     if (draft == null || !context.mounted) return;
@@ -715,73 +712,62 @@ class _AddPaymentSheetState extends State<_AddPaymentSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          AppSpacing.xl,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.xl),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                widget.isPlanning
-                    ? 'Новая единичная оплата'
-                    : 'Добавить платёж',
-                style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              widget.isPlanning ? 'Новая единичная оплата' : 'Добавить платёж',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            TextField(
+              controller: _amountController,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
               ),
-              const SizedBox(height: AppSpacing.lg),
-              TextField(
-                controller: _amountController,
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Сумма',
-                  suffixText: '₽',
-                  errorText: _error,
-                ),
-                onChanged: (_) {
-                  if (_error != null) setState(() => _error = null);
-                },
+              decoration: InputDecoration(
+                labelText: 'Сумма',
+                suffixText: '₽',
+                errorText: _error,
               ),
-              const SizedBox(height: AppSpacing.md),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_month_rounded),
-                title: const Text('Дата платежа'),
-                subtitle: Text(AppFormatters.fullDate(_date)),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => unawaited(_pickDate()),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              GlassButton(
-                label: widget.isPlanning ? 'Запланировать' : 'Сохранить платёж',
-                icon: Icons.check_rounded,
-                onPressed: _submit,
-              ),
-            ],
-          ),
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_month_rounded),
+              title: const Text('Дата платежа'),
+              subtitle: Text(AppFormatters.fullDate(_date)),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => unawaited(_pickDate()),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GlassButton(
+              label: widget.isPlanning ? 'Запланировать' : 'Сохранить платёж',
+              icon: Icons.check_rounded,
+              onPressed: _submit,
+            ),
+          ],
         ),
       ),
     );

@@ -220,8 +220,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
         _SectionTitle(
-          title: 'Расходы за 6 месяцев',
-          subtitle: 'План и фактические списания',
+          title: 'Динамика расходов',
+          subtitle: 'План и факт за последние 6 месяцев',
           onTap: () => showDynamicsDetailSheet(
             context: context,
             points: metrics.spendingByMonth,

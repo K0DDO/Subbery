@@ -7,10 +7,16 @@ import '../../../../core/models/monthly_spend_point.dart';
 import '../../../../core/theme/app_accent_theme.dart';
 
 class SpendingBarChart extends StatelessWidget {
-  const SpendingBarChart({required this.points, this.onBarSelected, super.key});
+  const SpendingBarChart({
+    required this.points,
+    this.onBarSelected,
+    this.height = 190,
+    super.key,
+  });
 
   final List<MonthlySpendPoint> points;
   final ValueChanged<MonthlySpendPoint>? onBarSelected;
+  final double height;
 
   static const _months = <String>[
     'янв',
@@ -51,7 +57,7 @@ class SpendingBarChart extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 190,
+          height: height,
           child: BarChart(
             BarChartData(
               minY: 0,
