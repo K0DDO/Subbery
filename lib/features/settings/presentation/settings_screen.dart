@@ -346,7 +346,20 @@ class SettingsScreen extends ConsumerWidget {
                         trailing: Switch.adaptive(
                           value: hapticSettings.enabled,
                           onChanged: (value) {
-                            unawaited(HapticManager.instance.toggle());
+                            final manager = HapticManager.instance;
+                            if (value) {
+                              manager.configure(
+                                enabled: true,
+                                intensity: hapticSettings.intensity,
+                              );
+                              unawaited(manager.toggle());
+                            } else {
+                              unawaited(manager.toggle());
+                              manager.configure(
+                                enabled: false,
+                                intensity: hapticSettings.intensity,
+                              );
+                            }
                             unawaited(
                               ref
                                   .read(hapticSettingsProvider.notifier)
@@ -381,6 +394,10 @@ class SettingsScreen extends ConsumerWidget {
                                     Slider(
                                       value: hapticSettings.intensity,
                                       onChanged: (value) {
+                                        HapticManager.instance.configure(
+                                          enabled: hapticSettings.enabled,
+                                          intensity: value,
+                                        );
                                         unawaited(
                                           HapticManager.instance.sliderTick(),
                                         );
@@ -526,7 +543,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.4.0',
+                    subtitle: 'Версия 1.4.1',
                   ),
                 ),
               ],

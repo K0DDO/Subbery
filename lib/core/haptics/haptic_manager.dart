@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Pluggable haptic backend so intensity/amplitude APIs can replace Flutter
@@ -74,11 +75,18 @@ class HapticManager {
   Future<void> destructive() => _play(HapticIntent.destructive);
 
   Future<void> _play(HapticIntent intent) async {
-    if (!enabled) return;
+    if (!enabled) {
+      _debug(intent, HapticBand.off, 'disabled in Subberry');
+      return;
+    }
     final band = hapticBandForIntensity(intensity);
-    if (band == HapticBand.off) return;
+    if (band == HapticBand.off) {
+      _debug(intent, band, 'intensity is 0%');
+      return;
+    }
 
     final resolved = _resolve(intent, band);
+    _debug(intent, resolved, 'dispatch');
     switch (resolved) {
       case HapticBand.off:
         return;
@@ -111,6 +119,12 @@ class HapticManager {
 
   HapticBand _minBand(HapticBand a, HapticBand b) {
     return HapticBand.values[a.index < b.index ? a.index : b.index];
+  }
+
+  void _debug(HapticIntent intent, HapticBand band, String reason) {
+    if (kDebugMode) {
+      debugPrint('HapticManager: ${intent.name} -> ${band.name} ($reason)');
+    }
   }
 }
 

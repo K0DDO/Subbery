@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-/// Shared drifting specular sheen for all liquid-glass surfaces.
+/// Shared phase for barely perceptible local glass reflections.
 ///
 /// One ticker for the whole app — materials listen; they do not own tickers.
 class LiquidGlassSheen extends ChangeNotifier {
@@ -14,9 +14,9 @@ class LiquidGlassSheen extends ChangeNotifier {
   int _listeners = 0;
   bool _enabled = false;
 
-  /// 0..1 looping phase for highlight drift.
+  /// 0..1 looping phase. The long period prevents a visible sweep.
   double get phase {
-    const periodMs = 7200;
+    const periodMs = 48000;
     return (_elapsed.inMilliseconds % periodMs) / periodMs;
   }
 

@@ -29,14 +29,19 @@ void main() {
       expect(zero.sheenEnabled, isFalse);
     });
 
-    test('raises blur and enables sheen toward full liquid glass', () {
+    test('transitions from matte glass to a transparent liquid material', () {
+      final zero = tokensFor(0);
       final mid = tokensFor(0.5);
       final max = tokensFor(1);
-      expect(mid.blur, greaterThan(tokensFor(0).blur));
-      expect(max.blur, greaterThan(mid.blur));
-      expect(max.blur, inInclusiveRange(36, 42));
+      expect(mid.blur, lessThan(zero.blur));
+      expect(max.blur, lessThan(mid.blur));
+      expect(max.blur, inInclusiveRange(5, 6));
       expect(max.sheenEnabled, isTrue);
-      expect(max.fill.a, lessThan(tokensFor(0).fill.a));
+      expect(mid.fill.a, lessThan(zero.fill.a));
+      expect(max.fill.a, lessThan(mid.fill.a));
+      expect(max.fill.a, lessThan(0.08));
+      expect(max.rimHighlight.a, lessThan(0.17));
+      expect(max.sheenAlpha, lessThanOrEqualTo(0.03));
     });
   });
 
@@ -55,6 +60,24 @@ void main() {
   });
 
   group('HapticManager', () {
+    test(
+      'dispatches semantic interaction events to their mapped bands',
+      () async {
+        final backend = _RecordingBackend();
+        final manager = HapticManager(backend: backend)
+          ..configure(enabled: true, intensity: 0.75);
+
+        await manager.sliderTick();
+        expect(backend.last, 'selection');
+        await manager.toggle();
+        expect(backend.last, 'light');
+        await manager.sheetOpen();
+        expect(backend.last, 'medium');
+        await manager.create();
+        expect(backend.last, 'medium');
+      },
+    );
+
     test('caps destructive intent by intensity band', () async {
       final backend = _RecordingBackend();
       final manager = HapticManager(backend: backend)

@@ -38,9 +38,7 @@ class _LiquidGlassRuntimeHostState extends ConsumerState<LiquidGlassRuntimeHost>
     final haptics = ref.watch(hapticSettingsProvider);
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
 
-    LiquidGlassSheen.instance.setEnabled(
-      strength >= 0.35 && !disableAnimations,
-    );
+    LiquidGlassSheen.instance.setEnabled(strength >= 0.6 && !disableAnimations);
     HapticManager.instance.configure(
       enabled: haptics.enabled,
       intensity: haptics.intensity,

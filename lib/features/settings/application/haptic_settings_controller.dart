@@ -33,9 +33,12 @@ class HapticSettingsController extends StateNotifier<HapticSettings> {
 
   static const _enabledKey = 'haptics_enabled';
   static const _intensityKey = 'haptics_intensity';
+  int _mutationVersion = 0;
 
   Future<void> _restore() async {
+    final restoreVersion = _mutationVersion;
     final preferences = await SharedPreferences.getInstance();
+    if (restoreVersion != _mutationVersion) return;
     state = HapticSettings(
       enabled: preferences.getBool(_enabledKey) ?? true,
       intensity: (preferences.getDouble(_intensityKey) ?? 0.55).clamp(0.0, 1.0),
@@ -44,6 +47,7 @@ class HapticSettingsController extends StateNotifier<HapticSettings> {
 
   Future<void> setEnabled(bool value) async {
     if (state.enabled == value) return;
+    _mutationVersion++;
     state = state.copyWith(enabled: value);
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(_enabledKey, value);
@@ -52,6 +56,7 @@ class HapticSettingsController extends StateNotifier<HapticSettings> {
   Future<void> setIntensity(double value) async {
     final next = value.clamp(0.0, 1.0);
     if ((state.intensity - next).abs() < 0.001) return;
+    _mutationVersion++;
     state = state.copyWith(intensity: next);
     final preferences = await SharedPreferences.getInstance();
     await preferences.setDouble(_intensityKey, next);

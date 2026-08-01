@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -94,23 +95,12 @@ class LiquidGlassMaterial extends StatelessWidget {
             children: <Widget>[
               Positioned.fill(
                 child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: borderRadius,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: <Color>[
-                          tokens.innerGlow.withValues(
-                            alpha: tokens.innerGlow.a * tokens.highlightStrength,
-                          ),
-                          Colors.transparent,
-                          tokens.rimShadow.withValues(
-                            alpha: tokens.rimShadow.a * 0.45,
-                          ),
-                        ],
-                        stops: const <double>[0, 0.45, 1],
-                      ),
+                  child: CustomPaint(
+                    painter: _GlassDepthPainter(
+                      radius: radius,
+                      innerGlow: tokens.innerGlow,
+                      edgeShade: tokens.edgeShade,
+                      strength: strength,
                     ),
                   ),
                 ),
@@ -135,14 +125,12 @@ class LiquidGlassMaterial extends StatelessWidget {
                       builder: (context, _) {
                         final phase = LiquidGlassSheen.instance.phase;
                         return CustomPaint(
-                          painter: _DriftingSheenPainter(
+                          painter: _LocalReflectionPainter(
                             radius: radius,
                             phase: phase,
-                            color: Color.lerp(
-                              Colors.white,
-                              palette.primaryLight,
-                              brightness == Brightness.dark ? 0.4 : 0.15,
-                            )!.withValues(alpha: tokens.sheenAlpha),
+                            color: tokens.reflectionTint.withValues(
+                              alpha: tokens.sheenAlpha,
+                            ),
                           ),
                         );
                       },
@@ -168,17 +156,66 @@ class LiquidGlassMaterial extends StatelessWidget {
               spreadRadius: tokens.shadowSpread,
               offset: Offset(0, tokens.shadowOffsetY),
             ),
-            if (strength > 0.2)
-              BoxShadow(
-                color: palette.primary.withValues(alpha: 0.08 * strength),
-                blurRadius: 28,
-                offset: const Offset(0, 6),
-              ),
           ],
         ),
         child: surface,
       ),
     );
+  }
+}
+
+class _GlassDepthPainter extends CustomPainter {
+  const _GlassDepthPainter({
+    required this.radius,
+    required this.innerGlow,
+    required this.edgeShade,
+    required this.strength,
+  });
+
+  final double radius;
+  final Color innerGlow;
+  final Color edgeShade;
+  final double strength;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    final edgeDepth = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, -0.08),
+        radius: 0.94,
+        colors: <Color>[
+          Colors.transparent,
+          Colors.transparent,
+          edgeShade.withValues(alpha: edgeShade.a * (0.55 + strength * 0.45)),
+        ],
+        stops: const <double>[0, 0.68, 1],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, edgeDepth);
+
+    final verticalDepth = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[
+          innerGlow.withValues(alpha: innerGlow.a * (0.55 + strength * 0.25)),
+          Colors.transparent,
+          Colors.transparent,
+          edgeShade.withValues(alpha: edgeShade.a * 0.52),
+        ],
+        stops: const <double>[0, 0.2, 0.68, 1],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, verticalDepth);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlassDepthPainter oldDelegate) {
+    return oldDelegate.radius != radius ||
+        oldDelegate.innerGlow != innerGlow ||
+        oldDelegate.edgeShade != edgeShade ||
+        oldDelegate.strength != strength;
   }
 }
 
@@ -203,36 +240,20 @@ class _SpecularRimPainter extends CustomPainter {
 
     final rim = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1 + strength * 0.5
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: <Color>[
-          highlight,
-          highlight.withValues(alpha: highlight.a * 0.15),
-          shadow.withValues(alpha: shadow.a * 0.35),
-          shadow,
-        ],
-        stops: const <double>[0, 0.28, 0.72, 1],
-      ).createShader(rect);
-    canvas.drawPath(path, rim);
-
-    final topGlow = Paint()
+      ..strokeWidth = 0.62 + strength * 0.14
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: <Color>[
-          highlight.withValues(alpha: highlight.a * 0.55 * strength),
+          highlight,
+          highlight.withValues(alpha: highlight.a * 0.12),
           Colors.transparent,
+          shadow.withValues(alpha: shadow.a * 0.14),
+          shadow,
         ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.35));
-    canvas.save();
-    canvas.clipRRect(rrect);
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height * 0.28),
-      topGlow,
-    );
-    canvas.restore();
+        stops: const <double>[0, 0.22, 0.5, 0.76, 1],
+      ).createShader(rect);
+    canvas.drawPath(path, rim);
   }
 
   @override
@@ -244,8 +265,8 @@ class _SpecularRimPainter extends CustomPainter {
   }
 }
 
-class _DriftingSheenPainter extends CustomPainter {
-  const _DriftingSheenPainter({
+class _LocalReflectionPainter extends CustomPainter {
+  const _LocalReflectionPainter({
     required this.radius,
     required this.phase,
     required this.color,
@@ -262,26 +283,27 @@ class _DriftingSheenPainter extends CustomPainter {
     canvas.save();
     canvas.clipRRect(rrect);
 
-    final x = -size.width * 0.35 + (size.width * 1.7) * phase;
-    final band = Rect.fromLTWH(
-      x,
-      -size.height * 0.2,
-      size.width * 0.38,
-      size.height * 1.4,
+    final angle = phase * math.pi * 2;
+    final driftX = math.sin(angle) * size.width * 0.025;
+    final driftY = math.cos(angle * 0.73) * size.height * 0.018;
+    final reflection = Rect.fromCenter(
+      center: Offset(size.width * 0.24 + driftX, size.height * 0.12 + driftY),
+      width: size.width * 0.72,
+      height: size.height * 0.5,
     );
     final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: <Color>[Colors.transparent, color, Colors.transparent],
-        stops: const <double>[0.2, 0.5, 0.8],
-      ).createShader(band);
-    canvas.drawRect(band, paint);
+      ..shader = RadialGradient(
+        center: const Alignment(-0.18, -0.12),
+        radius: 0.78,
+        colors: <Color>[color, color.withValues(alpha: 0)],
+        stops: const <double>[0, 1],
+      ).createShader(reflection);
+    canvas.drawOval(reflection, paint);
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _DriftingSheenPainter oldDelegate) {
+  bool shouldRepaint(covariant _LocalReflectionPainter oldDelegate) {
     return oldDelegate.phase != phase ||
         oldDelegate.color != color ||
         oldDelegate.radius != radius;
