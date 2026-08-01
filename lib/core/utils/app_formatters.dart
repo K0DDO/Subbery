@@ -15,9 +15,32 @@ abstract final class AppFormatters {
   static final _shortDateWithYear = DateFormat('d MMMM yyyy', 'ru');
   static final _fullDate = DateFormat('dd.MM.yyyy', 'ru');
 
-  static String money(int cents) {
-    final formatter = cents % 100 == 0 ? _wholeMoney : _fractionalMoney;
-    return formatter.format(cents / 100);
+  /// Formats cents as rubles.
+  ///
+  /// When [showKopecks] is true, always shows two decimals.
+  /// When false, always shows whole rubles (rounded).
+  static String money(int cents, {bool showKopecks = false}) {
+    if (showKopecks) {
+      return _fractionalMoney.format(cents / 100);
+    }
+    final roundedRubles = (cents / 100).round();
+    return _wholeMoney.format(roundedRubles);
+  }
+
+  /// Compact ring label used by the overview calendar.
+  static String compactMoney(int cents, {bool showKopecks = false}) {
+    final rubles = showKopecks ? cents / 100 : (cents / 100).roundToDouble();
+    if (rubles.abs() >= 1000) {
+      final thousands = rubles / 1000;
+      final digits = showKopecks
+          ? 1
+          : (thousands == thousands.roundToDouble() ? 0 : 1);
+      return '${thousands.toStringAsFixed(digits)} тыс. ₽';
+    }
+    if (showKopecks) {
+      return _fractionalMoney.format(rubles);
+    }
+    return _wholeMoney.format(rubles);
   }
 
   static String shortDate(DateTime date, {DateTime? now}) {

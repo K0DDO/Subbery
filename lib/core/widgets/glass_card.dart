@@ -14,6 +14,7 @@ class GlassCard extends StatefulWidget {
     this.margin,
     this.radius = AppRadius.lg,
     this.onTap,
+    this.onLongPress,
     this.strong = false,
     super.key,
   });
@@ -23,6 +24,7 @@ class GlassCard extends StatefulWidget {
   final EdgeInsetsGeometry? margin;
   final double radius;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool strong;
 
   @override
@@ -33,7 +35,10 @@ class _GlassCardState extends State<GlassCard> {
   bool _isPressed = false;
 
   void _setPressed(bool value) {
-    if (widget.onTap == null || _isPressed == value) return;
+    if ((widget.onTap == null && widget.onLongPress == null) ||
+        _isPressed == value) {
+      return;
+    }
     setState(() => _isPressed = value);
   }
 
@@ -42,10 +47,16 @@ class _GlassCardState extends State<GlassCard> {
     widget.onTap?.call();
   }
 
+  void _handleLongPress() {
+    unawaited(HapticFeedback.mediumImpact());
+    widget.onLongPress?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     final glass = Theme.of(context).extension<GlassTheme>()!;
     final borderRadius = BorderRadius.circular(widget.radius);
+    final interactive = widget.onTap != null || widget.onLongPress != null;
 
     return AnimatedScale(
       scale: _isPressed ? 0.985 : 1,
@@ -72,9 +83,12 @@ class _GlassCardState extends State<GlassCard> {
                 color: widget.strong ? glass.strongSurface : glass.surface,
                 child: InkWell(
                   onTap: widget.onTap == null ? null : _handleTap,
-                  onTapDown: (_) => _setPressed(true),
-                  onTapUp: (_) => _setPressed(false),
-                  onTapCancel: () => _setPressed(false),
+                  onLongPress: widget.onLongPress == null
+                      ? null
+                      : _handleLongPress,
+                  onTapDown: interactive ? (_) => _setPressed(true) : null,
+                  onTapUp: interactive ? (_) => _setPressed(false) : null,
+                  onTapCancel: interactive ? () => _setPressed(false) : null,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: borderRadius,

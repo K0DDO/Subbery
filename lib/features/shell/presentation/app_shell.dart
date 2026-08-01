@@ -10,6 +10,7 @@ import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/glass_theme.dart';
 import '../../../core/widgets/app_background.dart';
+import '../../settings/application/privacy_settings_controller.dart';
 import '../../subscriptions/presentation/subscriptions_screen.dart';
 import '../application/tab_reset_provider.dart';
 
@@ -60,6 +61,7 @@ class AppShell extends ConsumerWidget {
     unawaited(HapticFeedback.selectionClick());
     ref.read(subscriptionFilterProvider.notifier).state =
         const SubscriptionFilterState();
+    ref.read(moneyRevealEpochProvider.notifier).hideAll();
     ref.read(tabResetRevisionProvider(index).notifier).state++;
     navigationShell.goBranch(index, initialLocation: true);
   }

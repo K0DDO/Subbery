@@ -17,6 +17,7 @@ import '../application/accent_color_controller.dart';
 import '../application/app_icon_controller.dart';
 import '../application/background_pattern_controller.dart';
 import '../application/theme_mode_controller.dart';
+import 'widgets/privacy_controls.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -365,11 +366,32 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Приватность',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Баланс, спойлер чисел и копейки',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const PrivacyControls(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
                 const GlassCard(
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.3.8',
+                    subtitle: 'Версия 1.3.9',
                   ),
                 ),
               ],

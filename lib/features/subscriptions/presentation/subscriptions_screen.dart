@@ -10,6 +10,7 @@ import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../../widgets/morphing_sheet/morphing_glass_sheet.dart';
 import '../../shell/application/tab_reset_provider.dart';
@@ -700,8 +701,8 @@ class _SubscriptionCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                Text(
-                  AppFormatters.money(subscription.priceInCents),
+                MoneyText(
+                  cents: subscription.priceInCents,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 2),

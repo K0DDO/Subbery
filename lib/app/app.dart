@@ -8,6 +8,7 @@ import '../features/profile/presentation/user_name_gate.dart';
 import '../features/settings/application/accent_color_controller.dart';
 import '../features/settings/application/app_icon_controller.dart';
 import '../features/settings/application/theme_mode_controller.dart';
+import '../features/settings/presentation/widgets/privacy_lifecycle_observer.dart';
 import 'router/app_router.dart';
 
 class SubberryApp extends ConsumerWidget {
@@ -40,7 +41,9 @@ class SubberryApp extends ConsumerWidget {
                 : Brightness.dark,
             systemNavigationBarDividerColor: Colors.transparent,
           ),
-          child: AppIconLifecycleObserver(child: UserNameGate(child: child!)),
+          child: AppIconLifecycleObserver(
+            child: PrivacyLifecycleObserver(child: UserNameGate(child: child!)),
+          ),
         );
       },
       routerConfig: appRouter,

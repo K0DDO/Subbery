@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subberry/features/overview/application/overview_metrics.dart';
 import 'package:subberry/features/overview/presentation/widgets/berry_calendar_ring.dart';
@@ -9,17 +10,19 @@ void main() {
   testWidgets('selects months counter-clockwise from January', (tester) async {
     var selectedMonth = 1;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 340,
-              child: BerryCalendarRing(
-                year: 2026,
-                now: DateTime(2026, 7, 29),
-                occurrences: const [],
-                selectedMonth: selectedMonth,
-                onMonthSelected: (month) => selectedMonth = month,
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 340,
+                child: BerryCalendarRing(
+                  year: 2026,
+                  now: DateTime(2026, 7, 29),
+                  occurrences: const [],
+                  selectedMonth: selectedMonth,
+                  onMonthSelected: (month) => selectedMonth = month,
+                ),
               ),
             ),
           ),
@@ -84,19 +87,21 @@ void main() {
         ),
     ];
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 340,
-              child: BerryCalendarRing(
-                year: 2026,
-                now: DateTime(2026, 7, 29),
-                occurrences: occurrences,
-                selectedMonth: 8,
-                showPeriodArcs: true,
-                showCalendarLogos: false,
-                onMonthSelected: (_) {},
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 340,
+                child: BerryCalendarRing(
+                  year: 2026,
+                  now: DateTime(2026, 7, 29),
+                  occurrences: occurrences,
+                  selectedMonth: 8,
+                  showPeriodArcs: true,
+                  showCalendarLogos: false,
+                  onMonthSelected: (_) {},
+                ),
               ),
             ),
           ),
@@ -109,32 +114,34 @@ void main() {
 
   testWidgets('shows count badge for same-day payments', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 340,
-              child: BerryCalendarRing(
-                year: 2026,
-                now: DateTime(2026, 7, 29),
-                occurrences: <PaymentOccurrence>[
-                  PaymentOccurrence(
-                    subscription: _subscription('a'),
-                    date: DateTime(2026, 8, 3),
-                  ),
-                  PaymentOccurrence(
-                    subscription: _subscription('b'),
-                    date: DateTime(2026, 8, 3),
-                  ),
-                  PaymentOccurrence(
-                    subscription: _subscription('c'),
-                    date: DateTime(2026, 8, 10),
-                  ),
-                ],
-                selectedMonth: 8,
-                showPeriodArcs: true,
-                showCalendarLogos: false,
-                onMonthSelected: (_) {},
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 340,
+                child: BerryCalendarRing(
+                  year: 2026,
+                  now: DateTime(2026, 7, 29),
+                  occurrences: <PaymentOccurrence>[
+                    PaymentOccurrence(
+                      subscription: _subscription('a'),
+                      date: DateTime(2026, 8, 3),
+                    ),
+                    PaymentOccurrence(
+                      subscription: _subscription('b'),
+                      date: DateTime(2026, 8, 3),
+                    ),
+                    PaymentOccurrence(
+                      subscription: _subscription('c'),
+                      date: DateTime(2026, 8, 10),
+                    ),
+                  ],
+                  selectedMonth: 8,
+                  showPeriodArcs: true,
+                  showCalendarLogos: false,
+                  onMonthSelected: (_) {},
+                ),
               ),
             ),
           ),
@@ -148,26 +155,28 @@ void main() {
 
   testWidgets('hides calendar logos for dates before today', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 340,
-              child: BerryCalendarRing(
-                year: 2026,
-                now: DateTime(2026, 7, 29),
-                occurrences: <PaymentOccurrence>[
-                  PaymentOccurrence(
-                    subscription: _subscription('past'),
-                    date: DateTime(2026, 7, 28),
-                  ),
-                  PaymentOccurrence(
-                    subscription: _subscription('future'),
-                    date: DateTime(2026, 8, 3),
-                  ),
-                ],
-                selectedMonth: 8,
-                onMonthSelected: (_) {},
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 340,
+                child: BerryCalendarRing(
+                  year: 2026,
+                  now: DateTime(2026, 7, 29),
+                  occurrences: <PaymentOccurrence>[
+                    PaymentOccurrence(
+                      subscription: _subscription('past'),
+                      date: DateTime(2026, 7, 28),
+                    ),
+                    PaymentOccurrence(
+                      subscription: _subscription('future'),
+                      date: DateTime(2026, 8, 3),
+                    ),
+                  ],
+                  selectedMonth: 8,
+                  onMonthSelected: (_) {},
+                ),
               ),
             ),
           ),
@@ -180,26 +189,28 @@ void main() {
 
   testWidgets('does not pulse when animations are disabled', (tester) async {
     await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(disableAnimations: true),
-        child: MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: SizedBox(
-                width: 340,
-                child: BerryCalendarRing(
-                  year: 2026,
-                  now: DateTime(2026, 7, 29),
-                  occurrences: <PaymentOccurrence>[
-                    PaymentOccurrence(
-                      subscription: _subscription('soon'),
-                      date: DateTime(2026, 7, 30),
-                    ),
-                  ],
-                  selectedMonth: 7,
-                  showPeriodArcs: true,
-                  showCalendarLogos: false,
-                  onMonthSelected: (_) {},
+      ProviderScope(
+        child: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 340,
+                  child: BerryCalendarRing(
+                    year: 2026,
+                    now: DateTime(2026, 7, 29),
+                    occurrences: <PaymentOccurrence>[
+                      PaymentOccurrence(
+                        subscription: _subscription('soon'),
+                        date: DateTime(2026, 7, 30),
+                      ),
+                    ],
+                    selectedMonth: 7,
+                    showPeriodArcs: true,
+                    showCalendarLogos: false,
+                    onMonthSelected: (_) {},
+                  ),
                 ),
               ),
             ),
@@ -218,34 +229,36 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 340,
-              child: BerryCalendarRing(
-                year: 2026,
-                now: DateTime(2026, 7, 29),
-                occurrences: <PaymentOccurrence>[
-                  PaymentOccurrence(
-                    subscription: _subscription('a'),
-                    date: DateTime(2026, 8, 3),
-                  ),
-                  PaymentOccurrence(
-                    subscription: _subscription('b'),
-                    date: DateTime(2026, 9, 10),
-                  ),
-                ],
-                periodArcOccurrences: <PaymentOccurrence>[
-                  PaymentOccurrence(
-                    subscription: _subscription('arc'),
-                    date: DateTime(2026, 10, 4),
-                  ),
-                ],
-                selectedMonth: 8,
-                showPeriodArcs: true,
-                showCalendarLogos: true,
-                onMonthSelected: (_) {},
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 340,
+                child: BerryCalendarRing(
+                  year: 2026,
+                  now: DateTime(2026, 7, 29),
+                  occurrences: <PaymentOccurrence>[
+                    PaymentOccurrence(
+                      subscription: _subscription('a'),
+                      date: DateTime(2026, 8, 3),
+                    ),
+                    PaymentOccurrence(
+                      subscription: _subscription('b'),
+                      date: DateTime(2026, 9, 10),
+                    ),
+                  ],
+                  periodArcOccurrences: <PaymentOccurrence>[
+                    PaymentOccurrence(
+                      subscription: _subscription('arc'),
+                      date: DateTime(2026, 10, 4),
+                    ),
+                  ],
+                  selectedMonth: 8,
+                  showPeriodArcs: true,
+                  showCalendarLogos: true,
+                  onMonthSelected: (_) {},
+                ),
               ),
             ),
           ),

@@ -7,9 +7,11 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../analytics/presentation/widgets/spending_detail_sheet.dart';
 import '../../profile/application/user_profile_controller.dart';
+import '../../settings/presentation/widgets/privacy_quick_sheet.dart';
 import '../../shell/application/tab_reset_provider.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../../subscriptions/domain/entities/payment.dart';
@@ -425,10 +427,22 @@ class _MonthlySummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final next = metrics.upcomingPayments.firstOrNull;
     final accent = context.accentTheme;
+    final cardKey = GlobalKey();
 
     return GlassCard(
+      key: cardKey,
       strong: true,
       padding: const EdgeInsets.all(AppSpacing.lg),
+      onLongPress: () async {
+        final box = cardKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box == null || !box.hasSize) return;
+        final origin = box.localToGlobal(Offset.zero);
+        await showPrivacyQuickSheet(
+          context: context,
+          startRect: origin & box.size,
+          plannedCents: metrics.plannedThisMonthInCents,
+        );
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -462,19 +476,32 @@ class _MonthlySummary extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              AppFormatters.money(metrics.plannedThisMonthInCents),
+            child: MoneyText(
+              cents: metrics.plannedThisMonthInCents,
+              frost: true,
               style: Theme.of(context).textTheme.displaySmall,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Фактически потрачено: '
-            '${AppFormatters.money(metrics.actualThisMonthInCents)}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: <Widget>[
+              Text(
+                'Фактически потрачено: ',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Flexible(
+                child: MoneyText(
+                  cents: metrics.actualThisMonthInCents,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -482,8 +509,23 @@ class _MonthlySummary extends StatelessWidget {
               Expanded(
                 child: _SummaryCaption(
                   label: 'Среднее',
-                  value:
-                      '${AppFormatters.money(metrics.averageMonthlyPlannedInCents)} / мес',
+                  valueChild: Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: MoneyText(
+                          cents: metrics.averageMonthlyPlannedInCents,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      Text(
+                        ' / мес',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (next != null) ...<Widget>[
@@ -548,10 +590,15 @@ class _NextPaymentCaption extends StatelessWidget {
 }
 
 class _SummaryCaption extends StatelessWidget {
-  const _SummaryCaption({required this.label, required this.value});
+  const _SummaryCaption({
+    required this.label,
+    this.value,
+    this.valueChild,
+  }) : assert(value != null || valueChild != null);
 
   final String label;
-  final String value;
+  final String? value;
+  final Widget? valueChild;
 
   @override
   Widget build(BuildContext context) {
@@ -565,14 +612,15 @@ class _SummaryCaption extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        valueChild ??
+            Text(
+              value!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
       ],
     );
   }
@@ -634,7 +682,7 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
                 ),
                 title: subscription.name,
                 subtitle: AppFormatters.shortDate(occurrence.date),
-                trailing: AppFormatters.money(subscription.priceInCents),
+                amountInCents: subscription.priceInCents,
                 trailingColor: visual.primary,
                 accentColor: visual.glow,
                 lightAccentColor: visual.light,

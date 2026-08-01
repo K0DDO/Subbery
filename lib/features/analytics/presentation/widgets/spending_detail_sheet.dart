@@ -8,6 +8,7 @@ import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/glass_theme.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../core/widgets/money_text.dart';
 import '../../../../widgets/morphing_sheet/sheet_page_navigator.dart';
 import '../../../overview/presentation/widgets/spending_bar_chart.dart';
 import '../../../shell/presentation/hotbar_morph_sheet.dart';
@@ -69,9 +70,20 @@ Widget _categoryPage({
     category: category,
     now: now,
   );
+  final subtitleStyle = Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+    color: category.color(sheetContext),
+    fontWeight: FontWeight.w700,
+  );
   return _SheetScaffold(
     title: category.label,
-    subtitle: 'Около ${AppFormatters.money(amountInCents)} в месяц',
+    subtitle: Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        Text('Около ', style: subtitleStyle),
+        MoneyText(cents: amountInCents, style: subtitleStyle),
+        Text(' в месяц', style: subtitleStyle),
+      ],
+    ),
     accent: category.color(sheetContext),
     children: <Widget>[
       if (rows.isEmpty)
@@ -86,7 +98,7 @@ Widget _categoryPage({
               size: 40,
             ),
             title: row.subscription.name,
-            trailing: AppFormatters.money(row.monthlyEstimateInCents),
+            amountInCents: row.monthlyEstimateInCents,
             onTap: () {
               Navigator.pop(sheetContext);
               hostContext.push('/subscriptions/${row.subscription.id}');
@@ -293,7 +305,7 @@ class _SheetScaffold extends StatelessWidget {
   });
 
   final String title;
-  final String subtitle;
+  final Widget subtitle;
   final Color? accent;
   final Widget? hero;
   final List<Widget> children;
@@ -301,6 +313,10 @@ class _SheetScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveAccent = accent ?? context.subberryTheme.primary;
+    final subtitleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+      color: effectiveAccent,
+      fontWeight: FontWeight.w700,
+    );
     return ListView(
       shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(
@@ -319,13 +335,7 @@ class _SheetScaffold extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: effectiveAccent,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        DefaultTextStyle.merge(style: subtitleStyle, child: subtitle),
         if (hero != null) ...<Widget>[
           const SizedBox(height: AppSpacing.md),
           hero!,
@@ -369,11 +379,11 @@ class _MonthAnalyticsSheet extends StatelessWidget {
 
     return _SheetScaffold(
       title: AnalyticsBreakdown.monthLabel(target),
-      subtitle: switch (kind) {
+      subtitle: Text(switch (kind) {
         _MonthKind.past => 'Фактические расходы',
         _MonthKind.current => 'Факт и ожидаемые платежи',
         _MonthKind.future => 'Ожидаемые расходы',
-      },
+      }),
       accent: kind == _MonthKind.future
           ? palette.primaryLight
           : palette.primary,
@@ -426,7 +436,7 @@ class _MonthAnalyticsSheet extends StatelessWidget {
               ),
               title: row.name,
               subtitle: AppFormatters.shortDate(row.payment.date),
-              trailing: AppFormatters.money(row.payment.amountInCents),
+              amountInCents: row.payment.amountInCents,
               trailingColor: palette.primary,
               onTap: () => onPaymentTap(row),
             ),
@@ -476,7 +486,7 @@ class _YearAnalyticsSheet extends StatelessWidget {
 
     return _SheetScaffold(
       title: 'Траты за $year',
-      subtitle: 'Помесячная картина года',
+      subtitle: const Text('Помесячная картина года'),
       accent: palette.primary,
       hero: _SpendHeroCard(
         label: 'Факт за год',
@@ -565,8 +575,8 @@ class _YearMonthGlassRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text(
-                    AppFormatters.money(displayAmount),
+                  MoneyText(
+                    cents: displayAmount,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: barColor,
                       fontWeight: FontWeight.w800,
@@ -644,12 +654,22 @@ class _YearMonthGlassRow extends StatelessWidget {
               ),
               if (kind == _MonthKind.current) ...<Widget>[
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Факт ${AppFormatters.money(actual)} · '
-                  'Ожидается ${AppFormatters.money(expected)}',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final metaStyle = Theme.of(context).textTheme.labelMedium
+                        ?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        );
+                    return Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: <Widget>[
+                        Text('Факт ', style: metaStyle),
+                        MoneyText(cents: actual, style: metaStyle),
+                        Text(' · Ожидается ', style: metaStyle),
+                        MoneyText(cents: expected, style: metaStyle),
+                      ],
+                    );
+                  },
                 ),
               ],
             ],
@@ -684,7 +704,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
 
     return _SheetScaffold(
       title: 'Все траты',
-      subtitle: 'История и самые дорогие подписки',
+      subtitle: const Text('История и самые дорогие подписки'),
       accent: palette.primary,
       hero: _SpendHeroCard(
         label: 'Всего потрачено',
@@ -706,7 +726,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
                 size: 40,
               ),
               title: item.row.name,
-              trailing: AppFormatters.money(item.amount),
+              amountInCents: item.amount,
               trailingColor: palette.primary,
               onTap: item.row.subscription == null
                   ? null
@@ -725,7 +745,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
             ),
             title: row.name,
             subtitle: AppFormatters.shortDate(row.payment.date),
-            trailing: AppFormatters.money(row.payment.amountInCents),
+            amountInCents: row.payment.amountInCents,
             trailingColor: palette.primary,
             onTap: () => onPaymentTap(row),
           ),
@@ -766,7 +786,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
 
     return _SheetScaffold(
       title: 'Динамика расходов',
-      subtitle: 'Большой график и фильтр периода',
+      subtitle: const Text('Большой график и фильтр периода'),
       accent: palette.primary,
       children: <Widget>[
         Align(
@@ -824,35 +844,117 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(
-                  difference == 0
-                      ? 'Без изменений к прошлому месяцу'
-                      : '${difference > 0 ? '+' : '−'}'
-                            '${AppFormatters.money(difference.abs())} к прошлому месяцу',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: differenceColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: difference == 0
+                    ? Text(
+                        'Без изменений к прошлому месяцу',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: differenceColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    : Builder(
+                        builder: (context) {
+                          final style = Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: differenceColor,
+                                fontWeight: FontWeight.w700,
+                              );
+                          return Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: <Widget>[
+                              Text(difference > 0 ? '+' : '−', style: style),
+                              MoneyText(cents: difference.abs(), style: style),
+                              Text(' к прошлому месяцу', style: style),
+                            ],
+                          );
+                        },
+                      ),
               ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         for (final point in visible.reversed)
-          GlassPaymentRow(
-            leading: Icon(
-              Icons.calendar_month_rounded,
-              color: palette.primary.withValues(alpha: 0.9),
-            ),
-            title: AnalyticsBreakdown.monthLabel(point.month),
-            subtitle:
-                'Факт ${AppFormatters.money(point.amountInCents)} · '
-                'План ${AppFormatters.money(point.plannedAmountInCents)}',
-            trailing: '',
+          _DynamicsMonthRow(
+            point: point,
             onTap: () => widget.onPointSelected(context, point),
           ),
       ],
+    );
+  }
+}
+
+class _DynamicsMonthRow extends StatelessWidget {
+  const _DynamicsMonthRow({required this.point, required this.onTap});
+
+  final MonthlySpendPoint point;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
+    final glass = Theme.of(context).extension<GlassTheme>()!;
+    final theme = Theme.of(context);
+    final metaStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Ink(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: glass.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: glass.border),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.calendar_month_rounded,
+                  color: palette.primary.withValues(alpha: 0.9),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        AnalyticsBreakdown.monthLabel(point.month),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          Text('Факт ', style: metaStyle),
+                          MoneyText(
+                            cents: point.amountInCents,
+                            style: metaStyle,
+                          ),
+                          Text(' · План ', style: metaStyle),
+                          MoneyText(
+                            cents: point.plannedAmountInCents,
+                            style: metaStyle,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -873,9 +975,20 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
       0,
       (sum, item) => sum + item.amountInCents,
     );
+    final subtitleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+      color: Theme.of(context).colorScheme.secondary,
+      fontWeight: FontWeight.w700,
+    );
     return _SheetScaffold(
       title: 'По категориям',
-      subtitle: 'Средняя нагрузка ${AppFormatters.money(total)} / мес',
+      subtitle: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: <Widget>[
+          Text('Средняя нагрузка ', style: subtitleStyle),
+          MoneyText(cents: total, style: subtitleStyle),
+          Text(' / мес', style: subtitleStyle),
+        ],
+      ),
       accent: Theme.of(context).colorScheme.secondary,
       children: <Widget>[
         if (categories.isEmpty)
@@ -909,7 +1022,7 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
               subtitle: total == 0
                   ? '0%'
                   : '${((category.amountInCents / total) * 100).round()}% нагрузки',
-              trailing: AppFormatters.money(category.amountInCents),
+              amountInCents: category.amountInCents,
               trailingColor: category.category.color(context),
               onTap: () => onCategorySelected(context, category),
             ),
@@ -1022,8 +1135,8 @@ class _SpendHeroCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              AppFormatters.money(amountInCents),
+            child: MoneyText(
+              cents: amountInCents,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: color,
                 fontWeight: FontWeight.w800,
@@ -1075,14 +1188,25 @@ class _PaymentCategoryChips extends StatelessWidget {
                 color: category.key.color(context).withValues(alpha: 0.3),
               ),
             ),
-            child: Text(
-              '${category.key.label} · '
-              '${((category.value / total) * 100).round()}% · '
-              '${AppFormatters.money(category.value)}',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: category.key.color(context),
-                fontWeight: FontWeight.w700,
-              ),
+            child: Builder(
+              builder: (context) {
+                final chipStyle = Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(
+                      color: category.key.color(context),
+                      fontWeight: FontWeight.w700,
+                    );
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      '${category.key.label} · '
+                      '${((category.value / total) * 100).round()}% · ',
+                      style: chipStyle,
+                    ),
+                    MoneyText(cents: category.value, style: chipStyle),
+                  ],
+                );
+              },
             ),
           ),
       ],

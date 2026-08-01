@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/glass_theme.dart';
+import '../../../../core/widgets/money_text.dart';
 
 @visibleForTesting
 Color visiblePaymentAccent({
@@ -25,7 +26,8 @@ class GlassPaymentRow extends StatelessWidget {
   const GlassPaymentRow({
     required this.leading,
     required this.title,
-    required this.trailing,
+    this.trailing = '',
+    this.amountInCents,
     this.subtitle,
     this.trailingColor,
     this.accentColor,
@@ -39,6 +41,7 @@ class GlassPaymentRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final String trailing;
+  final int? amountInCents;
   final Color? trailingColor;
   final Color? accentColor;
   final Color? lightAccentColor;
@@ -123,17 +126,26 @@ class GlassPaymentRow extends StatelessWidget {
                               style: titleStyle,
                             ),
                           ),
-                          if (trailing.isNotEmpty) ...<Widget>[
+                          if (amountInCents != null ||
+                              trailing.isNotEmpty) ...<Widget>[
                             const SizedBox(width: AppSpacing.sm),
                             Flexible(
-                              child: Text(
-                                trailing,
-                                maxLines: 1,
-                                softWrap: false,
-                                overflow: TextOverflow.fade,
-                                textAlign: TextAlign.right,
-                                style: amountStyle,
-                              ),
+                              child: amountInCents != null
+                                  ? MoneyText(
+                                      cents: amountInCents!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.fade,
+                                      textAlign: TextAlign.right,
+                                      style: amountStyle,
+                                    )
+                                  : Text(
+                                      trailing,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.fade,
+                                      textAlign: TextAlign.right,
+                                      style: amountStyle,
+                                    ),
                             ),
                           ],
                         ],

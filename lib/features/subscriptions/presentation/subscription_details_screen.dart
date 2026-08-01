@@ -11,6 +11,7 @@ import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../shell/presentation/hotbar_morph_sheet.dart';
 import '../application/subscription_details_controller.dart';
 import '../application/subscription_providers.dart';
@@ -233,23 +234,23 @@ class _DetailsContent extends StatelessWidget {
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text.rich(
-                  TextSpan(
-                    children: <InlineSpan>[
-                      TextSpan(
-                        text: AppFormatters.money(subscription.priceInCents),
-                        style: Theme.of(context).textTheme.titleLarge,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    MoneyText(
+                      cents: subscription.priceInCents,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    Text(
+                      subscription.renewalMode == RenewalMode.manual
+                          ? ' · единичная оплата'
+                          : ' / ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                      TextSpan(
-                        text: subscription.renewalMode == RenewalMode.manual
-                            ? ' · единичная оплата'
-                            : ' / ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _StatusBadge(
@@ -291,11 +292,15 @@ class _DetailsContent extends StatelessWidget {
                   label: subscription.renewalMode == RenewalMode.manual
                       ? 'Запланировано'
                       : 'Следующий',
-                  value:
-                      subscription.renewalMode == RenewalMode.manual &&
-                          subscription.status != SubscriptionStatus.active
-                      ? 'Нет активной оплаты'
-                      : AppFormatters.shortDate(subscription.nextPaymentDate),
+                  value: Text(
+                    subscription.renewalMode == RenewalMode.manual &&
+                            subscription.status != SubscriptionStatus.active
+                        ? 'Нет активной оплаты'
+                        : AppFormatters.shortDate(subscription.nextPaymentDate),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   color: accent.primary,
                   onTap: () => context.pushNamed(
                     'subscription-payment-schedule',
@@ -308,7 +313,12 @@ class _DetailsContent extends StatelessWidget {
                 child: _MetricCard(
                   icon: Icons.category_rounded,
                   label: 'Категория',
-                  value: subscription.category.label,
+                  value: Text(
+                    subscription.category.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   color: subscription.category.color(context),
                   onTap: () => context.goNamed(
                     'subscriptions',
@@ -324,7 +334,12 @@ class _DetailsContent extends StatelessWidget {
           _MetricCard(
             icon: Icons.savings_rounded,
             label: 'Всего потрачено',
-            value: AppFormatters.money(subscription.totalSpentInCents),
+            value: MoneyText(
+              cents: subscription.totalSpentInCents,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             color: accent.tertiary,
             horizontal: true,
           ),
@@ -479,7 +494,7 @@ class _MetricCard extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final String value;
+  final Widget value;
   final Color color;
   final bool horizontal;
   final VoidCallback? onTap;
@@ -509,12 +524,7 @@ class _MetricCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        value,
       ],
     );
 
@@ -590,8 +600,8 @@ class _PaymentRow extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
-          Text(
-            AppFormatters.money(payment.amountInCents),
+          MoneyText(
+            cents: payment.amountInCents,
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ],

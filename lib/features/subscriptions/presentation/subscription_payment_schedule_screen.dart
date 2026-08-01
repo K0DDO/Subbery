@@ -6,6 +6,7 @@ import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/money_text.dart';
 import '../application/subscription_providers.dart';
 import '../domain/entities/subscription.dart';
 import '../domain/subscription_schedule.dart';
@@ -107,12 +108,30 @@ class _ScheduleContent extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        '${AppFormatters.money(subscription.priceInCents)}'
-                        '${subscription.renewalMode == RenewalMode.manual ? ' · единично' : ' / ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}'}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          MoneyText(
+                            cents: subscription.priceInCents,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                          Text(
+                            subscription.renewalMode == RenewalMode.manual
+                                ? ' · единично'
+                                : ' / ${subscription.billingCycle.periodLabel(customIntervalDays: subscription.customIntervalDays)}',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -228,8 +247,8 @@ class _ScheduleRow extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 108),
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              AppFormatters.money(amountInCents),
+            child: MoneyText(
+              cents: amountInCents,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),

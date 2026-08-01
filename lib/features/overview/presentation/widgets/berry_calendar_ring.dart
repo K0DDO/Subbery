@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/color_palette.dart';
+import '../../../../core/widgets/money_text.dart';
 import '../../../subscriptions/presentation/subscription_visuals.dart';
 import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/overview_metrics.dart';
@@ -325,10 +326,17 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                                     ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                _compactMoney(total),
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(color: primary),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: MoneyText(
+                                  cents: total,
+                                  compact: true,
+                                  frost: true,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(color: primary),
+                                ),
                               ),
                             ],
                           ),
@@ -492,9 +500,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                   color: borderColor,
                   width: isSoon ? 1.4 + pulse * 0.8 : 1,
                 ),
-                color: group.count > 1
-                    ? pulsed.withValues(alpha: 0.92)
-                    : null,
+                color: group.count > 1 ? pulsed.withValues(alpha: 0.92) : null,
                 boxShadow: isSoon
                     ? <BoxShadow>[
                         BoxShadow(
@@ -553,14 +559,6 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
       return 'платежа';
     }
     return 'платежей';
-  }
-
-  static String _compactMoney(int cents) {
-    final rubles = cents / 100;
-    if (rubles >= 1000) {
-      return '${(rubles / 1000).toStringAsFixed(rubles % 1000 == 0 ? 0 : 1)} тыс. ₽';
-    }
-    return '${rubles.toStringAsFixed(cents % 100 == 0 ? 0 : 2)} ₽';
   }
 }
 

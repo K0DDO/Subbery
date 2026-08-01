@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/utils/app_formatters.dart';
+import '../../../../core/widgets/money_text.dart';
 import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
 import '../../application/analytics_metrics.dart';
 
@@ -75,8 +75,8 @@ class CategorySpendingChart extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    AppFormatters.money(total),
+                  MoneyText(
+                    cents: total,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
@@ -128,8 +128,8 @@ class _LegendItem extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(width: AppSpacing.xs),
-        Text(
-          AppFormatters.money(category.amountInCents),
+        MoneyText(
+          cents: category.amountInCents,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w700,

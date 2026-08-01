@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/money_text.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../overview/presentation/widgets/spending_bar_chart.dart';
 import '../../shell/application/tab_reset_provider.dart';
@@ -140,7 +140,10 @@ class _AnalyticsContent extends ConsumerWidget {
             Expanded(
               child: _AnalyticsMetricCard(
                 label: 'Этот месяц',
-                value: AppFormatters.money(metrics.thisMonthInCents),
+                value: MoneyText(
+                  cents: metrics.thisMonthInCents,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 icon: Icons.calendar_month_rounded,
                 color: accent.primary,
                 onTap: () => _openPeriod(
@@ -155,7 +158,10 @@ class _AnalyticsContent extends ConsumerWidget {
             Expanded(
               child: _AnalyticsMetricCard(
                 label: 'Этот год',
-                value: AppFormatters.money(metrics.thisYearInCents),
+                value: MoneyText(
+                  cents: metrics.thisYearInCents,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 icon: Icons.date_range_rounded,
                 color: accent.secondary,
                 onTap: () => _openPeriod(context, AnalyticsPeriod.year, now),
@@ -166,7 +172,10 @@ class _AnalyticsContent extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         _AnalyticsMetricCard(
           label: 'Всего потрачено',
-          value: AppFormatters.money(metrics.totalSpentInCents),
+          value: MoneyText(
+            cents: metrics.totalSpentInCents,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           icon: Icons.savings_rounded,
           color: accent.tertiary,
           horizontal: true,
@@ -277,7 +286,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
   });
 
   final String label;
-  final String value;
+  final Widget value;
   final IconData icon;
   final Color color;
   final bool horizontal;
@@ -308,10 +317,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xxs),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(value, style: Theme.of(context).textTheme.titleLarge),
-        ),
+        FittedBox(fit: BoxFit.scaleDown, child: value),
       ],
     );
 
