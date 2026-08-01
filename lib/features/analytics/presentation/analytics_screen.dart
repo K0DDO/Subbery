@@ -14,8 +14,11 @@ import '../../shell/application/tab_reset_provider.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
+import '../application/ai_insights_provider.dart';
+import '../application/analytics_breakdown.dart';
 import '../application/analytics_metrics.dart';
 import 'widgets/category_spending_chart.dart';
+import 'widgets/spending_detail_sheet.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
@@ -55,7 +58,7 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 }
 
-class _AnalyticsContent extends StatelessWidget {
+class _AnalyticsContent extends ConsumerWidget {
   const _AnalyticsContent({
     required this.subscriptions,
     required this.payments,
@@ -66,8 +69,28 @@ class _AnalyticsContent extends StatelessWidget {
   final List<Payment> payments;
   final int resetRevision;
 
+  void _openPeriod(BuildContext context, AnalyticsPeriod period, DateTime now) {
+    final hasMonthPayments = period == AnalyticsPeriod.month &&
+        AnalyticsBreakdown.paymentRows(
+          payments: payments,
+          subscriptions: subscriptions,
+          period: AnalyticsPeriod.month,
+          now: now,
+        ).isEmpty;
+    showPeriodSpendingSheet(
+      context: context,
+      period: period,
+      payments: payments,
+      subscriptions: subscriptions,
+      now: now,
+      footnote: hasMonthPayments
+          ? 'На карточке — оценка по активным подпискам: записанных платежей в этом месяце ещё нет'
+          : null,
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final accent = context.accentTheme;
     if (subscriptions.isEmpty) {
       return EmptyState(
@@ -81,11 +104,19 @@ class _AnalyticsContent extends StatelessWidget {
       );
     }
 
+    final now = DateTime.now();
     final metrics = AnalyticsMetrics.calculate(
       subscriptions: subscriptions,
       payments: payments,
-      now: DateTime.now(),
+      now: now,
     );
+    final aiRequest = buildAiInsightsRequest(
+      subscriptions: subscriptions,
+      payments: payments,
+      metrics: metrics,
+      now: now,
+    );
+    final aiInsights = ref.watch(aiInsightsProvider(aiRequest));
 
     return ListView(
       key: ValueKey<String>('analytics-$resetRevision'),
@@ -104,6 +135,7 @@ class _AnalyticsContent extends StatelessWidget {
                 value: AppFormatters.money(metrics.thisMonthInCents),
                 icon: Icons.calendar_month_rounded,
                 color: accent.primary,
+                onTap: () => _openPeriod(context, AnalyticsPeriod.month, now),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -113,6 +145,7 @@ class _AnalyticsContent extends StatelessWidget {
                 value: AppFormatters.money(metrics.thisYearInCents),
                 icon: Icons.date_range_rounded,
                 color: accent.secondary,
+                onTap: () => _openPeriod(context, AnalyticsPeriod.year, now),
               ),
             ),
           ],
@@ -124,18 +157,41 @@ class _AnalyticsContent extends StatelessWidget {
           icon: Icons.savings_rounded,
           color: accent.tertiary,
           horizontal: true,
+          onTap: () => _openPeriod(context, AnalyticsPeriod.total, now),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const _SectionTitle(
+        _SectionTitle(
           title: 'Динамика расходов',
-          subtitle: 'Последние 6 месяцев',
+          subtitle: 'Нажмите, чтобы разобрать месяцы',
+          onTap: () => showDynamicsDetailSheet(
+            context: context,
+            points: metrics.monthlySpending,
+            payments: payments,
+            subscriptions: subscriptions,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        GlassCard(child: SpendingBarChart(points: metrics.monthlySpending)),
+        GlassCard(
+          child: SpendingBarChart(
+            points: metrics.monthlySpending,
+            onBarSelected: (point) => showMonthSpendingSheet(
+              context: context,
+              month: point.month,
+              payments: payments,
+              subscriptions: subscriptions,
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
-        const _SectionTitle(
+        _SectionTitle(
           title: 'По категориям',
-          subtitle: 'Средняя нагрузка в месяц',
+          subtitle: 'Нажмите для детализации',
+          onTap: () => showCategoriesDetailSheet(
+            context: context,
+            categories: metrics.categorySpending,
+            subscriptions: subscriptions,
+            now: now,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         GlassCard(
@@ -144,18 +200,53 @@ class _AnalyticsContent extends StatelessWidget {
                   padding: EdgeInsets.all(AppSpacing.lg),
                   child: Center(child: Text('Нет активных подписок')),
                 )
-              : CategorySpendingChart(categories: metrics.categorySpending),
+              : CategorySpendingChart(
+                  categories: metrics.categorySpending,
+                  onCategorySelected: (category) =>
+                      showCategorySubscriptionsSheet(
+                        context: context,
+                        category: category.category,
+                        amountInCents: category.amountInCents,
+                        subscriptions: subscriptions,
+                        now: now,
+                      ),
+                ),
         ),
         const SizedBox(height: AppSpacing.lg),
         const _SectionTitle(
           title: 'Умные подсказки',
-          subtitle: 'Subberry анализирует данные локально',
+          subtitle: 'OpenRouter · GPT-4o с локальным запасным вариантом',
         ),
         const SizedBox(height: AppSpacing.sm),
-        for (final insight in metrics.insights) ...<Widget>[
-          _InsightCard(insight: insight),
-          const SizedBox(height: AppSpacing.sm),
-        ],
+        ...aiInsights.when(
+          data: (insights) => <Widget>[
+            for (final insight in insights) ...<Widget>[
+              _InsightCard(insight: insight),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+          loading: () => <Widget>[
+            for (final insight in metrics.insights) ...<Widget>[
+              _InsightCard(insight: insight),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            const Padding(
+              padding: EdgeInsets.only(top: AppSpacing.xs),
+              child: Center(
+                child: SizedBox.square(
+                  dimension: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          ],
+          error: (_, _) => <Widget>[
+            for (final insight in metrics.insights) ...<Widget>[
+              _InsightCard(insight: insight),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+        ),
       ],
     );
   }
@@ -168,6 +259,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.horizontal = false,
+    this.onTap,
   });
 
   final String label;
@@ -175,6 +267,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool horizontal;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +302,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
     );
 
     return GlassCard(
+      onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: horizontal
           ? Row(
@@ -216,6 +310,11 @@ class _AnalyticsMetricCard extends StatelessWidget {
                 iconWidget,
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: content),
+                if (onTap != null)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
               ],
             )
           : Column(
@@ -250,6 +349,7 @@ class _InsightCard extends StatelessWidget {
         Icons.pie_chart_rounded,
         accent.tertiary,
       ),
+      AnalyticsInsightType.ai => (Icons.auto_awesome_rounded, accent.secondary),
     };
 
     return GlassCard(
@@ -291,14 +391,19 @@ class _InsightCard extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
+  const _SectionTitle({
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+  });
 
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(title, style: Theme.of(context).textTheme.titleLarge),
@@ -310,6 +415,24 @@ class _SectionTitle extends StatelessWidget {
           ),
         ),
       ],
+    );
+
+    if (onTap == null) return content;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: <Widget>[
+            Expanded(child: content),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

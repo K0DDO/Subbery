@@ -8,6 +8,7 @@ import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../analytics/presentation/widgets/spending_detail_sheet.dart';
 import '../../profile/application/user_profile_controller.dart';
 import '../../shell/application/tab_reset_provider.dart';
 import '../../subscriptions/application/subscription_providers.dart';
@@ -218,12 +219,28 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const _SectionTitle(
+        _SectionTitle(
           title: 'Расходы за 6 месяцев',
-          subtitle: 'Фактические платежи',
+          subtitle: 'Нажмите столбец или заголовок',
+          onTap: () => showDynamicsDetailSheet(
+            context: context,
+            points: metrics.spendingByMonth,
+            payments: payments,
+            subscriptions: subscriptions,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        GlassCard(child: SpendingBarChart(points: metrics.spendingByMonth)),
+        GlassCard(
+          child: SpendingBarChart(
+            points: metrics.spendingByMonth,
+            onBarSelected: (point) => showMonthSpendingSheet(
+              context: context,
+              month: point.month,
+              payments: payments,
+              subscriptions: subscriptions,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -631,14 +648,19 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
+  const _SectionTitle({
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+  });
 
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(title, style: Theme.of(context).textTheme.titleLarge),
@@ -650,6 +672,23 @@ class _SectionTitle extends StatelessWidget {
           ),
         ),
       ],
+    );
+    if (onTap == null) return content;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: <Widget>[
+            Expanded(child: content),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

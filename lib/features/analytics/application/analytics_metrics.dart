@@ -9,7 +9,7 @@ class CategorySpend {
   final int amountInCents;
 }
 
-enum AnalyticsInsightType { longevity, totalSpent, largestCategory }
+enum AnalyticsInsightType { longevity, totalSpent, largestCategory, ai }
 
 class AnalyticsInsight {
   const AnalyticsInsight({
@@ -86,22 +86,26 @@ class AnalyticsMetrics {
             (left, right) => right.amountInCents.compareTo(left.amountInCents),
           );
 
+    final monthlySpending = _sixMonthSpending(
+      payments,
+      now,
+      fallback: recurringMonthly,
+    );
+    final thisMonthInCents = thisMonthActual == 0
+        ? recurringMonthly
+        : thisMonthActual;
     return AnalyticsMetrics(
-      thisMonthInCents: thisMonthActual == 0
-          ? recurringMonthly
-          : thisMonthActual,
+      thisMonthInCents: thisMonthInCents,
       thisYearInCents: thisYear,
       totalSpentInCents: total,
-      monthlySpending: _sixMonthSpending(
-        payments,
-        now,
-        fallback: recurringMonthly,
-      ),
+      monthlySpending: monthlySpending,
       categorySpending: categorySpending,
       insights: _buildInsights(
         subscriptions: subscriptions,
         totalSpentInCents: total,
         categories: categorySpending,
+        monthlySpending: monthlySpending,
+        thisMonthInCents: thisMonthInCents,
         now: now,
       ),
     );
@@ -157,6 +161,8 @@ class AnalyticsMetrics {
     required List<Subscription> subscriptions,
     required int totalSpentInCents,
     required List<CategorySpend> categories,
+    required List<MonthlySpendPoint> monthlySpending,
+    required int thisMonthInCents,
     required DateTime now,
   }) {
     final insights = <AnalyticsInsight>[];
@@ -175,28 +181,33 @@ class AnalyticsMetrics {
         0,
         (total, item) => total + _monthlyEstimate(item, now),
       );
+      final yearlyProjection = monthlyLoad * 12;
       insights.add(
         AnalyticsInsight(
           type: AnalyticsInsightType.totalSpent,
-          title:
-              'Сейчас активны ${active.length} ${_subscriptionWord(active.length)}',
+          title: 'Месячная нагрузка ${_formatRubles(monthlyLoad)}',
           detail:
-              'Около ${_formatRubles(monthlyLoad)} в месяц; '
-              'приостановлено $paused, отменено $cancelled',
+              'Активно ${active.length}, пауза $paused, отменено $cancelled. '
+              'В год это около ${_formatRubles(yearlyProjection)}',
         ),
       );
 
-      active.sort((left, right) => left.startDate.compareTo(right.startDate));
-      final oldest = active.first;
-      final months = _monthsBetween(oldest.startDate, now).clamp(0, 999);
+      final pricey = List<Subscription>.from(active)
+        ..sort(
+          (left, right) =>
+              _monthlyEstimate(right, now).compareTo(_monthlyEstimate(left, now)),
+        );
+      final topSub = pricey.first;
+      final topShare = monthlyLoad == 0
+          ? 0
+          : ((_monthlyEstimate(topSub, now) / monthlyLoad) * 100).round();
       insights.add(
         AnalyticsInsight(
           type: AnalyticsInsightType.longevity,
-          title:
-              '${oldest.name} с вами уже $months ${_monthWord(months)}',
-          detail: months >= 12
-              ? 'Долгоживущая подписка — стоит пересмотреть тариф'
-              : 'Самая продолжительная активная подписка',
+          title: '${topSub.name} тянет на $topShare%',
+          detail:
+              '${_formatRubles(_monthlyEstimate(topSub, now))} из месячного бюджета. '
+              'Если редко пользуетесь — кандидат на паузу',
         ),
       );
     } else {
@@ -209,7 +220,27 @@ class AnalyticsMetrics {
       );
     }
 
-    if (categories.isNotEmpty) {
+    if (monthlySpending.length >= 2) {
+      final previous = monthlySpending[monthlySpending.length - 2].amountInCents;
+      final delta = thisMonthInCents - previous;
+      if (previous > 0 || thisMonthInCents > 0) {
+        final direction = delta > 0
+            ? 'выросли'
+            : delta < 0
+            ? 'снизились'
+            : 'на том же уровне';
+        insights.add(
+          AnalyticsInsight(
+            type: AnalyticsInsightType.largestCategory,
+            title: 'Расходы $direction к прошлому месяцу',
+            detail: delta == 0
+                ? 'Сейчас ${_formatRubles(thisMonthInCents)} — как месяц назад'
+                : '${delta > 0 ? '+' : ''}${_formatRubles(delta)} '
+                    '(${_formatRubles(previous)} → ${_formatRubles(thisMonthInCents)})',
+          ),
+        );
+      }
+    } else if (categories.isNotEmpty) {
       final top = categories.first;
       final share = categories.fold<int>(0, (s, c) => s + c.amountInCents);
       final percent = share == 0
@@ -236,16 +267,6 @@ class AnalyticsMetrics {
     return insights.take(3).toList(growable: false);
   }
 
-  static String _subscriptionWord(int count) {
-    final mod10 = count % 10;
-    final mod100 = count % 100;
-    if (mod10 == 1 && mod100 != 11) return 'подписка';
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-      return 'подписки';
-    }
-    return 'подписок';
-  }
-
   static int _sumPayments(
     List<Payment> payments, {
     required DateTime start,
@@ -257,12 +278,6 @@ class AnalyticsMetrics {
               !payment.date.isBefore(start) && payment.date.isBefore(end),
         )
         .fold<int>(0, (sum, payment) => sum + payment.amountInCents);
-  }
-
-  static int _monthsBetween(DateTime start, DateTime end) {
-    var months = (end.year - start.year) * 12 + end.month - start.month;
-    if (end.day < start.day) months--;
-    return months;
   }
 
   static DateTime _addMonths(DateTime date, int offset) {
@@ -277,16 +292,6 @@ class AnalyticsMetrics {
       buffer.write(rubles[index]);
     }
     return '${buffer.toString()} ₽';
-  }
-
-  static String _monthWord(int months) {
-    final last = months % 10;
-    final lastTwo = months % 100;
-    if (last == 1 && lastTwo != 11) return 'месяц';
-    if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) {
-      return 'месяца';
-    }
-    return 'месяцев';
   }
 
   static String _categoryName(SubscriptionCategory category) =>

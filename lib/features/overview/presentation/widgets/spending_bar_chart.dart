@@ -7,9 +7,14 @@ import '../../../../core/models/monthly_spend_point.dart';
 import '../../../../core/theme/app_accent_theme.dart';
 
 class SpendingBarChart extends StatelessWidget {
-  const SpendingBarChart({required this.points, super.key});
+  const SpendingBarChart({
+    required this.points,
+    this.onBarSelected,
+    super.key,
+  });
 
   final List<MonthlySpendPoint> points;
+  final ValueChanged<MonthlySpendPoint>? onBarSelected;
 
   static const _months = <String>[
     'янв',
@@ -87,6 +92,18 @@ class SpendingBarChart extends StatelessWidget {
             ),
           ),
           barTouchData: BarTouchData(
+            enabled: true,
+            handleBuiltInTouches: true,
+            touchCallback: (event, response) {
+              if (onBarSelected == null) return;
+              if (!event.isInterestedForInteractions) return;
+              final spot = response?.spot;
+              if (spot == null) return;
+              if (event is! FlTapUpEvent) return;
+              final index = spot.touchedBarGroupIndex;
+              if (index < 0 || index >= points.length) return;
+              onBarSelected!(points[index]);
+            },
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (_) =>
                   Theme.of(context).colorScheme.inverseSurface,

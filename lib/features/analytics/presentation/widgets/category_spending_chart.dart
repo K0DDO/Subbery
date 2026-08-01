@@ -7,9 +7,14 @@ import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
 import '../../application/analytics_metrics.dart';
 
 class CategorySpendingChart extends StatelessWidget {
-  const CategorySpendingChart({required this.categories, super.key});
+  const CategorySpendingChart({
+    required this.categories,
+    this.onCategorySelected,
+    super.key,
+  });
 
   final List<CategorySpend> categories;
+  final ValueChanged<CategorySpend>? onCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +36,21 @@ class CategorySpendingChart extends StatelessWidget {
                   sectionsSpace: 4,
                   startDegreeOffset: -90,
                   borderData: FlBorderData(show: false),
+                  pieTouchData: PieTouchData(
+                    enabled: onCategorySelected != null,
+                    touchCallback: (event, response) {
+                      if (onCategorySelected == null) return;
+                      if (event is! FlTapUpEvent) return;
+                      final index =
+                          response?.touchedSection?.touchedSectionIndex;
+                      if (index == null ||
+                          index < 0 ||
+                          index >= categories.length) {
+                        return;
+                      }
+                      onCategorySelected!(categories[index]);
+                    },
+                  ),
                   sections: <PieChartSectionData>[
                     for (final category in categories)
                       PieChartSectionData(
@@ -69,7 +89,13 @@ class CategorySpendingChart extends StatelessWidget {
           spacing: AppSpacing.md,
           runSpacing: AppSpacing.sm,
           children: <Widget>[
-            for (final category in categories) _LegendItem(category: category),
+            for (final category in categories)
+              _LegendItem(
+                category: category,
+                onTap: onCategorySelected == null
+                    ? null
+                    : () => onCategorySelected!(category),
+              ),
           ],
         ),
       ],
@@ -78,13 +104,14 @@ class CategorySpendingChart extends StatelessWidget {
 }
 
 class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.category});
+  const _LegendItem({required this.category, this.onTap});
 
   final CategorySpend category;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
@@ -101,6 +128,18 @@ class _LegendItem extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ],
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxs,
+          vertical: AppSpacing.xxs,
+        ),
+        child: row,
+      ),
     );
   }
 }
