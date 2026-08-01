@@ -174,10 +174,14 @@ class _MeasuredMorphingGlassSheetState<T>
   }) {
     final route = widget.route;
     final targetBottom = keyboardHeight == 0
-        ? route.startRect.bottom
+        ? route.endPosition == null
+              ? route.startRect.bottom
+              : screenSize.height - safePadding.bottom - AppSpacing.md
         : (screenSize.height - keyboardHeight - AppSpacing.md).clamp(
             safePadding.top + route.startRect.height + AppSpacing.lg,
-            route.startRect.bottom,
+            route.endPosition == null
+                ? route.startRect.bottom
+                : screenSize.height - safePadding.bottom - AppSpacing.md,
           );
     final availableHeight = targetBottom - safePadding.top - AppSpacing.lg;
     final maximumHeight = route.maximumHeight == null
@@ -207,7 +211,9 @@ class _MeasuredMorphingGlassSheetState<T>
     final safePadding = MediaQuery.paddingOf(context);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final targetBottom = keyboardHeight == 0
-        ? widget.route.startRect.bottom
+        ? widget.route.endPosition == null
+              ? widget.route.startRect.bottom
+              : screenSize.height - safePadding.bottom - AppSpacing.md
         : screenSize.height - keyboardHeight - AppSpacing.md;
     final screenMaximumHeight = targetBottom - safePadding.top - AppSpacing.lg;
     final maximumHeight = widget.route.maximumHeight == null
@@ -352,13 +358,20 @@ class _MeasuredMorphingGlassSheetState<T>
                     source: widget.route.source,
                     child: SheetGestureHandler(
                       controller: widget.route.sheetController,
-                      child: KeyedSubtree(
-                        key: MorphingGlassSheetKeys.content,
-                        child: MorphingSheetGeometryScope(
-                          maximumHeight: maximumHeight,
-                          onHeightChanged: (height) =>
-                              _updateContentHeight(height, maximumHeight),
-                          child: widget.child,
+                      child: OverflowBox(
+                        alignment: Alignment.topCenter,
+                        minWidth: endRect.width,
+                        maxWidth: endRect.width,
+                        minHeight: endRect.height,
+                        maxHeight: endRect.height,
+                        child: KeyedSubtree(
+                          key: MorphingGlassSheetKeys.content,
+                          child: MorphingSheetGeometryScope(
+                            maximumHeight: maximumHeight,
+                            onHeightChanged: (height) =>
+                                _updateContentHeight(height, maximumHeight),
+                            child: widget.child,
+                          ),
                         ),
                       ),
                     ),

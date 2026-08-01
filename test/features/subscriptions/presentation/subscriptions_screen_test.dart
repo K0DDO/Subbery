@@ -58,6 +58,43 @@ void main() {
 
     expect(result, <Subscription>[music]);
   });
+
+  test('filters one-time payments through renewal mode', () {
+    final oneTime = _subscription(
+      id: 'one-time',
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 7, 20),
+      renewalMode: RenewalMode.manual,
+    );
+
+    final result = filterSubscriptions(
+      <Subscription>[monthly, oneTime, paused],
+      SubscriptionListFilter.all,
+      oneTime: true,
+      now: today,
+    );
+
+    expect(result, <Subscription>[oneTime]);
+  });
+
+  test('combines regular and one-time status choices as alternatives', () {
+    final oneTime = _subscription(
+      id: 'one-time',
+      billingCycle: BillingCycle.monthly,
+      nextPaymentDate: DateTime(2026, 7, 20),
+      renewalMode: RenewalMode.manual,
+    );
+
+    final result = filterSubscriptions(
+      <Subscription>[monthly, oneTime, paused],
+      SubscriptionListFilter.all,
+      statuses: const <SubscriptionStatus>{SubscriptionStatus.paused},
+      oneTime: true,
+      now: today,
+    );
+
+    expect(result, <Subscription>[oneTime, paused]);
+  });
 }
 
 Subscription _subscription({
@@ -66,6 +103,7 @@ Subscription _subscription({
   required DateTime nextPaymentDate,
   SubscriptionStatus status = SubscriptionStatus.active,
   SubscriptionCategory category = SubscriptionCategory.other,
+  RenewalMode renewalMode = RenewalMode.automatic,
 }) {
   return Subscription(
     id: id,
@@ -78,5 +116,6 @@ Subscription _subscription({
     status: status,
     totalSpentInCents: 0,
     reminderEnabled: true,
+    renewalMode: renewalMode,
   );
 }

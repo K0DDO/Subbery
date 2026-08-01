@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_button.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../../widgets/morphing_sheet/morphing_glass_sheet.dart';
 import '../../shell/application/tab_reset_provider.dart';
 import '../application/subscription_providers.dart';
 import '../domain/entities/subscription.dart';
@@ -23,23 +26,28 @@ class SubscriptionFilterState {
     this.quick = SubscriptionListFilter.all,
     this.categories = const <SubscriptionCategory>{},
     this.statuses = const <SubscriptionStatus>{},
+    this.oneTime = false,
   });
 
   final SubscriptionListFilter quick;
   final Set<SubscriptionCategory> categories;
   final Set<SubscriptionStatus> statuses;
+  final bool oneTime;
 
-  bool get hasAdvancedFilters => categories.isNotEmpty || statuses.isNotEmpty;
+  bool get hasAdvancedFilters =>
+      categories.isNotEmpty || statuses.isNotEmpty || oneTime;
 
   SubscriptionFilterState copyWith({
     SubscriptionListFilter? quick,
     Set<SubscriptionCategory>? categories,
     Set<SubscriptionStatus>? statuses,
+    bool? oneTime,
   }) {
     return SubscriptionFilterState(
       quick: quick ?? this.quick,
       categories: categories ?? this.categories,
       statuses: statuses ?? this.statuses,
+      oneTime: oneTime ?? this.oneTime,
     );
   }
 }
@@ -54,6 +62,7 @@ List<Subscription> filterSubscriptions(
   SubscriptionCategory? category,
   Set<SubscriptionCategory> categories = const <SubscriptionCategory>{},
   Set<SubscriptionStatus> statuses = const <SubscriptionStatus>{},
+  bool oneTime = false,
   DateTime? now,
 }) {
   final today = SubscriptionSchedule.dateOnly(now ?? DateTime.now());
@@ -70,8 +79,11 @@ List<Subscription> filterSubscriptions(
             !selectedCategories.contains(subscription.category)) {
           return false;
         }
-        if (statuses.isNotEmpty && !statuses.contains(subscription.status)) {
-          return false;
+        if (statuses.isNotEmpty || oneTime) {
+          final matchesStatus = statuses.contains(subscription.status);
+          final matchesOneTime =
+              oneTime && subscription.renewalMode == RenewalMode.manual;
+          if (!matchesStatus && !matchesOneTime) return false;
         }
         return switch (filter) {
           SubscriptionListFilter.all => true,
@@ -151,6 +163,7 @@ class SubscriptionsScreen extends ConsumerWidget {
                   category: initialCategory,
                   categories: filterState.categories,
                   statuses: filterState.statuses,
+                  oneTime: filterState.oneTime,
                 );
                 if (filtered.isEmpty) {
                   return const EmptyState(
@@ -269,47 +282,10 @@ class _AdvancedFilterButtonState extends State<_AdvancedFilterButton> {
     if (renderBox == null) return;
     final origin = renderBox.localToGlobal(Offset.zero);
     final anchor = origin & renderBox.size;
-    final screenSize = MediaQuery.sizeOf(context);
-    final popupWidth = (screenSize.width - AppSpacing.lg * 2).clamp(
-      280.0,
-      380.0,
-    );
-    final popupLeft = (anchor.right - popupWidth).clamp(
-      AppSpacing.md,
-      screenSize.width - popupWidth - AppSpacing.md,
-    );
-    final popupTop = anchor.bottom + AppSpacing.xs;
-
-    final next = await showGeneralDialog<SubscriptionFilterState>(
+    final next = await showSubscriptionFilterSheet(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Закрыть фильтры',
-      barrierColor: Colors.black.withValues(alpha: 0.18),
-      transitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutBack,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return Stack(
-          children: <Widget>[
-            Positioned(
-              left: popupLeft,
-              top: popupTop,
-              width: popupWidth,
-              child: FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  alignment: Alignment.topRight,
-                  scale: Tween<double>(begin: 0.82, end: 1).animate(curved),
-                  child: _FilterPanel(initial: widget.state),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      startRect: anchor,
+      initial: widget.state,
     );
     if (next != null) widget.onChanged(next);
   }
@@ -333,126 +309,241 @@ class _AdvancedFilterButtonState extends State<_AdvancedFilterButton> {
   }
 }
 
-class _FilterPanel extends StatefulWidget {
-  const _FilterPanel({required this.initial});
+Future<SubscriptionFilterState?> showSubscriptionFilterSheet({
+  required BuildContext context,
+  required Rect startRect,
+  required SubscriptionFilterState initial,
+}) {
+  final media = MediaQuery.of(context);
+  return MorphingGlassSheet.show<SubscriptionFilterState>(
+    context: context,
+    startRect: startRect,
+    endPosition: Offset(AppSpacing.md, media.padding.top + 72),
+    maximumHeight: math.min(660, media.size.height * 0.82),
+    source: Material(
+      type: MaterialType.transparency,
+      child: Center(
+        child: Icon(
+          Icons.filter_alt_rounded,
+          color: context.subberryTheme.primary,
+        ),
+      ),
+    ),
+    builder: (_) => SubscriptionFilterSheet(initial: initial),
+  );
+}
+
+class SubscriptionFilterSheet extends StatefulWidget {
+  const SubscriptionFilterSheet({required this.initial, super.key});
 
   final SubscriptionFilterState initial;
 
   @override
-  State<_FilterPanel> createState() => _FilterPanelState();
+  State<SubscriptionFilterSheet> createState() =>
+      _SubscriptionFilterSheetState();
 }
 
-class _FilterPanelState extends State<_FilterPanel> {
+class _SubscriptionFilterSheetState extends State<SubscriptionFilterSheet> {
   late Set<SubscriptionCategory> _categories;
   late Set<SubscriptionStatus> _statuses;
+  late bool _oneTime;
 
   @override
   void initState() {
     super.initState();
     _categories = {...widget.initial.categories};
     _statuses = {...widget.initial.statuses};
+    _oneTime = widget.initial.oneTime;
+  }
+
+  void _toggleCategory(SubscriptionCategory category, bool selected) {
+    setState(() {
+      selected ? _categories.add(category) : _categories.remove(category);
+    });
+  }
+
+  void _toggleStatus(SubscriptionStatus status, bool selected) {
+    setState(() {
+      selected ? _statuses.add(status) : _statuses.remove(status);
+    });
+  }
+
+  void _reset() {
+    setState(() {
+      _categories.clear();
+      _statuses.clear();
+      _oneTime = false;
+    });
+  }
+
+  void _done() {
+    Navigator.pop(
+      context,
+      widget.initial.copyWith(
+        categories: _categories,
+        statuses: _statuses,
+        oneTime: _oneTime,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Material(
-      color: Colors.transparent,
-      child: GlassCard(
-        strong: true,
-        padding: EdgeInsets.zero,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 520),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      type: MaterialType.transparency,
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          52,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Фильтры',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Категории', style: theme.textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
               children: <Widget>[
-                Text('Фильтры', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Категории',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
-                    for (final category in SubscriptionCategory.values)
-                      FilterChip(
-                        showCheckmark: false,
-                        label: Text('${category.emoji} ${category.label}'),
-                        selected: _categories.contains(category),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _categories.add(category);
-                            } else {
-                              _categories.remove(category);
-                            }
-                          });
-                        },
-                      ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text('Статус', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
-                    for (final status in const <SubscriptionStatus>[
-                      SubscriptionStatus.active,
-                      SubscriptionStatus.paused,
-                      SubscriptionStatus.cancelled,
-                      SubscriptionStatus.expired,
-                    ])
-                      FilterChip(
-                        showCheckmark: false,
-                        label: Text(status.label),
-                        selected: _statuses.contains(status),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _statuses.add(status);
-                            } else {
-                              _statuses.remove(status);
-                            }
-                          });
-                        },
-                      ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: <Widget>[
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _categories.clear();
-                          _statuses.clear();
-                        });
-                      },
-                      child: const Text('Сбросить'),
+                for (final category in SubscriptionCategory.values)
+                  _GlassSelectionChip(
+                    key: ValueKey<String>(
+                      'subscription-filter-category-${category.name}',
                     ),
-                    const Spacer(),
-                    FilledButton(
-                      onPressed: () {
-                        Navigator.pop(
-                          context,
-                          widget.initial.copyWith(
-                            categories: _categories,
-                            statuses: _statuses,
-                          ),
-                        );
-                      },
-                      child: const Text('Готово'),
+                    label: '${category.emoji} ${category.label}',
+                    selected: _categories.contains(category),
+                    onSelected: (selected) =>
+                        _toggleCategory(category, selected),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Статус', style: theme.textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (final status in const <SubscriptionStatus>[
+                  SubscriptionStatus.active,
+                  SubscriptionStatus.paused,
+                  SubscriptionStatus.cancelled,
+                  SubscriptionStatus.expired,
+                ])
+                  _GlassSelectionChip(
+                    key: ValueKey<String>(
+                      'subscription-filter-status-${status.name}',
                     ),
-                  ],
+                    label: status.label,
+                    selected: _statuses.contains(status),
+                    onSelected: (selected) => _toggleStatus(status, selected),
+                  ),
+                _GlassSelectionChip(
+                  key: const ValueKey<String>(
+                    'subscription-filter-status-one-time',
+                  ),
+                  label: 'Единовременная',
+                  selected: _oneTime,
+                  onSelected: (selected) => setState(() => _oneTime = selected),
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: <Widget>[
+                TextButton(
+                  key: const ValueKey<String>('subscription-filter-reset'),
+                  onPressed: _reset,
+                  child: const Text('Сбросить'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: GlassButton(
+                    key: const ValueKey<String>('subscription-filter-done'),
+                    label: 'Готово',
+                    icon: Icons.check_rounded,
+                    onPressed: _done,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassSelectionChip extends StatelessWidget {
+  const _GlassSelectionChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final subberry = context.subberryTheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          color: selected
+              ? subberry.primary.withValues(alpha: 0.2)
+              : subberry.glassTint.withValues(alpha: 0.42),
+          border: Border.all(
+            color: selected ? subberry.primary : subberry.borderColor,
+          ),
+          boxShadow: selected
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: subberry.glowColor.withValues(alpha: 0.34),
+                    blurRadius: 14,
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            onTap: () => onSelected(!selected),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              child: Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: selected
+                      ? subberry.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ),
