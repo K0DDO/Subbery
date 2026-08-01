@@ -37,16 +37,17 @@ abstract final class SubscriptionBrandColors {
   }) {
     final explicit = _explicit[logoKey];
     if (explicit != null) {
-      return brightness == Brightness.dark
-          ? explicit.forBrightness(brightness)
-          : explicit;
+      return adaptBrandPaletteForBrightness(explicit, brightness);
     }
 
     final known = KnownServices.byLogoKey(logoKey);
     if (known != null) {
-      return ColorPalette.fromSeed(
-        Color(known.brandColorValue),
-        brightness: brightness,
+      return adaptBrandPaletteForBrightness(
+        ColorPalette.fromSeed(
+          Color(known.brandColorValue),
+          brightness: brightness,
+        ),
+        brightness,
       );
     }
 
@@ -78,4 +79,24 @@ abstract final class SubscriptionBrandColors {
       brightness: brightness,
     ).forBrightness(brightness);
   }
+}
+
+@visibleForTesting
+ColorPalette adaptBrandPaletteForBrightness(
+  ColorPalette palette,
+  Brightness brightness,
+) {
+  if (brightness == Brightness.dark) {
+    return palette.forBrightness(brightness);
+  }
+
+  // Bright brand yellows and similar colors disappear on light glass.
+  // Preserve their hue while lowering luminance enough for text and borders.
+  if (palette.primary.computeLuminance() <= 0.42) return palette;
+  final hsl = HSLColor.fromColor(palette.primary);
+  final adjusted = hsl
+      .withSaturation(hsl.saturation.clamp(0.55, 1.0))
+      .withLightness(hsl.lightness.clamp(0.22, 0.38))
+      .toColor();
+  return ColorPalette.fromSeed(adjusted, brightness: brightness);
 }

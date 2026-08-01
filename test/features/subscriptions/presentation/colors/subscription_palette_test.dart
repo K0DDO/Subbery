@@ -71,4 +71,23 @@ void main() {
     );
     expect(HSLColor.fromColor(apple.primary).lightness, greaterThan(0.15));
   });
+
+  test('bright yellow brands are darkened on light surfaces', () {
+    final light = SubscriptionBrandColors.resolve(
+      name: 'Яндекс Музыка',
+      logoKey: 'yandex_music',
+      category: SubscriptionCategory.music,
+      brightness: Brightness.light,
+    );
+    final dark = SubscriptionBrandColors.resolve(
+      name: 'Яндекс Музыка',
+      logoKey: 'yandex_music',
+      category: SubscriptionCategory.music,
+      brightness: Brightness.dark,
+    );
+
+    expect(light.primary.computeLuminance(), lessThan(0.42));
+    expect(light.primary, isNot(const Color(0xFFFFCC00)));
+    expect(dark.primary, isNot(light.primary));
+  });
 }
