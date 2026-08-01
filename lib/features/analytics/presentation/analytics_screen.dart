@@ -202,39 +202,47 @@ class _AnalyticsContent extends ConsumerWidget {
           onTap: () => _openPeriod(context, AnalyticsPeriod.total, now),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _SectionTitle(
-          title: 'Динамика расходов',
-          subtitle: 'План и факт за последние 6 месяцев',
-          onTap: openDynamics,
-        ),
-        const SizedBox(height: AppSpacing.sm),
         GlassCard(
           key: const ValueKey<String>('analytics-dynamics-card'),
           onTap: openDynamics,
-          child: SpendingBarChart(
-            points: metrics.monthlySpending,
-            onBarSelected: (_) => openDynamics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const _SectionTitle(
+                title: 'Динамика расходов',
+                subtitle: 'План и факт за последние 6 месяцев',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              IgnorePointer(
+                child: SpendingBarChart(points: metrics.monthlySpending),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _SectionTitle(
-          title: 'По категориям',
-          subtitle: 'Нажмите для детализации',
-          onTap: openCategories,
-        ),
-        const SizedBox(height: AppSpacing.sm),
         GlassCard(
           key: const ValueKey<String>('analytics-categories-card'),
           onTap: openCategories,
-          child: metrics.categorySpending.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Center(child: Text('Нет активных подписок')),
-                )
-              : CategorySpendingChart(
-                  categories: metrics.categorySpending,
-                  onCategorySelected: (_) => openCategories(),
-                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const _SectionTitle(
+                title: 'По категориям',
+                subtitle: 'Нажмите для детализации',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              IgnorePointer(
+                child: metrics.categorySpending.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(AppSpacing.lg),
+                        child: Center(child: Text('Нет активных подписок')),
+                      )
+                    : CategorySpendingChart(
+                        categories: metrics.categorySpending,
+                      ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         const _SectionTitle(
@@ -413,19 +421,14 @@ class _InsightCard extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    required this.subtitle,
-    this.onTap,
-  });
+  const _SectionTitle({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(title, style: Theme.of(context).textTheme.titleLarge),
@@ -437,24 +440,6 @@ class _SectionTitle extends StatelessWidget {
           ),
         ),
       ],
-    );
-
-    if (onTap == null) return content;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          children: <Widget>[
-            Expanded(child: content),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -312,25 +312,41 @@ class _EngravedGlassTextPainter extends CustomPainter {
       Offset(0.75 + glassAmount * 0.65, 1 + glassAmount * 0.8),
     );
 
-    // The center is a non-uniform glass gradient, not a faded solid color.
+    // Visibility follows a stable vertical glass profile: solid edges,
+    // dissolved center, then solid edges again. Strength flattens that profile
+    // towards a fully readable value instead of fading the whole glyph.
+    double visibility(double minimum) => minimum + (1 - minimum) * strength;
     _paintText(
       canvas,
       size,
       Paint()
         ..shader = ui.Gradient.linear(
-          bounds.topLeft,
-          bounds.bottomRight,
+          bounds.topCenter,
+          bounds.bottomCenter,
           <Color>[
-            highlightColor.withValues(alpha: 0.32 + strength * 0.68),
             Color.lerp(
-              recessColor,
               baseColor,
-              strength,
-            )!.withValues(alpha: 0.12 + strength * 0.88),
-            baseColor.withValues(alpha: 0.22 + strength * 0.78),
-            glowColor.withValues(alpha: 0.12 + strength * 0.58),
+              highlightColor,
+              0.42,
+            )!.withValues(alpha: visibility(0.96)),
+            Color.lerp(
+              baseColor,
+              highlightColor,
+              0.12,
+            )!.withValues(alpha: visibility(0.5)),
+            baseColor.withValues(alpha: visibility(0.18)),
+            Color.lerp(
+              baseColor,
+              recessColor,
+              0.08,
+            )!.withValues(alpha: visibility(0.5)),
+            Color.lerp(
+              baseColor,
+              recessColor,
+              0.18,
+            )!.withValues(alpha: visibility(0.96)),
           ],
-          const <double>[0, 0.34, 0.68, 1],
+          const <double>[0, 0.25, 0.5, 0.75, 1],
         ),
       Offset.zero,
     );
@@ -351,26 +367,6 @@ class _EngravedGlassTextPainter extends CustomPainter {
       color: recessColor.withValues(alpha: 0.28 + glassAmount * 0.38),
       blur: 0.35 + glassAmount * 0.35,
     );
-
-    // A narrow specular streak breaks edge intensity across the glyphs.
-    canvas.saveLayer(bounds, Paint());
-    _paintText(
-      canvas,
-      size,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          bounds.topLeft,
-          bounds.bottomRight,
-          <Color>[
-            Colors.transparent,
-            highlightColor.withValues(alpha: 0.1 + glassAmount * 0.28),
-            Colors.transparent,
-          ],
-          const <double>[0.2, 0.48, 0.72],
-        ),
-      Offset(-0.25, -0.35),
-    );
-    canvas.restore();
   }
 
   @override

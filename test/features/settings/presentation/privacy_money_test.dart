@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:subberry/core/theme/app_accent_theme.dart';
 import 'package:subberry/core/theme/app_theme.dart';
 import 'package:subberry/core/widgets/money_text.dart';
 import 'package:subberry/features/settings/application/privacy_settings_controller.dart';
@@ -125,6 +126,34 @@ void main() {
       container.read(privacySettingsProvider).transparencyStrength,
       lessThan(before),
     );
+  });
+
+  testWidgets('engraved balance paints across themes and accent colors', (
+    tester,
+  ) async {
+    for (final brightness in Brightness.values) {
+      for (final accent in AppAccentChoice.values) {
+        final theme = brightness == Brightness.light
+            ? AppTheme.lightFor(accent)
+            : AppTheme.darkFor(accent);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: Center(
+                child: FrostedBalanceText(
+                  text: '42 800 ₽',
+                  strength: 0.2,
+                  style: theme.textTheme.displaySmall,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+      }
+    }
   });
 
   for (final mode in <ThemeMode>[ThemeMode.light, ThemeMode.dark]) {

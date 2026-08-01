@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subberry/app/app.dart';
 import 'package:subberry/app/router/app_router.dart';
 import 'package:subberry/core/widgets/glass_card.dart';
+import 'package:subberry/core/widgets/money_text.dart';
 import 'package:subberry/features/profile/application/user_profile_controller.dart';
 import 'package:subberry/features/subscriptions/application/subscription_providers.dart';
 import 'package:subberry/features/subscriptions/domain/entities/payment.dart';
@@ -222,12 +223,34 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.edit_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     final summaryTitle = find.text('Запланировано в этом месяце');
+    final summaryCard = find.ancestor(
+      of: summaryTitle,
+      matching: find.byType(GlassCard),
+    );
+    final frostedValues = tester
+        .widgetList<MoneyText>(
+          find.descendant(of: summaryCard, matching: find.byType(MoneyText)),
+        )
+        .where((money) => money.frost);
+    expect(frostedValues, hasLength(3));
+
     await tester.tap(summaryTitle);
     await tester.pump();
     expect(
-      find.text('Чтобы изменить настройки, удерживайте блок'),
+      find.text('Чтобы изменить данные, удерживайте блок'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('monthly-summary-hint')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('monthly-summary-hint')),
+        matching: find.byType(BackdropFilter),
+      ),
       findsOneWidget,
     );
     expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
@@ -238,7 +261,7 @@ void main() {
     expect(find.text('Прозрачный баланс'), findsOneWidget);
   });
 
-  testWidgets('overview chart cards open their existing detail sheets', (
+  testWidgets('only overview dynamics card opens analytical details', (
     tester,
   ) async {
     appRouter.go('/');
@@ -253,11 +276,10 @@ void main() {
     final ringCard = find.byKey(
       const ValueKey<String>('overview-payments-card'),
     );
+    expect(tester.widget<GlassCard>(ringCard).onTap, isNull);
     await tester.tapAt(tester.getTopLeft(ringCard) + const Offset(28, 28));
     await tester.pumpAndSettle();
-    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
-    await tester.tapAt(const Offset(8, 8));
-    await tester.pumpAndSettle();
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
 
     final dynamicsCard = find.byKey(
       const ValueKey<String>('overview-dynamics-card'),
@@ -268,6 +290,13 @@ void main() {
       const Offset(0, -300),
     );
     await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: dynamicsCard,
+        matching: find.text('Динамика расходов'),
+      ),
+      findsOneWidget,
+    );
     tester.widget<GlassCard>(dynamicsCard).onTap!.call();
     await tester.pumpAndSettle();
     expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
@@ -311,21 +340,37 @@ void main() {
       matching: find.byType(Scrollable),
     );
     final position = tester.state<ScrollableState>(scrollable).position;
-    position.jumpTo(position.maxScrollExtent * 0.38);
+    position.jumpTo(280.0.clamp(0, position.maxScrollExtent).toDouble());
     await tester.pump(const Duration(milliseconds: 400));
     final dynamics = find.byKey(
       const ValueKey<String>('analytics-dynamics-card'),
     );
     expect(dynamics, findsOneWidget);
     expect(tester.widget<GlassCard>(dynamics).onTap, isNotNull);
+    expect(
+      find.descendant(of: dynamics, matching: find.text('Динамика расходов')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: dynamics, matching: find.byType(IgnorePointer)),
+      findsOneWidget,
+    );
 
-    position.jumpTo(position.maxScrollExtent * 0.58);
+    position.jumpTo(600.0.clamp(0, position.maxScrollExtent).toDouble());
     await tester.pump(const Duration(milliseconds: 400));
     final categories = find.byKey(
       const ValueKey<String>('analytics-categories-card'),
     );
     expect(categories, findsOneWidget);
     expect(tester.widget<GlassCard>(categories).onTap, isNotNull);
+    expect(
+      find.descendant(of: categories, matching: find.text('По категориям')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: categories, matching: find.byType(IgnorePointer)),
+      findsOneWidget,
+    );
   });
 }
 

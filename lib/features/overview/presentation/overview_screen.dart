@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -121,25 +123,6 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
       );
     }
 
-    void openSelectedMonth() {
-      final selectedDate = DateTime(now.year, _selectedMonth);
-      final planned = metrics.spendingByMonth
-          .where(
-            (point) =>
-                point.month.year == selectedDate.year &&
-                point.month.month == selectedDate.month,
-          )
-          .firstOrNull
-          ?.plannedAmountInCents;
-      showMonthSpendingSheet(
-        context: context,
-        month: selectedDate,
-        payments: payments,
-        subscriptions: subscriptions,
-        plannedInCents: planned ?? 0,
-      );
-    }
-
     return ListView(
       key: ValueKey<String>('overview-$resetRevision'),
       padding: const EdgeInsets.fromLTRB(
@@ -154,7 +137,6 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         GlassCard(
           key: const ValueKey<String>('overview-payments-card'),
           strong: true,
-          onTap: openSelectedMonth,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.lg,
@@ -185,7 +167,6 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       onMonthSelected: (month) {
                         setState(() => _selectedMonth = month);
                       },
-                      onTap: openSelectedMonth,
                     ),
                     _RingGalleryPage(
                       title: 'Календарь платежей',
@@ -201,7 +182,6 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       onMonthSelected: (month) {
                         setState(() => _selectedMonth = month);
                       },
-                      onTap: openSelectedMonth,
                     ),
                   ],
                 ),
@@ -254,18 +234,21 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _SectionTitle(
-          title: 'Динамика расходов',
-          subtitle: 'План и факт за последние 6 месяцев',
-          onTap: openDynamics,
-        ),
-        const SizedBox(height: AppSpacing.sm),
         GlassCard(
           key: const ValueKey<String>('overview-dynamics-card'),
           onTap: openDynamics,
-          child: SpendingBarChart(
-            points: metrics.spendingByMonth,
-            onBarSelected: (_) => openDynamics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const _SectionTitle(
+                title: 'Динамика расходов',
+                subtitle: 'План и факт за последние 6 месяцев',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              IgnorePointer(
+                child: SpendingBarChart(points: metrics.spendingByMonth),
+              ),
+            ],
           ),
         ),
       ],
@@ -331,7 +314,6 @@ class _RingGalleryPage extends StatelessWidget {
     required this.counterValue,
     required this.selectedMonth,
     required this.onMonthSelected,
-    required this.onTap,
     this.showPeriodArcs = false,
     this.showCalendarLogos = true,
   });
@@ -345,7 +327,6 @@ class _RingGalleryPage extends StatelessWidget {
   final int counterValue;
   final int selectedMonth;
   final ValueChanged<int> onMonthSelected;
-  final VoidCallback onTap;
   final bool showPeriodArcs;
   final bool showCalendarLogos;
 
@@ -404,7 +385,6 @@ class _RingGalleryPage extends StatelessWidget {
             showPeriodArcs: showPeriodArcs,
             showCalendarLogos: showCalendarLogos,
             onMonthSelected: onMonthSelected,
-            onTap: onTap,
           ),
         ),
       ],
@@ -453,9 +433,20 @@ class _MonthlySummary extends StatelessWidget {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
-          content: Text('Чтобы изменить настройки, удерживайте блок'),
+        SnackBar(
+          content: const _SubberryGlassHint(
+            message: 'Чтобы изменить данные, удерживайте блок',
+          ),
           behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          padding: EdgeInsets.zero,
+          margin: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -536,6 +527,7 @@ class _MonthlySummary extends StatelessWidget {
               Flexible(
                 child: MoneyText(
                   cents: metrics.actualThisMonthInCents,
+                  frost: true,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -555,6 +547,7 @@ class _MonthlySummary extends StatelessWidget {
                       Flexible(
                         child: MoneyText(
                           cents: metrics.averageMonthlyPlannedInCents,
+                          frost: true,
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
@@ -586,55 +579,92 @@ class _MonthlySummary extends StatelessWidget {
   }
 }
 
-class _GlassEditHintIcon extends StatefulWidget {
+class _GlassEditHintIcon extends StatelessWidget {
   const _GlassEditHintIcon();
-
-  @override
-  State<_GlassEditHintIcon> createState() => _GlassEditHintIconState();
-}
-
-class _GlassEditHintIconState extends State<_GlassEditHintIcon> {
-  var _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.subberryTheme;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Tooltip(
-        message: 'Удерживайте блок для настройки',
-        child: AnimatedScale(
-          scale: _hovered ? 1.08 : 1,
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOutCubic,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              color: palette.glassTint.withValues(
-                alpha: _hovered ? 0.72 : 0.42,
-              ),
-              border: Border.all(
-                color: palette.primary.withValues(
-                  alpha: _hovered ? 0.46 : 0.24,
-                ),
-              ),
-              boxShadow: _hovered
-                  ? <BoxShadow>[
-                      BoxShadow(
-                        color: palette.glowColor.withValues(alpha: 0.18),
-                        blurRadius: 12,
-                      ),
-                    ]
-                  : null,
+    return Icon(
+      Icons.edit_outlined,
+      size: 14,
+      color: Color.lerp(
+        palette.mutedTextColor,
+        palette.primary,
+        0.38,
+      )!.withValues(alpha: 0.72),
+    );
+  }
+}
+
+class _SubberryGlassHint extends StatelessWidget {
+  const _SubberryGlassHint({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.subberryTheme;
+    return ClipRRect(
+      key: const ValueKey<String>('monthly-summary-hint'),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: palette.borderColor.withValues(alpha: 0.58),
             ),
-            child: Icon(
-              Icons.edit_rounded,
-              size: 15,
-              color: palette.primary.withValues(alpha: 0.82),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[
+                Color.lerp(
+                  theme.colorScheme.surface,
+                  palette.primaryLight,
+                  0.14,
+                )!.withValues(alpha: 0.92),
+                Color.lerp(
+                  theme.colorScheme.surface,
+                  palette.glassTint,
+                  0.28,
+                )!.withValues(alpha: 0.82),
+              ],
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: palette.glowColor.withValues(alpha: 0.16),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  Icons.touch_app_outlined,
+                  size: 17,
+                  color: palette.primary,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    message,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -804,19 +834,14 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    required this.subtitle,
-    this.onTap,
-  });
+  const _SectionTitle({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(title, style: Theme.of(context).textTheme.titleLarge),
@@ -828,23 +853,6 @@ class _SectionTitle extends StatelessWidget {
           ),
         ),
       ],
-    );
-    if (onTap == null) return content;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          children: <Widget>[
-            Expanded(child: content),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

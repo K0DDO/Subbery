@@ -78,7 +78,6 @@ class BerryCalendarRing extends StatefulWidget {
     this.periodArcOccurrences,
     this.showPeriodArcs = false,
     this.showCalendarLogos = true,
-    this.onTap,
     super.key,
   });
 
@@ -90,7 +89,6 @@ class BerryCalendarRing extends StatefulWidget {
   final List<PaymentOccurrence>? periodArcOccurrences;
   final bool showPeriodArcs;
   final bool showCalendarLogos;
-  final VoidCallback? onTap;
 
   @override
   State<BerryCalendarRing> createState() => _BerryCalendarRingState();
@@ -249,10 +247,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
         return Center(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapUp: (details) {
-              _handleTap(details, Size.square(size));
-              widget.onTap?.call();
-            },
+            onTapUp: (details) => _handleTap(details, Size.square(size)),
             child: SizedBox.square(
               dimension: size,
               child: Stack(
