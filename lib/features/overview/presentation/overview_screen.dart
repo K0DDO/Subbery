@@ -637,6 +637,8 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
                 trailing: AppFormatters.money(subscription.priceInCents),
                 trailingColor: visual.primary,
                 accentColor: visual.glow,
+                lightAccentColor: visual.light,
+                darkAccentColor: visual.dark,
                 onTap: () => widget.onTap(subscription),
               );
             },

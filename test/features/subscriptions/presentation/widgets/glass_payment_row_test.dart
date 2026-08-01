@@ -4,25 +4,35 @@ import 'package:subberry/core/theme/app_theme.dart';
 import 'package:subberry/features/subscriptions/presentation/widgets/glass_payment_row.dart';
 
 void main() {
-  test('uses theme accent for gray or low-contrast brand colors', () {
-    const themeAccent = Color(0xFFE67F73);
-    const surface = Color(0xFFF2ECEA);
+  test('uses dark logo variant for neutral accents in light theme', () {
+    const lightVariant = Color(0xFFB0B0B0);
+    const darkVariant = Color(0xFF303030);
 
     expect(
       visiblePaymentAccent(
         candidate: const Color(0xFF454545),
-        themeAccent: themeAccent,
-        surface: surface,
+        lightVariant: lightVariant,
+        darkVariant: darkVariant,
+        brightness: Brightness.light,
+        surface: const Color(0xFFF2ECEA),
       ),
-      themeAccent,
+      darkVariant,
     );
+  });
+
+  test('uses light logo variant for neutral accents in dark theme', () {
+    const lightVariant = Color(0xFFB0B0B0);
+    const darkVariant = Color(0xFF303030);
+
     expect(
       visiblePaymentAccent(
-        candidate: const Color(0xFFEFE9E7),
-        themeAccent: themeAccent,
-        surface: surface,
+        candidate: const Color(0xFF454545),
+        lightVariant: lightVariant,
+        darkVariant: darkVariant,
+        brightness: Brightness.dark,
+        surface: const Color(0xFF202020),
       ),
-      themeAccent,
+      lightVariant,
     );
   });
 
@@ -31,7 +41,9 @@ void main() {
     expect(
       visiblePaymentAccent(
         candidate: spotify,
-        themeAccent: const Color(0xFFE67F73),
+        lightVariant: const Color(0xFF4CDE7C),
+        darkVariant: const Color(0xFF128C3E),
+        brightness: Brightness.light,
         surface: const Color(0xFFF2ECEA),
       ),
       spotify,

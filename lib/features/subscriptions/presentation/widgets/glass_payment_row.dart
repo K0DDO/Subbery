@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/glass_theme.dart';
 
 @visibleForTesting
 Color visiblePaymentAccent({
-  required Color? candidate,
-  required Color themeAccent,
+  required Color candidate,
+  required Color lightVariant,
+  required Color darkVariant,
+  required Brightness brightness,
   required Color surface,
 }) {
-  if (candidate == null) return themeAccent;
   final hsl = HSLColor.fromColor(candidate);
   final luminanceDelta =
       (candidate.computeLuminance() - surface.computeLuminance()).abs();
   if (hsl.saturation < 0.24 || luminanceDelta < 0.08) {
-    return themeAccent;
+    return brightness == Brightness.dark ? lightVariant : darkVariant;
   }
   return candidate;
 }
@@ -29,6 +29,8 @@ class GlassPaymentRow extends StatelessWidget {
     this.subtitle,
     this.trailingColor,
     this.accentColor,
+    this.lightAccentColor,
+    this.darkAccentColor,
     this.onTap,
     super.key,
   });
@@ -39,25 +41,32 @@ class GlassPaymentRow extends StatelessWidget {
   final String trailing;
   final Color? trailingColor;
   final Color? accentColor;
+  final Color? lightAccentColor;
+  final Color? darkAccentColor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final glass = Theme.of(context).extension<GlassTheme>()!;
     final theme = Theme.of(context);
-    final themeAccent = context.subberryTheme.primary;
-    final visibleTrailingColor = trailingColor == null
+    final resolvedTrailingColor = trailingColor;
+    final resolvedBorderColor = accentColor;
+    final visibleTrailingColor = resolvedTrailingColor == null
         ? null
         : visiblePaymentAccent(
-            candidate: trailingColor,
-            themeAccent: themeAccent,
+            candidate: resolvedTrailingColor,
+            lightVariant: lightAccentColor ?? resolvedTrailingColor,
+            darkVariant: darkAccentColor ?? resolvedTrailingColor,
+            brightness: theme.brightness,
             surface: glass.surface,
           );
-    final visibleBorderAccent = accentColor == null
+    final visibleBorderAccent = resolvedBorderColor == null
         ? null
         : visiblePaymentAccent(
-            candidate: accentColor,
-            themeAccent: themeAccent,
+            candidate: resolvedBorderColor,
+            lightVariant: lightAccentColor ?? resolvedBorderColor,
+            darkVariant: darkAccentColor ?? resolvedBorderColor,
+            brightness: theme.brightness,
             surface: glass.surface,
           );
     final amountStyle = theme.textTheme.titleSmall?.copyWith(
