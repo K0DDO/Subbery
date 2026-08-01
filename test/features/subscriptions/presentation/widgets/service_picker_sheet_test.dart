@@ -72,9 +72,9 @@ void main() {
     expect(third, findsOneWidget);
     expect(tester.getTopLeft(first).dy, tester.getTopLeft(second).dy);
     expect(tester.getTopLeft(second).dy, tester.getTopLeft(third).dy);
-    expect(tester.getSize(first).height, closeTo(96, 0.1));
-    expect(tester.getSize(second).height, closeTo(96, 0.1));
-    expect(tester.getSize(third).height, closeTo(96, 0.1));
+    expect(tester.getSize(first).height, closeTo(100, 0.1));
+    expect(tester.getSize(second).height, closeTo(100, 0.1));
+    expect(tester.getSize(third).height, closeTo(100, 0.1));
     expect(tester.getTopLeft(first).dx, lessThan(tester.getTopLeft(second).dx));
     expect(tester.getTopLeft(second).dx, lessThan(tester.getTopLeft(third).dx));
   });

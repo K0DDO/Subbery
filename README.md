@@ -52,6 +52,15 @@
   <img src="docs/screenshots/subscriptions.jpg" width="280" alt="Экран подписок">
 </p>
 
+### Новая подписка
+Выберите сервис из сетки логотипов — название, категория и иконка подставятся сами. Или добавьте свой сервис.
+
+<p align="center">
+  <img src="docs/screenshots/add_subscription.jpg" width="280" alt="Новая подписка">
+  &nbsp;
+  <img src="docs/screenshots/service_picker.jpg" width="280" alt="Выбор сервиса">
+</p>
+
 ### Аналитика
 Месяц, год и общий итог. Динамика плана и факта, структура по категориям, понятные подсказки.
 
@@ -71,6 +80,16 @@
 
 <p align="center">
   <img src="docs/screenshots/settings.jpg" width="280" alt="Настройки внешнего вида">
+</p>
+
+---
+
+## Какие подписки поддерживаются
+
+Более 80 готовых сервисов с логотипами: стриминг, музыка, работа, AI, облака, игры, VPN и хостинг. Свои записи тоже можно добавить.
+
+<p align="center">
+  <img src="docs/screenshots/catalog_grid.jpg" width="920" alt="Каталог поддерживаемых сервисов">
 </p>
 
 ---

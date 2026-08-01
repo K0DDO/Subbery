@@ -14,7 +14,7 @@ import 'service_logo.dart';
 const int _columns = 3;
 const int _minRows = 3;
 const int _maxRows = 4;
-const double _cellExtent = 96;
+const double _cellExtent = 100;
 const double _cellSpacing = AppSpacing.xs;
 
 /// Everything above and below the grid: drag handle, title, search, categories.
