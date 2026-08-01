@@ -127,6 +127,14 @@ class _LegendItem extends StatelessWidget {
           category.category.label,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          AppFormatters.money(category.amountInCents),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ],
     );
     if (onTap == null) return row;

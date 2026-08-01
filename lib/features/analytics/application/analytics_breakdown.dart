@@ -1,4 +1,5 @@
 import '../../../core/models/monthly_spend_point.dart';
+import '../../overview/application/overview_metrics.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
 import '../../subscriptions/presentation/subscription_ui_extensions.dart';
@@ -177,6 +178,60 @@ class AnalyticsBreakdown {
       'Декабрь',
     ];
     return '${months[month.month - 1]} ${month.year}';
+  }
+
+  static String monthName(DateTime month) {
+    const months = <String>[
+      'Январь',
+      'Февраль',
+      'Март',
+      'Апрель',
+      'Май',
+      'Июнь',
+      'Июль',
+      'Август',
+      'Сентябрь',
+      'Октябрь',
+      'Ноябрь',
+      'Декабрь',
+    ];
+    return months[month.month - 1];
+  }
+
+  static List<MonthlySpendPoint> yearSpending({
+    required List<Subscription> subscriptions,
+    required List<Payment> payments,
+    required int year,
+  }) {
+    final active = subscriptions
+        .where((item) => item.status == SubscriptionStatus.active)
+        .toList(growable: false);
+    final plannedOccurrences = OverviewMetrics.buildYearOccurrences(
+      active,
+      year,
+    );
+    return <MonthlySpendPoint>[
+      for (var month = 1; month <= 12; month++)
+        MonthlySpendPoint(
+          month: DateTime(year, month),
+          amountInCents: payments
+              .where(
+                (payment) =>
+                    payment.date.year == year && payment.date.month == month,
+              )
+              .fold<int>(0, (sum, payment) => sum + payment.amountInCents),
+          plannedAmountInCents: plannedOccurrences
+              .where(
+                (occurrence) =>
+                    occurrence.date.year == year &&
+                    occurrence.date.month == month,
+              )
+              .fold<int>(
+                0,
+                (sum, occurrence) => sum + occurrence.subscription.priceInCents,
+              ),
+        ),
+    ];
   }
 
   static String categoryLabel(SubscriptionCategory category) => category.label;

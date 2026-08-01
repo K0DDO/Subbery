@@ -7,13 +7,16 @@ class MorphingSheetController extends ChangeNotifier {
 
   final MorphingSheetAnimationSettings settings;
   final ScrollController scrollController = ScrollController();
+  final ValueNotifier<bool> sheetDragging = ValueNotifier<bool>(false);
 
   AnimationController? _animationController;
   VoidCallback? _dismiss;
   double _dragTravel = 1;
   bool _hasInteracted = false;
+  bool _isClosing = false;
 
   bool get hasInteracted => _hasInteracted;
+  bool get isClosing => _isClosing;
   double get progress => _animationController?.value ?? 0;
 
   void attach({
@@ -36,9 +39,11 @@ class MorphingSheetController extends ChangeNotifier {
   }
 
   void updateDrag(double primaryDelta) {
+    if (_isClosing) return;
     final animation = _animationController;
     if (animation == null) return;
     _beginInteraction();
+    sheetDragging.value = true;
     animation.stop();
     animation.value = (animation.value - primaryDelta / _dragTravel).clamp(
       0.0,
@@ -47,8 +52,10 @@ class MorphingSheetController extends ChangeNotifier {
   }
 
   void endDrag(double primaryVelocity) {
+    if (_isClosing) return;
     final animation = _animationController;
     if (animation == null) return;
+    sheetDragging.value = false;
     final dismissedFraction = 1 - animation.value;
     if (primaryVelocity > settings.dismissVelocity ||
         dismissedFraction >= settings.dismissThreshold) {
@@ -67,7 +74,11 @@ class MorphingSheetController extends ChangeNotifier {
   }
 
   void dismiss() {
+    if (_isClosing) return;
+    _isClosing = true;
+    sheetDragging.value = false;
     _beginInteraction();
+    notifyListeners();
     _dismiss?.call();
   }
 
@@ -79,6 +90,7 @@ class MorphingSheetController extends ChangeNotifier {
 
   @override
   void dispose() {
+    sheetDragging.dispose();
     scrollController.dispose();
     _animationController = null;
     _dismiss = null;

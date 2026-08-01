@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/monthly_spend_point.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/glass_theme.dart';
 import '../../../../core/utils/app_formatters.dart';
 import '../../../overview/presentation/widgets/spending_bar_chart.dart';
 import '../../../shell/presentation/hotbar_morph_sheet.dart';
@@ -13,6 +16,9 @@ import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/analytics_breakdown.dart';
 import '../../application/analytics_metrics.dart';
 import 'category_spending_chart.dart';
+
+const _actualSpendColor = Color(0xFFFF7665);
+const _expectedSpendColor = Color(0xFFFFB894);
 
 Future<void> _showDropletSheet({
   required BuildContext context,
@@ -36,16 +42,47 @@ Future<void> showPeriodSpendingSheet({
     period: period,
     now: now,
   );
-  return showSpendingRowsSheet(
-    context: context,
-    title: AnalyticsBreakdown.periodTitle(period, now),
-    subtitle: AppFormatters.money(AnalyticsBreakdown.sumRows(rows)),
-    rows: rows,
-    plannedInCents: plannedInCents,
-    footnote: footnote,
-    period: period,
-    periodDate: now,
-  );
+  return switch (period) {
+    AnalyticsPeriod.month => _showDropletSheet(
+      context: context,
+      builder: (sheetContext) => _MonthAnalyticsSheet(
+        now: now,
+        rows: rows,
+        plannedInCents: plannedInCents ?? 0,
+        footnote: footnote,
+        onPaymentTap: (row) => _openSubscription(context, sheetContext, row),
+      ),
+    ),
+    AnalyticsPeriod.year => _showDropletSheet(
+      context: context,
+      builder: (sheetContext) => _YearAnalyticsSheet(
+        year: now.year,
+        now: now,
+        points: AnalyticsBreakdown.yearSpending(
+          subscriptions: subscriptions,
+          payments: payments,
+          year: now.year,
+        ),
+        onMonthTap: (point) {
+          Navigator.pop(sheetContext);
+          showMonthSpendingSheet(
+            context: context,
+            month: point.month,
+            payments: payments,
+            subscriptions: subscriptions,
+            plannedInCents: point.plannedAmountInCents,
+          );
+        },
+      ),
+    ),
+    AnalyticsPeriod.total => _showDropletSheet(
+      context: context,
+      builder: (sheetContext) => _TotalAnalyticsSheet(
+        rows: rows,
+        onPaymentTap: (row) => _openSubscription(context, sheetContext, row),
+      ),
+    ),
+  };
 }
 
 Future<void> showMonthSpendingSheet({
@@ -60,64 +97,15 @@ Future<void> showMonthSpendingSheet({
     subscriptions: subscriptions,
     month: month,
   );
-  return showSpendingRowsSheet(
-    context: context,
-    title: AnalyticsBreakdown.monthLabel(month),
-    subtitle: AppFormatters.money(AnalyticsBreakdown.sumRows(rows)),
-    rows: rows,
-    plannedInCents: plannedInCents,
-    period: AnalyticsPeriod.month,
-    periodDate: month,
-  );
-}
-
-Future<void> showSpendingRowsSheet({
-  required BuildContext context,
-  required String title,
-  required String subtitle,
-  required List<PaymentSpendRow> rows,
-  int? plannedInCents,
-  String? footnote,
-  AnalyticsPeriod? period,
-  DateTime? periodDate,
-}) {
-  final actualInCents = AnalyticsBreakdown.sumRows(rows);
-  final summary = switch (period) {
-    AnalyticsPeriod.month => _PaymentCategorySummary(rows: rows),
-    AnalyticsPeriod.year => _YearSpendingSummary(
-      rows: rows,
-      year: periodDate?.year ?? DateTime.now().year,
-    ),
-    AnalyticsPeriod.total => _TopSubscriptionsSummary(rows: rows),
-    null => null,
-  };
+  final now = DateTime.now();
   return _showDropletSheet(
     context: context,
-    builder: (sheetContext) => _SpendingDetailSheet(
-      title: title,
-      subtitle: subtitle,
-      actualInCents: plannedInCents == null ? null : actualInCents,
+    builder: (sheetContext) => _MonthAnalyticsSheet(
+      now: now,
+      month: month,
+      rows: rows,
       plannedInCents: plannedInCents,
-      footnote: footnote,
-      summary: summary,
-      child: rows.isEmpty
-          ? const _EmptyDetail(message: 'За этот период платежей пока нет')
-          : Column(
-              children: <Widget>[
-                for (final row in rows)
-                  _PaymentTile(
-                    row: row,
-                    onTap: row.subscription == null
-                        ? null
-                        : () {
-                            Navigator.pop(sheetContext);
-                            context.push(
-                              '/subscriptions/${row.subscription!.id}',
-                            );
-                          },
-                  ),
-              ],
-            ),
+      onPaymentTap: (row) => _openSubscription(context, sheetContext, row),
     ),
   );
 }
@@ -130,22 +118,18 @@ Future<void> showDynamicsDetailSheet({
 }) {
   return _showDropletSheet(
     context: context,
-    builder: (sheetContext) => _SpendingDetailSheet(
-      title: 'Динамика расходов',
-      subtitle: 'Последние ${points.length} месяцев',
-      child: _DynamicsSheetContent(
-        points: points,
-        onPointSelected: (point) {
-          Navigator.pop(sheetContext);
-          showMonthSpendingSheet(
-            context: context,
-            month: point.month,
-            payments: payments,
-            subscriptions: subscriptions,
-            plannedInCents: point.plannedAmountInCents,
-          );
-        },
-      ),
+    builder: (sheetContext) => _DynamicsAnalyticsSheet(
+      points: points,
+      onPointSelected: (point) {
+        Navigator.pop(sheetContext);
+        showMonthSpendingSheet(
+          context: context,
+          month: point.month,
+          payments: payments,
+          subscriptions: subscriptions,
+          plannedInCents: point.plannedAmountInCents,
+        );
+      },
     ),
   );
 }
@@ -158,70 +142,19 @@ Future<void> showCategoriesDetailSheet({
 }) {
   return _showDropletSheet(
     context: context,
-    builder: (sheetContext) {
-      final total = categories.fold<int>(
-        0,
-        (sum, item) => sum + item.amountInCents,
-      );
-      return _SpendingDetailSheet(
-        title: 'По категориям',
-        subtitle: 'Средняя нагрузка ${AppFormatters.money(total)} / мес',
-        child: categories.isEmpty
-            ? const _EmptyDetail(message: 'Нет активных подписок')
-            : Column(
-                children: <Widget>[
-                  CategorySpendingChart(
-                    categories: categories,
-                    onCategorySelected: (category) {
-                      Navigator.pop(sheetContext);
-                      showCategorySubscriptionsSheet(
-                        context: context,
-                        category: category.category,
-                        amountInCents: category.amountInCents,
-                        subscriptions: subscriptions,
-                        now: now,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  for (final category in categories)
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs,
-                      ),
-                      leading: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: category.category.color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      title: Text(category.category.label),
-                      subtitle: Text(
-                        total == 0
-                            ? '0%'
-                            : '${((category.amountInCents / total) * 100).round()}% нагрузки',
-                      ),
-                      trailing: Text(
-                        AppFormatters.money(category.amountInCents),
-                        style: Theme.of(sheetContext).textTheme.titleMedium,
-                      ),
-                      onTap: () {
-                        Navigator.pop(sheetContext);
-                        showCategorySubscriptionsSheet(
-                          context: context,
-                          category: category.category,
-                          amountInCents: category.amountInCents,
-                          subscriptions: subscriptions,
-                          now: now,
-                        );
-                      },
-                    ),
-                ],
-              ),
-      );
-    },
+    builder: (sheetContext) => _CategoriesAnalyticsSheet(
+      categories: categories,
+      onCategorySelected: (category) {
+        Navigator.pop(sheetContext);
+        showCategorySubscriptionsSheet(
+          context: context,
+          category: category.category,
+          amountInCents: category.amountInCents,
+          subscriptions: subscriptions,
+          now: now,
+        );
+      },
+    ),
   );
 }
 
@@ -239,137 +172,495 @@ Future<void> showCategorySubscriptionsSheet({
   );
   return _showDropletSheet(
     context: context,
-    builder: (sheetContext) => _SpendingDetailSheet(
+    builder: (sheetContext) => _SheetScaffold(
       title: category.label,
       subtitle: 'Около ${AppFormatters.money(amountInCents)} в месяц',
-      child: rows.isEmpty
-          ? const _EmptyDetail(message: 'В категории пока пусто')
-          : Column(
-              children: <Widget>[
-                for (final row in rows)
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                    ),
-                    leading: ServiceLogo(
-                      name: row.subscription.name,
-                      logoKey: row.subscription.logo,
-                      category: row.subscription.category,
-                      size: 40,
-                    ),
-                    title: Text(row.subscription.name),
-                    trailing: Text(
-                      AppFormatters.money(row.monthlyEstimateInCents),
-                      style: Theme.of(sheetContext).textTheme.titleMedium,
-                    ),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      context.push('/subscriptions/${row.subscription.id}');
-                    },
-                  ),
-              ],
+      accent: category.color,
+      children: <Widget>[
+        if (rows.isEmpty)
+          const _EmptyDetail(message: 'В категории пока пусто')
+        else
+          for (final row in rows)
+            _GlassPaymentRow(
+              leading: ServiceLogo(
+                name: row.subscription.name,
+                logoKey: row.subscription.logo,
+                category: row.subscription.category,
+                size: 40,
+              ),
+              title: row.subscription.name,
+              trailing: AppFormatters.money(row.monthlyEstimateInCents),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/subscriptions/${row.subscription.id}');
+              },
             ),
+      ],
     ),
   );
 }
 
-class _SpendingDetailSheet extends StatelessWidget {
-  const _SpendingDetailSheet({
+void _openSubscription(
+  BuildContext context,
+  BuildContext sheetContext,
+  PaymentSpendRow row,
+) {
+  if (row.subscription == null) return;
+  Navigator.pop(sheetContext);
+  context.push('/subscriptions/${row.subscription!.id}');
+}
+
+enum _MonthKind { past, current, future }
+
+_MonthKind _monthKind(DateTime month, DateTime now) {
+  final current = DateTime(now.year, now.month);
+  final target = DateTime(month.year, month.month);
+  if (target.isBefore(current)) return _MonthKind.past;
+  if (target.isAfter(current)) return _MonthKind.future;
+  return _MonthKind.current;
+}
+
+class _SheetScaffold extends StatelessWidget {
+  const _SheetScaffold({
     required this.title,
     required this.subtitle,
-    required this.child,
-    this.actualInCents,
-    this.plannedInCents,
-    this.footnote,
-    this.summary,
+    required this.children,
+    this.accent = _actualSpendColor,
+    this.hero,
   });
 
   final String title;
   final String subtitle;
-  final int? actualInCents;
-  final int? plannedInCents;
-  final String? footnote;
-  final Widget? summary;
-  final Widget child;
+  final Color accent;
+  final Widget? hero;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        52,
+        AppSpacing.lg,
         AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.sm,
       ),
       children: <Widget>[
-        Center(
-          child: Container(
-            width: 42,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(99),
-            ),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           subtitle,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
+            color: accent,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        if (actualInCents != null && plannedInCents != null) ...<Widget>[
+        if (hero != null) ...<Widget>[
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _AmountSummary(
-                  label: 'Фактически',
-                  amountInCents: actualInCents!,
-                  color: Theme.of(context).colorScheme.primary,
-                  filled: true,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _AmountSummary(
-                  label: 'По плану',
-                  amountInCents: plannedInCents!,
-                  color: Theme.of(context).colorScheme.secondary,
-                  filled: false,
-                ),
-              ),
-            ],
-          ),
+          hero!,
         ],
-        if (footnote != null) ...<Widget>[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            footnote!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-        if (summary != null) ...<Widget>[
-          const SizedBox(height: AppSpacing.md),
-          summary!,
-        ],
-        const SizedBox(height: AppSpacing.sm),
-        child,
+        const SizedBox(height: AppSpacing.md),
+        ...children,
       ],
     );
   }
 }
 
-class _DynamicsSheetContent extends StatefulWidget {
-  const _DynamicsSheetContent({
+class _MonthAnalyticsSheet extends StatelessWidget {
+  const _MonthAnalyticsSheet({
+    required this.now,
+    required this.rows,
+    required this.plannedInCents,
+    required this.onPaymentTap,
+    this.month,
+    this.footnote,
+  });
+
+  final DateTime now;
+  final DateTime? month;
+  final List<PaymentSpendRow> rows;
+  final int plannedInCents;
+  final String? footnote;
+  final ValueChanged<PaymentSpendRow> onPaymentTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final target = month ?? DateTime(now.year, now.month);
+    final kind = _monthKind(target, now);
+    final actual = AnalyticsBreakdown.sumRows(rows);
+    final expected = math.max(0, plannedInCents - actual);
+    final forecast = actual + expected;
+
+    return _SheetScaffold(
+      title: AnalyticsBreakdown.monthLabel(target),
+      subtitle: switch (kind) {
+        _MonthKind.past => 'Фактические расходы',
+        _MonthKind.current => 'Факт, ожидание и прогноз',
+        _MonthKind.future => 'Ожидаемые расходы',
+      },
+      accent: kind == _MonthKind.future
+          ? _expectedSpendColor
+          : _actualSpendColor,
+      hero: switch (kind) {
+        _MonthKind.past => _SpendHeroCard(
+          label: 'Фактически',
+          amountInCents: actual,
+          color: _actualSpendColor,
+        ),
+        _MonthKind.current => _CurrentMonthHero(
+          actualInCents: actual,
+          expectedInCents: expected,
+          forecastInCents: forecast,
+        ),
+        _MonthKind.future => _SpendHeroCard(
+          label: 'Ожидается',
+          amountInCents: plannedInCents,
+          color: _expectedSpendColor,
+        ),
+      },
+      children: <Widget>[
+        if (footnote != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Text(
+              footnote!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        _SectionLabel('Категории месяца'),
+        const SizedBox(height: AppSpacing.sm),
+        _PaymentCategoryChips(rows: rows),
+        const SizedBox(height: AppSpacing.md),
+        _SectionLabel('Подписки и платежи'),
+        const SizedBox(height: AppSpacing.sm),
+        if (rows.isEmpty)
+          const _EmptyDetail(message: 'За этот период платежей пока нет')
+        else
+          for (final row in rows)
+            _GlassPaymentRow(
+              leading: ServiceLogo(
+                name: row.name,
+                logoKey: row.logoKey,
+                category: row.category,
+                size: 40,
+              ),
+              title: row.name,
+              subtitle: AppFormatters.shortDate(row.payment.date),
+              trailing: AppFormatters.money(row.payment.amountInCents),
+              trailingColor: _actualSpendColor,
+              onTap: () => onPaymentTap(row),
+            ),
+      ],
+    );
+  }
+}
+
+class _YearAnalyticsSheet extends StatelessWidget {
+  const _YearAnalyticsSheet({
+    required this.year,
+    required this.now,
+    required this.points,
+    required this.onMonthTap,
+  });
+
+  final int year;
+  final DateTime now;
+  final List<MonthlySpendPoint> points;
+  final ValueChanged<MonthlySpendPoint> onMonthTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = points
+        .where((point) {
+          final kind = _monthKind(point.month, now);
+          return switch (kind) {
+            _MonthKind.past => point.amountInCents > 0,
+            _MonthKind.current =>
+              point.amountInCents > 0 || point.plannedAmountInCents > 0,
+            _MonthKind.future => point.plannedAmountInCents > 0,
+          };
+        })
+        .toList(growable: false);
+    final maxValue = visible.fold<int>(
+      0,
+      (max, point) => math.max(
+        max,
+        math.max(point.amountInCents, point.plannedAmountInCents),
+      ),
+    );
+    final yearActual = points.fold<int>(
+      0,
+      (sum, point) => sum + point.amountInCents,
+    );
+
+    return _SheetScaffold(
+      title: 'Траты за $year',
+      subtitle: 'Помесячная картина года',
+      accent: _actualSpendColor,
+      hero: _SpendHeroCard(
+        label: 'Факт за год',
+        amountInCents: yearActual,
+        color: _actualSpendColor,
+      ),
+      children: <Widget>[
+        _SectionLabel('Месяцы'),
+        const SizedBox(height: AppSpacing.sm),
+        if (visible.isEmpty)
+          const _EmptyDetail(message: 'За этот год расходов пока нет')
+        else
+          for (final point in visible) ...<Widget>[
+            _YearMonthGlassRow(
+              point: point,
+              now: now,
+              maxAmountInCents: math.max(maxValue, 1),
+              onTap: () => onMonthTap(point),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+      ],
+    );
+  }
+}
+
+class _YearMonthGlassRow extends StatelessWidget {
+  const _YearMonthGlassRow({
+    required this.point,
+    required this.now,
+    required this.maxAmountInCents,
+    required this.onTap,
+  });
+
+  final MonthlySpendPoint point;
+  final DateTime now;
+  final int maxAmountInCents;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final glass = Theme.of(context).extension<GlassTheme>()!;
+    final kind = _monthKind(point.month, now);
+    final actual = point.amountInCents;
+    final expected = math.max(0, point.plannedAmountInCents - actual);
+    final displayAmount = switch (kind) {
+      _MonthKind.past => actual,
+      _MonthKind.current => actual + expected,
+      _MonthKind.future => point.plannedAmountInCents,
+    };
+    final barColor = kind == _MonthKind.future
+        ? _expectedSpendColor
+        : _actualSpendColor;
+    final ratio = (displayAmount / maxAmountInCents).clamp(0.0, 1.0);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: glass.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: glass.border),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: barColor.withValues(alpha: 0.12),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      AnalyticsBreakdown.monthName(point.month),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    AppFormatters.money(displayAmount),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: barColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: SizedBox(
+                  height: 12,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth;
+                      if (kind == _MonthKind.current) {
+                        final actualWidth =
+                            width * (actual / maxAmountInCents).clamp(0.0, 1.0);
+                        final expectedWidth =
+                            width *
+                            (expected / maxAmountInCents).clamp(0.0, 1.0);
+                        return Stack(
+                          children: <Widget>[
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: _expectedSpendColor.withValues(
+                                  alpha: 0.14,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: actualWidth,
+                              child: const ColoredBox(color: _actualSpendColor),
+                            ),
+                            Positioned(
+                              left: actualWidth,
+                              top: 0,
+                              bottom: 0,
+                              width: expectedWidth,
+                              child: ColoredBox(
+                                color: _expectedSpendColor.withValues(
+                                  alpha: 0.85,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      return Stack(
+                        children: <Widget>[
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: barColor.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: width * ratio,
+                            child: ColoredBox(
+                              color: barColor.withValues(
+                                alpha: kind == _MonthKind.future ? 0.72 : 1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+              if (kind == _MonthKind.current) ...<Widget>[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Факт ${AppFormatters.money(actual)} · '
+                  'Ожидается ${AppFormatters.money(expected)}',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TotalAnalyticsSheet extends StatelessWidget {
+  const _TotalAnalyticsSheet({required this.rows, required this.onPaymentTap});
+
+  final List<PaymentSpendRow> rows;
+  final ValueChanged<PaymentSpendRow> onPaymentTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = AnalyticsBreakdown.sumRows(rows);
+    final totals = <String, ({PaymentSpendRow row, int amount})>{};
+    for (final row in rows) {
+      final key = row.subscription?.id ?? row.name;
+      final previous = totals[key];
+      totals[key] = (
+        row: row,
+        amount: (previous?.amount ?? 0) + row.payment.amountInCents,
+      );
+    }
+    final top = totals.values.toList(growable: false)
+      ..sort((left, right) => right.amount.compareTo(left.amount));
+
+    return _SheetScaffold(
+      title: 'Все траты',
+      subtitle: 'История и самые дорогие подписки',
+      accent: _actualSpendColor,
+      hero: _SpendHeroCard(
+        label: 'Всего потрачено',
+        amountInCents: total,
+        color: _actualSpendColor,
+      ),
+      children: <Widget>[
+        _SectionLabel('Топ подписок'),
+        const SizedBox(height: AppSpacing.sm),
+        if (top.isEmpty)
+          const _EmptyDetail(message: 'История платежей пока пуста')
+        else
+          for (final item in top.take(5))
+            _GlassPaymentRow(
+              leading: ServiceLogo(
+                name: item.row.name,
+                logoKey: item.row.logoKey,
+                category: item.row.category,
+                size: 40,
+              ),
+              title: item.row.name,
+              trailing: AppFormatters.money(item.amount),
+              trailingColor: _actualSpendColor,
+              onTap: item.row.subscription == null
+                  ? null
+                  : () => onPaymentTap(item.row),
+            ),
+        const SizedBox(height: AppSpacing.md),
+        _SectionLabel('История платежей'),
+        const SizedBox(height: AppSpacing.sm),
+        for (final row in rows.take(20))
+          _GlassPaymentRow(
+            leading: ServiceLogo(
+              name: row.name,
+              logoKey: row.logoKey,
+              category: row.category,
+              size: 36,
+            ),
+            title: row.name,
+            subtitle: AppFormatters.shortDate(row.payment.date),
+            trailing: AppFormatters.money(row.payment.amountInCents),
+            trailingColor: _actualSpendColor,
+            onTap: () => onPaymentTap(row),
+          ),
+      ],
+    );
+  }
+}
+
+class _DynamicsAnalyticsSheet extends StatefulWidget {
+  const _DynamicsAnalyticsSheet({
     required this.points,
     required this.onPointSelected,
   });
@@ -378,10 +669,11 @@ class _DynamicsSheetContent extends StatefulWidget {
   final ValueChanged<MonthlySpendPoint> onPointSelected;
 
   @override
-  State<_DynamicsSheetContent> createState() => _DynamicsSheetContentState();
+  State<_DynamicsAnalyticsSheet> createState() =>
+      _DynamicsAnalyticsSheetState();
 }
 
-class _DynamicsSheetContentState extends State<_DynamicsSheetContent> {
+class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
   int _period = 6;
 
   @override
@@ -395,9 +687,12 @@ class _DynamicsSheetContentState extends State<_DynamicsSheetContent> {
     final difference = latest - previous;
     final differenceColor = difference <= 0
         ? const Color(0xFF63C987)
-        : Theme.of(context).colorScheme.primary;
+        : _actualSpendColor;
 
-    return Column(
+    return _SheetScaffold(
+      title: 'Динамика расходов',
+      subtitle: 'Большой график и фильтр периода',
+      accent: _actualSpendColor,
       children: <Widget>[
         Align(
           alignment: Alignment.centerLeft,
@@ -414,17 +709,34 @@ class _DynamicsSheetContentState extends State<_DynamicsSheetContent> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        SpendingBarChart(
-          points: visible,
-          height: 240,
-          onBarSelected: widget.onPointSelected,
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).extension<GlassTheme>()!.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: Theme.of(context).extension<GlassTheme>()!.border,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.sm,
+            ),
+            child: SpendingBarChart(
+              points: visible,
+              height: 260,
+              onBarSelected: widget.onPointSelected,
+            ),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: differenceColor.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            color: differenceColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: differenceColor.withValues(alpha: 0.28)),
           ),
           child: Row(
@@ -440,31 +752,29 @@ class _DynamicsSheetContentState extends State<_DynamicsSheetContent> {
                 child: Text(
                   difference == 0
                       ? 'Без изменений к прошлому месяцу'
-                      : '${difference > 0 ? '+' : '−'}${AppFormatters.money(difference.abs())} к прошлому месяцу',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(color: differenceColor),
+                      : '${difference > 0 ? '+' : '−'}'
+                            '${AppFormatters.money(difference.abs())} к прошлому месяцу',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: differenceColor,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         for (final point in visible.reversed)
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
+          _GlassPaymentRow(
+            leading: Icon(
+              Icons.calendar_month_rounded,
+              color: _actualSpendColor.withValues(alpha: 0.9),
             ),
-            title: Text(AnalyticsBreakdown.monthLabel(point.month)),
-            trailing: Text(
-              'Факт ${AppFormatters.money(point.amountInCents)}\n'
-              'План ${AppFormatters.money(point.plannedAmountInCents)}',
-              textAlign: TextAlign.end,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                height: 1.45,
-              ),
-            ),
+            title: AnalyticsBreakdown.monthLabel(point.month),
+            subtitle:
+                'Факт ${AppFormatters.money(point.amountInCents)} · '
+                'План ${AppFormatters.money(point.plannedAmountInCents)}',
+            trailing: '',
             onTap: () => widget.onPointSelected(point),
           ),
       ],
@@ -472,8 +782,166 @@ class _DynamicsSheetContentState extends State<_DynamicsSheetContent> {
   }
 }
 
-class _PaymentCategorySummary extends StatelessWidget {
-  const _PaymentCategorySummary({required this.rows});
+class _CategoriesAnalyticsSheet extends StatelessWidget {
+  const _CategoriesAnalyticsSheet({
+    required this.categories,
+    required this.onCategorySelected,
+  });
+
+  final List<CategorySpend> categories;
+  final ValueChanged<CategorySpend> onCategorySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = categories.fold<int>(
+      0,
+      (sum, item) => sum + item.amountInCents,
+    );
+    return _SheetScaffold(
+      title: 'По категориям',
+      subtitle: 'Средняя нагрузка ${AppFormatters.money(total)} / мес',
+      accent: Theme.of(context).colorScheme.secondary,
+      children: <Widget>[
+        if (categories.isEmpty)
+          const _EmptyDetail(message: 'Нет активных подписок')
+        else ...<Widget>[
+          CategorySpendingChart(
+            categories: categories,
+            onCategorySelected: onCategorySelected,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (final category in categories)
+            _GlassPaymentRow(
+              leading: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: category.category.color,
+                  shape: BoxShape.circle,
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: category.category.color.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+              ),
+              title: category.category.label,
+              subtitle: total == 0
+                  ? '0%'
+                  : '${((category.amountInCents / total) * 100).round()}% нагрузки',
+              trailing: AppFormatters.money(category.amountInCents),
+              trailingColor: category.category.color,
+              onTap: () => onCategorySelected(category),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CurrentMonthHero extends StatelessWidget {
+  const _CurrentMonthHero({
+    required this.actualInCents,
+    required this.expectedInCents,
+    required this.forecastInCents,
+  });
+
+  final int actualInCents;
+  final int expectedInCents;
+  final int forecastInCents;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _SpendHeroCard(
+                label: 'Фактически',
+                amountInCents: actualInCents,
+                color: _actualSpendColor,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _SpendHeroCard(
+                label: 'Ожидается',
+                amountInCents: expectedInCents,
+                color: _expectedSpendColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _SpendHeroCard(
+          label: 'Прогноз',
+          amountInCents: forecastInCents,
+          color: Color.lerp(_actualSpendColor, _expectedSpendColor, 0.35)!,
+        ),
+      ],
+    );
+  }
+}
+
+class _SpendHeroCard extends StatelessWidget {
+  const _SpendHeroCard({
+    required this.label,
+    required this.amountInCents,
+    required this.color,
+  });
+
+  final String label;
+  final int amountInCents;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            color.withValues(alpha: 0.20),
+            color.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              AppFormatters.money(amountInCents),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentCategoryChips extends StatelessWidget {
+  const _PaymentCategoryChips({required this.rows});
 
   final List<PaymentSpendRow> rows;
 
@@ -489,223 +957,133 @@ class _PaymentCategorySummary extends StatelessWidget {
     }
     final categories = totals.entries.toList(growable: false)
       ..sort((left, right) => right.value.compareTo(left.value));
-    if (categories.isEmpty) return const SizedBox.shrink();
+    if (categories.isEmpty) {
+      return const _EmptyDetail(message: 'Категорий пока нет');
+    }
     final total = categories.fold<int>(0, (sum, item) => sum + item.value);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: <Widget>[
-        Text('Категории', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        for (final category in categories) ...<Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: category.key.color,
-                  shape: BoxShape.circle,
-                ),
+        for (final category in categories)
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: category.key.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              border: Border.all(
+                color: category.key.color.withValues(alpha: 0.3),
               ),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(child: Text(category.key.label)),
-              Text(
-                '${((category.value / total) * 100).round()}% · '
-                '${AppFormatters.money(category.value)}',
-                style: Theme.of(context).textTheme.labelLarge,
+            ),
+            child: Text(
+              '${category.key.label} · '
+              '${((category.value / total) * 100).round()}% · '
+              '${AppFormatters.money(category.value)}',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: category.key.color,
+                fontWeight: FontWeight.w700,
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-        ],
       ],
     );
   }
 }
 
-class _YearSpendingSummary extends StatelessWidget {
-  const _YearSpendingSummary({required this.rows, required this.year});
-
-  final List<PaymentSpendRow> rows;
-  final int year;
-
-  @override
-  Widget build(BuildContext context) {
-    final points = <MonthlySpendPoint>[
-      for (var month = 1; month <= 12; month++)
-        MonthlySpendPoint(
-          month: DateTime(year, month),
-          amountInCents: rows
-              .where(
-                (row) =>
-                    row.payment.date.year == year &&
-                    row.payment.date.month == month,
-              )
-              .fold<int>(0, (sum, row) => sum + row.payment.amountInCents),
-        ),
-    ];
-    final now = DateTime.now();
-    final comparisonMonth = now.year == year ? now.month : 12;
-    final current = points[comparisonMonth - 1].amountInCents;
-    final previous = comparisonMonth > 1
-        ? points[comparisonMonth - 2].amountInCents
-        : 0;
-    final difference = current - previous;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          'Расходы по месяцам',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        SpendingBarChart(points: points, height: 220),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          difference == 0
-              ? 'Текущий месяц без изменений'
-              : 'Текущий месяц: ${difference > 0 ? '+' : '−'}'
-                    '${AppFormatters.money(difference.abs())} к предыдущему',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TopSubscriptionsSummary extends StatelessWidget {
-  const _TopSubscriptionsSummary({required this.rows});
-
-  final List<PaymentSpendRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final totals = <String, ({PaymentSpendRow row, int amount})>{};
-    for (final row in rows) {
-      final key = row.subscription?.id ?? row.name;
-      final previous = totals[key];
-      totals[key] = (
-        row: row,
-        amount: (previous?.amount ?? 0) + row.payment.amountInCents,
-      );
-    }
-    final top = totals.values.toList(growable: false)
-      ..sort((left, right) => right.amount.compareTo(left.amount));
-    if (top.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          'Самые дорогие подписки',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        for (final item in top.take(5))
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-            ),
-            leading: ServiceLogo(
-              name: item.row.name,
-              logoKey: item.row.logoKey,
-              category: item.row.category,
-              size: 38,
-            ),
-            title: Text(item.row.name),
-            trailing: Text(
-              AppFormatters.money(item.amount),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-        const Divider(),
-        Text(
-          'История платежей',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ],
-    );
-  }
-}
-
-class _AmountSummary extends StatelessWidget {
-  const _AmountSummary({
-    required this.label,
-    required this.amountInCents,
-    required this.color,
-    required this.filled,
+class _GlassPaymentRow extends StatelessWidget {
+  const _GlassPaymentRow({
+    required this.leading,
+    required this.title,
+    required this.trailing,
+    this.subtitle,
+    this.trailingColor,
+    this.onTap,
   });
 
-  final String label;
-  final int amountInCents;
-  final Color color;
-  final bool filled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: filled ? 0.16 : 0.07),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: color.withValues(alpha: filled ? 0.28 : 0.55),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 3),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              AppFormatters.money(amountInCents),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentTile extends StatelessWidget {
-  const _PaymentTile({required this.row, this.onTap});
-
-  final PaymentSpendRow row;
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final String trailing;
+  final Color? trailingColor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      leading: ServiceLogo(
-        name: row.name,
-        logoKey: row.logoKey,
-        category: row.category,
-        size: 40,
+    final glass = Theme.of(context).extension<GlassTheme>()!;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Ink(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: glass.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: glass.border),
+            ),
+            child: Row(
+              children: <Widget>[
+                leading,
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (trailing.isNotEmpty)
+                  Text(
+                    trailing,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: trailingColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
-      title: Text(row.name),
-      subtitle: Text(AppFormatters.shortDate(row.payment.date)),
-      trailing: Text(
-        AppFormatters.money(row.payment.amountInCents),
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      onTap: onTap,
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
     );
   }
 }
@@ -718,7 +1096,7 @@ class _EmptyDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(
         child: Text(
           message,

@@ -64,7 +64,11 @@ class MorphingGlassSheet<T> extends PopupRoute<T> {
     if (animationController == null) return;
     sheetController.attach(
       animationController: animationController,
-      dismiss: () => navigator?.pop(),
+      dismiss: () {
+        final nav = navigator;
+        if (nav == null || !isCurrent) return;
+        nav.pop();
+      },
     );
   }
 
@@ -283,24 +287,27 @@ class _MeasuredMorphingGlassSheetState<T>
         return Stack(
           children: <Widget>[
             Positioned.fill(
-              child: GestureDetector(
-                key: MorphingGlassSheetKeys.barrier,
-                behavior: HitTestBehavior.opaque,
-                onTap: widget.route.sheetController.dismiss,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX:
-                        widget.route.animationSettings.backgroundBlur *
-                        overlayProgress,
-                    sigmaY:
-                        widget.route.animationSettings.backgroundBlur *
-                        overlayProgress,
-                  ),
-                  child: ColoredBox(
-                    color: Colors.black.withValues(
-                      alpha:
-                          widget.route.animationSettings.overlayOpacity *
+              child: IgnorePointer(
+                ignoring: widget.route.sheetController.isClosing,
+                child: GestureDetector(
+                  key: MorphingGlassSheetKeys.barrier,
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.route.sheetController.dismiss,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX:
+                          widget.route.animationSettings.backgroundBlur *
                           overlayProgress,
+                      sigmaY:
+                          widget.route.animationSettings.backgroundBlur *
+                          overlayProgress,
+                    ),
+                    child: ColoredBox(
+                      color: Colors.black.withValues(
+                        alpha:
+                            widget.route.animationSettings.overlayOpacity *
+                            overlayProgress,
+                      ),
                     ),
                   ),
                 ),
@@ -355,8 +362,8 @@ class _LiquidGlassSurface extends StatelessWidget {
     final glass = theme.extension<GlassTheme>()!;
     const coral = Color(0xFFDC586D);
     final luxurySurface = theme.brightness == Brightness.dark
-        ? const Color(0xE6171214)
-        : const Color(0xE6F8EDEB);
+        ? const Color(0xF2171214)
+        : const Color(0xF2F8EDEB);
     final surface = Color.lerp(glass.strongSurface, luxurySurface, progress)!;
     final radius = MorphingSheetGeometry.value(
       settings.startRadius,
@@ -368,8 +375,8 @@ class _LiquidGlassSurface extends StatelessWidget {
       settings.endBlur,
       progress,
     );
-    final shadowBlur = MorphingSheetGeometry.value(28, 48, progress);
-    final shadowOffset = MorphingSheetGeometry.value(14, 18, progress);
+    final shadowBlur = MorphingSheetGeometry.value(28, 52, progress);
+    final shadowOffset = MorphingSheetGeometry.value(14, 20, progress);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -378,12 +385,17 @@ class _LiquidGlassSurface extends StatelessWidget {
           BoxShadow(
             color: Color.lerp(
               glass.shadow,
-              coral.withValues(alpha: 0.24),
+              coral.withValues(alpha: 0.28),
               progress,
             )!,
             blurRadius: shadowBlur,
-            spreadRadius: 1 + progress * 2,
+            spreadRadius: 1 + progress * 3,
             offset: Offset(0, shadowOffset),
+          ),
+          BoxShadow(
+            color: coral.withValues(alpha: 0.10 * progress),
+            blurRadius: 36,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -398,18 +410,29 @@ class _LiquidGlassSurface extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: <Color>[
                   Color.alphaBlend(
-                    coral.withValues(alpha: 0.10 * progress),
+                    coral.withValues(alpha: 0.14 * progress),
                     surface,
                   ),
-                  surface,
+                  Color.alphaBlend(
+                    Colors.white.withValues(
+                      alpha: theme.brightness == Brightness.dark
+                          ? 0.02 * progress
+                          : 0.18 * progress,
+                    ),
+                    surface,
+                  ),
                 ],
               ),
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
                 color: Color.lerp(
                   glass.border,
-                  Colors.white.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.16 : 0.62,
+                  Color.lerp(
+                    Colors.white.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.18 : 0.72,
+                    ),
+                    coral.withValues(alpha: 0.35),
+                    0.18,
                   ),
                   progress,
                 )!,
@@ -430,15 +453,19 @@ class _LiquidGlassSurface extends StatelessWidget {
                   alignment: Alignment.topCenter,
                   child: IgnorePointer(
                     child: Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
+                      height: 1.2,
+                      margin: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        1,
+                        AppSpacing.xl,
+                        0,
                       ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: <Color>[
                             Colors.transparent,
-                            glass.highlight.withValues(alpha: 0.85),
+                            glass.highlight.withValues(alpha: 0.9),
+                            coral.withValues(alpha: 0.35 * progress),
                             Colors.transparent,
                           ],
                         ),

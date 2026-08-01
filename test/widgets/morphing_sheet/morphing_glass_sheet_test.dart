@@ -59,6 +59,23 @@ void main() {
     expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
   });
 
+  testWidgets('double tap outside does not black-screen the host route', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const _Harness(themeMode: ThemeMode.light, contentHeight: 240),
+    );
+    await _open(tester);
+
+    await tester.tapAt(const Offset(8, 8));
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
+    expect(find.text('Открыть'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('drag threshold restores or dismisses the sheet', (tester) async {
     await tester.pumpWidget(
       const _Harness(themeMode: ThemeMode.light, contentHeight: 240),
@@ -68,11 +85,11 @@ void main() {
       const ValueKey<String>('morphing-sheet-drag-handle'),
     );
 
-    await tester.drag(handle, const Offset(0, 40));
+    await tester.drag(handle, const Offset(0, 25));
     await tester.pumpAndSettle();
     expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
 
-    await tester.drag(handle, const Offset(0, 70));
+    await tester.drag(handle, const Offset(0, 120));
     await tester.pumpAndSettle();
     expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
   });
