@@ -24,9 +24,12 @@ Future<T?> showHotbarMorphSheet<T>({
       endPosition: endPosition,
       maximumHeight: maximumHeight,
       animationSettings: animationSettings,
-      source: AppHotbarContents(
-        currentIndex: AppShellHotbar.currentIndex,
-        onSelected: (_) {},
+      source: Material(
+        type: MaterialType.transparency,
+        child: AppHotbarContents(
+          currentIndex: AppShellHotbar.currentIndex,
+          onSelected: (_) {},
+        ),
       ),
       builder: builder,
     );

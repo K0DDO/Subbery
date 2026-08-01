@@ -14,6 +14,7 @@ import '../data/catalog/known_services.dart';
 import '../domain/entities/subscription.dart';
 import 'subscription_ui_extensions.dart';
 import 'widgets/service_logo.dart';
+import 'widgets/service_picker_sheet.dart';
 
 class AddSubscriptionScreen extends ConsumerStatefulWidget {
   const AddSubscriptionScreen({this.subscriptionId, super.key});
@@ -49,6 +50,24 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
       ..text = service.name
       ..selection = TextSelection.collapsed(offset: service.name.length);
     _nameFocusNode.unfocus();
+  }
+
+  void _setServiceQuery(String value) {
+    _controller().setServiceName(value);
+    _nameController
+      ..text = value
+      ..selection = TextSelection.collapsed(offset: value.length);
+  }
+
+  Future<void> _openServicePicker(String initialQuery) async {
+    _nameFocusNode.unfocus();
+    final service = await showServicePickerSheet(
+      context: context,
+      initialQuery: initialQuery,
+      onQueryChanged: _setServiceQuery,
+    );
+    if (!mounted || service == null) return;
+    _selectService(service);
   }
 
   Future<void> _pickDate(DateTime selectedDate) async {
@@ -145,36 +164,16 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                       TextField(
                         controller: _nameController,
                         focusNode: _nameFocusNode,
-                        textCapitalization: TextCapitalization.words,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const <String>[AutofillHints.name],
-                        onChanged: controller.setServiceName,
+                        readOnly: true,
+                        enableInteractiveSelection: false,
+                        onTap: () =>
+                            unawaited(_openServicePicker(state.serviceName)),
                         decoration: const InputDecoration(
-                          labelText: 'Название',
+                          labelText: 'Сервис',
                           hintText: 'Например, Netflix',
                           prefixIcon: Icon(Icons.search_rounded),
+                          suffixIcon: Icon(Icons.chevron_right_rounded),
                         ),
-                      ),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        child:
-                            state.suggestions.isEmpty || selectedService != null
-                            ? const SizedBox.shrink()
-                            : Padding(
-                                key: ValueKey<String>(state.serviceName),
-                                padding: const EdgeInsets.only(
-                                  top: AppSpacing.sm,
-                                ),
-                                child: Column(
-                                  children: <Widget>[
-                                    for (final service in state.suggestions)
-                                      _ServiceSuggestion(
-                                        service: service,
-                                        onTap: () => _selectService(service),
-                                      ),
-                                  ],
-                                ),
-                              ),
                       ),
                     ],
                   ),
@@ -529,34 +528,6 @@ class _ServicePreview extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _ServiceSuggestion extends StatelessWidget {
-  const _ServiceSuggestion({required this.service, required this.onTap});
-
-  final KnownService service;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      leading: ServiceLogo(
-        name: service.name,
-        logoKey: service.logoKey,
-        category: service.category,
-        size: 42,
-      ),
-      title: Text(service.name),
-      subtitle: Text('${service.category.emoji} ${service.category.label}'),
-      trailing: const Icon(Icons.north_west_rounded, size: 18),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      onTap: onTap,
     );
   }
 }
