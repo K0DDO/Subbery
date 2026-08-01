@@ -23,6 +23,26 @@ void main() {
     expect(music, isNotEmpty);
   });
 
+  test('keeps four rows for a full catalog and three rows as the minimum', () {
+    const tallScreen = 900.0;
+
+    expect(
+      servicePickerRowCount(
+        serviceCount: KnownServices.all.length,
+        screenHeight: tallScreen,
+      ),
+      4,
+    );
+    expect(
+      servicePickerRowCount(serviceCount: 12, screenHeight: tallScreen),
+      4,
+    );
+    expect(servicePickerRowCount(serviceCount: 5, screenHeight: tallScreen), 3);
+    expect(servicePickerRowCount(serviceCount: 1, screenHeight: tallScreen), 3);
+    expect(servicePickerRowCount(serviceCount: 0, screenHeight: tallScreen), 3);
+    expect(servicePickerRowCount(serviceCount: 60, screenHeight: 600), 3);
+  });
+
   testWidgets('renders services as equal three-column app cells', (
     tester,
   ) async {
@@ -52,11 +72,35 @@ void main() {
     expect(third, findsOneWidget);
     expect(tester.getTopLeft(first).dy, tester.getTopLeft(second).dy);
     expect(tester.getTopLeft(second).dy, tester.getTopLeft(third).dy);
-    expect(tester.getSize(first).height, closeTo(108, 0.1));
-    expect(tester.getSize(second).height, closeTo(108, 0.1));
-    expect(tester.getSize(third).height, closeTo(108, 0.1));
+    expect(tester.getSize(first).height, closeTo(96, 0.1));
+    expect(tester.getSize(second).height, closeTo(96, 0.1));
+    expect(tester.getSize(third).height, closeTo(96, 0.1));
     expect(tester.getTopLeft(first).dx, lessThan(tester.getTopLeft(second).dx));
     expect(tester.getTopLeft(second).dx, lessThan(tester.getTopLeft(third).dx));
+  });
+
+  testWidgets('keeps the grid viewport at four rows while filtering', (
+    tester,
+  ) async {
+    await _useTallScreen(tester);
+    await tester.pumpWidget(_SheetHarness(themeMode: ThemeMode.light));
+
+    await tester.tap(find.text('Открыть сервисы'));
+    await tester.pumpAndSettle();
+
+    final viewport = find.byKey(
+      const ValueKey<String>('service-picker-grid-viewport'),
+    );
+    expect(tester.getSize(viewport).height, servicePickerGridHeight(4));
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('service-picker-search')),
+      'Spotify',
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(viewport).height, servicePickerGridHeight(3));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('searches, filters categories, and selects a service', (
@@ -107,10 +151,53 @@ void main() {
     expect(selected?.logoKey, 'spotify');
   });
 
+  testWidgets('scrolling the service list never dismisses the sheet', (
+    tester,
+  ) async {
+    await _useTallScreen(tester);
+    await tester.pumpWidget(_SheetHarness(themeMode: ThemeMode.light));
+
+    await tester.tap(find.text('Открыть сервисы'));
+    await tester.pumpAndSettle();
+
+    final grid = find.byKey(const ValueKey<String>('service-picker-grid'));
+    await tester.drag(grid, const Offset(0, -240));
+    await tester.pumpAndSettle();
+    final scrolled = _gridOffset(tester, grid);
+    expect(scrolled, greaterThan(0));
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+
+    await tester.drag(grid, const Offset(0, 120));
+    await tester.pumpAndSettle();
+    expect(_gridOffset(tester, grid), lessThan(scrolled));
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('swiping down from the top of the list dismisses the sheet', (
+    tester,
+  ) async {
+    await _useTallScreen(tester);
+    await tester.pumpWidget(_SheetHarness(themeMode: ThemeMode.light));
+
+    await tester.tap(find.text('Открыть сервисы'));
+    await tester.pumpAndSettle();
+
+    final grid = find.byKey(const ValueKey<String>('service-picker-grid'));
+    expect(_gridOffset(tester, grid), 0);
+
+    await tester.drag(grid, const Offset(0, 420));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final mode in <ThemeMode>[ThemeMode.light, ThemeMode.dark]) {
     testWidgets('opens and returns from morph sheet in ${mode.name} mode', (
       tester,
     ) async {
+      await _useTallScreen(tester);
       await tester.pumpWidget(_SheetHarness(themeMode: mode));
 
       await tester.tap(find.text('Открыть сервисы'));
@@ -129,6 +216,21 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+}
+
+double _gridOffset(WidgetTester tester, Finder grid) {
+  return tester
+      .state<ScrollableState>(
+        find.descendant(of: grid, matching: find.byType(Scrollable)),
+      )
+      .position
+      .pixels;
+}
+
+Future<void> _useTallScreen(WidgetTester tester) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(400, 900);
+  addTearDown(tester.view.reset);
 }
 
 class _PickerHarness extends StatelessWidget {

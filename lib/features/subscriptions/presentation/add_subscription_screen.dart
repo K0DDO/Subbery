@@ -13,6 +13,7 @@ import '../application/subscription_providers.dart';
 import '../data/catalog/known_services.dart';
 import '../domain/entities/subscription.dart';
 import 'subscription_ui_extensions.dart';
+import 'widgets/category_picker_sheet.dart';
 import 'widgets/service_logo.dart';
 import 'widgets/service_picker_sheet.dart';
 
@@ -68,6 +69,16 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
     );
     if (!mounted || service == null) return;
     _selectService(service);
+  }
+
+  Future<void> _openCategoryPicker(SubscriptionCategory selected) async {
+    FocusScope.of(context).unfocus();
+    final category = await showCategoryPickerSheet(
+      context: context,
+      selected: selected,
+    );
+    if (!mounted || category == null) return;
+    _controller().setCategory(category);
   }
 
   Future<void> _pickDate(DateTime selectedDate) async {
@@ -306,27 +317,53 @@ class _AddSubscriptionScreenState extends ConsumerState<AddSubscriptionScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 GlassCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: <Widget>[
-                      for (final category in SubscriptionCategory.values)
-                        ChoiceChip(
-                          showCheckmark: false,
-                          label: Text('${category.emoji} ${category.label}'),
-                          selected: state.category == category,
-                          selectedColor: category
-                              .color(context)
-                              .withValues(alpha: 0.28),
-                          side: BorderSide(
-                            color: state.category == category
-                                ? category.color(context)
-                                : Theme.of(context).dividerColor,
+                  key: const ValueKey<String>('add-subscription-category'),
+                  padding: EdgeInsets.zero,
+                  onTap: () => unawaited(_openCategoryPicker(state.category)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      children: <Widget>[
+                        Container(
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: state.category
+                                .color(context)
+                                .withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
-                          onSelected: (_) => controller.setCategory(category),
+                          child: Text(
+                            state.category.emoji,
+                            style: const TextStyle(fontSize: 22),
+                          ),
                         ),
-                    ],
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'Выберите категорию',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                state.category.label,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),

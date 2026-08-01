@@ -4,11 +4,46 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../widgets/morphing_sheet/sheet_page_navigator.dart';
 import '../../../shell/presentation/hotbar_morph_sheet.dart';
 import '../../data/catalog/known_services.dart';
 import '../../domain/entities/subscription.dart';
 import '../subscription_ui_extensions.dart';
 import 'service_logo.dart';
+
+const int _columns = 3;
+const int _minRows = 3;
+const int _maxRows = 4;
+const double _cellExtent = 96;
+const double _cellSpacing = AppSpacing.xs;
+
+/// Everything above and below the grid: drag handle, title, search, categories.
+const double _chromeHeight = 284;
+
+@visibleForTesting
+double servicePickerMaxHeight(double screenHeight) =>
+    math.min(720, screenHeight * 0.9);
+
+/// The grid always shows [_maxRows] rows and never shrinks below [_minRows],
+/// so the sheet keeps one height while the user searches or filters.
+@visibleForTesting
+int servicePickerRowCount({
+  required int serviceCount,
+  required double screenHeight,
+}) {
+  final contentRows = (serviceCount / _columns).ceil().clamp(
+    _minRows,
+    _maxRows,
+  );
+  final gridSpace = servicePickerMaxHeight(screenHeight) - _chromeHeight;
+  final fittingRows =
+      ((gridSpace + _cellSpacing) / (_cellExtent + _cellSpacing)).floor();
+  return math.max(_minRows, math.min(contentRows, fittingRows));
+}
+
+@visibleForTesting
+double servicePickerGridHeight(int rows) =>
+    rows * _cellExtent + (rows - 1) * _cellSpacing;
 
 @visibleForTesting
 List<KnownService> filterKnownServices({
@@ -36,11 +71,13 @@ Future<KnownService?> showServicePickerSheet({
   final screenHeight = MediaQuery.sizeOf(context).height;
   return showHotbarMorphSheet<KnownService>(
     context: context,
-    maximumHeight: math.min(680, screenHeight * 0.82),
-    builder: (sheetContext) => ServicePickerSheet(
-      initialQuery: initialQuery,
-      onQueryChanged: onQueryChanged,
-      onSelected: (service) => Navigator.of(sheetContext).pop(service),
+    maximumHeight: servicePickerMaxHeight(screenHeight),
+    builder: (sheetContext) => MorphingSheetNavigator(
+      home: ServicePickerSheet(
+        initialQuery: initialQuery,
+        onQueryChanged: onQueryChanged,
+        onSelected: (service) => Navigator.of(sheetContext).pop(service),
+      ),
     ),
   );
 }
@@ -90,20 +127,18 @@ class _ServicePickerSheetState extends State<ServicePickerSheet> {
       query: _searchController.text,
       category: _category,
     );
-    final rows = math.max(1, (services.length / 3).ceil());
-    final availableHeight = math.min(
-      680.0,
-      MediaQuery.sizeOf(context).height * 0.82,
+    final rows = servicePickerRowCount(
+      serviceCount: services.length,
+      screenHeight: MediaQuery.sizeOf(context).height,
     );
-    final maxGridHeight = math.min(
-      324.0,
-      math.max(108.0, availableHeight - 300),
-    );
-    final gridHeight = math.min(rows * 108.0, maxGridHeight);
+    final gridHeight = servicePickerGridHeight(rows);
 
     return Material(
       type: MaterialType.transparency,
       child: SingleChildScrollView(
+        // The grid below owns the sheet's primary scroll controller, so this
+        // wrapper only guards against clipping on very short screens.
+        primary: false,
         physics: const NeverScrollableScrollPhysics(),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -186,15 +221,17 @@ class _ServicePickerSheetState extends State<ServicePickerSheet> {
                       : GridView.builder(
                           key: const ValueKey<String>('service-picker-grid'),
                           padding: EdgeInsets.zero,
-                          physics: rows * 108.0 > maxGridHeight
-                              ? const BouncingScrollPhysics()
-                              : const NeverScrollableScrollPhysics(),
+                          // Scrolling the list must never scrub the sheet, so
+                          // the grid stays the single primary scroll view and
+                          // clamps instead of overscrolling into a dismissal.
+                          primary: true,
+                          physics: const ClampingScrollPhysics(),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                mainAxisExtent: 108,
-                                crossAxisSpacing: AppSpacing.xs,
-                                mainAxisSpacing: AppSpacing.xs,
+                                crossAxisCount: _columns,
+                                mainAxisExtent: _cellExtent,
+                                crossAxisSpacing: _cellSpacing,
+                                mainAxisSpacing: _cellSpacing,
                               ),
                           itemCount: services.length,
                           itemBuilder: (context, index) {
@@ -229,6 +266,7 @@ class _CategoryGrid extends StatelessWidget {
       height: 84,
       child: GridView.builder(
         padding: EdgeInsets.zero,
+        primary: false,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4,
@@ -309,7 +347,7 @@ class _ServiceAppCell extends StatelessWidget {
                 name: service.name,
                 logoKey: service.logoKey,
                 category: service.category,
-                size: 64,
+                size: 56,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
