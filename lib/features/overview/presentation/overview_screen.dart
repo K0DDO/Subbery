@@ -112,6 +112,33 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
               occurrence.date.year == now.year,
         )
         .toList(growable: false);
+    void openDynamics() {
+      showDynamicsDetailSheet(
+        context: context,
+        points: metrics.spendingByMonth,
+        payments: payments,
+        subscriptions: subscriptions,
+      );
+    }
+
+    void openSelectedMonth() {
+      final selectedDate = DateTime(now.year, _selectedMonth);
+      final planned = metrics.spendingByMonth
+          .where(
+            (point) =>
+                point.month.year == selectedDate.year &&
+                point.month.month == selectedDate.month,
+          )
+          .firstOrNull
+          ?.plannedAmountInCents;
+      showMonthSpendingSheet(
+        context: context,
+        month: selectedDate,
+        payments: payments,
+        subscriptions: subscriptions,
+        plannedInCents: planned ?? 0,
+      );
+    }
 
     return ListView(
       key: ValueKey<String>('overview-$resetRevision'),
@@ -125,7 +152,9 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         _MonthlySummary(metrics: metrics),
         const SizedBox(height: AppSpacing.lg),
         GlassCard(
+          key: const ValueKey<String>('overview-payments-card'),
           strong: true,
+          onTap: openSelectedMonth,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.lg,
@@ -156,6 +185,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       onMonthSelected: (month) {
                         setState(() => _selectedMonth = month);
                       },
+                      onTap: openSelectedMonth,
                     ),
                     _RingGalleryPage(
                       title: 'Календарь платежей',
@@ -171,6 +201,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
                       onMonthSelected: (month) {
                         setState(() => _selectedMonth = month);
                       },
+                      onTap: openSelectedMonth,
                     ),
                   ],
                 ),
@@ -226,24 +257,15 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         _SectionTitle(
           title: 'Динамика расходов',
           subtitle: 'План и факт за последние 6 месяцев',
-          onTap: () => showDynamicsDetailSheet(
-            context: context,
-            points: metrics.spendingByMonth,
-            payments: payments,
-            subscriptions: subscriptions,
-          ),
+          onTap: openDynamics,
         ),
         const SizedBox(height: AppSpacing.sm),
         GlassCard(
+          key: const ValueKey<String>('overview-dynamics-card'),
+          onTap: openDynamics,
           child: SpendingBarChart(
             points: metrics.spendingByMonth,
-            onBarSelected: (point) => showMonthSpendingSheet(
-              context: context,
-              month: point.month,
-              payments: payments,
-              subscriptions: subscriptions,
-              plannedInCents: point.plannedAmountInCents,
-            ),
+            onBarSelected: (_) => openDynamics(),
           ),
         ),
       ],
@@ -309,6 +331,7 @@ class _RingGalleryPage extends StatelessWidget {
     required this.counterValue,
     required this.selectedMonth,
     required this.onMonthSelected,
+    required this.onTap,
     this.showPeriodArcs = false,
     this.showCalendarLogos = true,
   });
@@ -322,6 +345,7 @@ class _RingGalleryPage extends StatelessWidget {
   final int counterValue;
   final int selectedMonth;
   final ValueChanged<int> onMonthSelected;
+  final VoidCallback onTap;
   final bool showPeriodArcs;
   final bool showCalendarLogos;
 
@@ -380,6 +404,7 @@ class _RingGalleryPage extends StatelessWidget {
             showPeriodArcs: showPeriodArcs,
             showCalendarLogos: showCalendarLogos,
             onMonthSelected: onMonthSelected,
+            onTap: onTap,
           ),
         ),
       ],
@@ -423,6 +448,19 @@ class _MonthlySummary extends StatelessWidget {
 
   final OverviewMetrics metrics;
 
+  void _showHoldHint(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Чтобы изменить настройки, удерживайте блок'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final next = metrics.upcomingPayments.firstOrNull;
@@ -433,6 +471,7 @@ class _MonthlySummary extends StatelessWidget {
       key: cardKey,
       strong: true,
       padding: const EdgeInsets.all(AppSpacing.lg),
+      onTap: () => _showHoldHint(context),
       onLongPress: () async {
         final box = cardKey.currentContext?.findRenderObject() as RenderBox?;
         if (box == null || !box.hasSize) return;
@@ -470,6 +509,8 @@ class _MonthlySummary extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
+              const SizedBox(width: AppSpacing.xs),
+              const _GlassEditHintIcon(),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -545,6 +586,63 @@ class _MonthlySummary extends StatelessWidget {
   }
 }
 
+class _GlassEditHintIcon extends StatefulWidget {
+  const _GlassEditHintIcon();
+
+  @override
+  State<_GlassEditHintIcon> createState() => _GlassEditHintIconState();
+}
+
+class _GlassEditHintIconState extends State<_GlassEditHintIcon> {
+  var _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.subberryTheme;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Tooltip(
+        message: 'Удерживайте блок для настройки',
+        child: AnimatedScale(
+          scale: _hovered ? 1.08 : 1,
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              color: palette.glassTint.withValues(
+                alpha: _hovered ? 0.72 : 0.42,
+              ),
+              border: Border.all(
+                color: palette.primary.withValues(
+                  alpha: _hovered ? 0.46 : 0.24,
+                ),
+              ),
+              boxShadow: _hovered
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: palette.glowColor.withValues(alpha: 0.18),
+                        blurRadius: 12,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              Icons.edit_rounded,
+              size: 15,
+              color: palette.primary.withValues(alpha: 0.82),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _NextPaymentCaption extends StatelessWidget {
   const _NextPaymentCaption({required this.occurrence});
 
@@ -590,11 +688,8 @@ class _NextPaymentCaption extends StatelessWidget {
 }
 
 class _SummaryCaption extends StatelessWidget {
-  const _SummaryCaption({
-    required this.label,
-    this.value,
-    this.valueChild,
-  }) : assert(value != null || valueChild != null);
+  const _SummaryCaption({required this.label, this.value, this.valueChild})
+    : assert(value != null || valueChild != null);
 
   final String label;
   final String? value;

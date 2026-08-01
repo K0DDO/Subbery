@@ -33,9 +33,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('4'), findsWidgets);
 
-    await container
-        .read(privacySettingsProvider.notifier)
-        .setShowKopecks(true);
+    await container.read(privacySettingsProvider.notifier).setShowKopecks(true);
     await tester.pumpAndSettle();
     expect(find.textContaining(',50'), findsOneWidget);
   });
@@ -92,6 +90,41 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(FrostedBalanceText), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(FrostedBalanceText),
+        matching: find.byType(CustomPaint),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('transparency slider changes glass-effect strength', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: PrivacyControls()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch).at(1));
+    await tester.pumpAndSettle();
+    expect(find.byType(Slider), findsOneWidget);
+    final before = container.read(privacySettingsProvider).transparencyStrength;
+    await tester.drag(find.byType(Slider), const Offset(-100, 0));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(privacySettingsProvider).transparencyStrength,
+      lessThan(before),
+    );
   });
 
   for (final mode in <ThemeMode>[ThemeMode.light, ThemeMode.dark]) {

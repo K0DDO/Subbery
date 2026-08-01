@@ -125,6 +125,23 @@ class _AnalyticsContent extends ConsumerWidget {
       now: now,
     );
     final aiInsights = ref.watch(aiInsightsProvider(aiRequest));
+    void openDynamics() {
+      showDynamicsDetailSheet(
+        context: context,
+        points: metrics.monthlySpending,
+        payments: payments,
+        subscriptions: subscriptions,
+      );
+    }
+
+    void openCategories() {
+      showCategoriesDetailSheet(
+        context: context,
+        categories: metrics.categorySpending,
+        subscriptions: subscriptions,
+        now: now,
+      );
+    }
 
     return ListView(
       key: ValueKey<String>('analytics-$resetRevision'),
@@ -139,6 +156,7 @@ class _AnalyticsContent extends ConsumerWidget {
           children: <Widget>[
             Expanded(
               child: _AnalyticsMetricCard(
+                key: const ValueKey<String>('analytics-month-card'),
                 label: 'Этот месяц',
                 value: MoneyText(
                   cents: metrics.thisMonthInCents,
@@ -157,6 +175,7 @@ class _AnalyticsContent extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _AnalyticsMetricCard(
+                key: const ValueKey<String>('analytics-year-card'),
                 label: 'Этот год',
                 value: MoneyText(
                   cents: metrics.thisYearInCents,
@@ -171,6 +190,7 @@ class _AnalyticsContent extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         _AnalyticsMetricCard(
+          key: const ValueKey<String>('analytics-total-card'),
           label: 'Всего потрачено',
           value: MoneyText(
             cents: metrics.totalSpentInCents,
@@ -185,39 +205,27 @@ class _AnalyticsContent extends ConsumerWidget {
         _SectionTitle(
           title: 'Динамика расходов',
           subtitle: 'План и факт за последние 6 месяцев',
-          onTap: () => showDynamicsDetailSheet(
-            context: context,
-            points: metrics.monthlySpending,
-            payments: payments,
-            subscriptions: subscriptions,
-          ),
+          onTap: openDynamics,
         ),
         const SizedBox(height: AppSpacing.sm),
         GlassCard(
+          key: const ValueKey<String>('analytics-dynamics-card'),
+          onTap: openDynamics,
           child: SpendingBarChart(
             points: metrics.monthlySpending,
-            onBarSelected: (point) => showMonthSpendingSheet(
-              context: context,
-              month: point.month,
-              payments: payments,
-              subscriptions: subscriptions,
-              plannedInCents: point.plannedAmountInCents,
-            ),
+            onBarSelected: (_) => openDynamics(),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
         _SectionTitle(
           title: 'По категориям',
           subtitle: 'Нажмите для детализации',
-          onTap: () => showCategoriesDetailSheet(
-            context: context,
-            categories: metrics.categorySpending,
-            subscriptions: subscriptions,
-            now: now,
-          ),
+          onTap: openCategories,
         ),
         const SizedBox(height: AppSpacing.sm),
         GlassCard(
+          key: const ValueKey<String>('analytics-categories-card'),
+          onTap: openCategories,
           child: metrics.categorySpending.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(AppSpacing.lg),
@@ -225,14 +233,7 @@ class _AnalyticsContent extends ConsumerWidget {
                 )
               : CategorySpendingChart(
                   categories: metrics.categorySpending,
-                  onCategorySelected: (category) =>
-                      showCategorySubscriptionsSheet(
-                        context: context,
-                        category: category.category,
-                        amountInCents: category.amountInCents,
-                        subscriptions: subscriptions,
-                        now: now,
-                      ),
+                  onCategorySelected: (_) => openCategories(),
                 ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -283,6 +284,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
     required this.color,
     this.horizontal = false,
     this.onTap,
+    super.key,
   });
 
   final String label;

@@ -155,7 +155,7 @@ class _MoneyTextState extends ConsumerState<MoneyText>
   }
 }
 
-/// T-Bank-like frosted digits: outline stays, fill becomes milky glass.
+/// Engraved glass digits with directional bevels and a recessed center.
 class FrostedBalanceText extends StatelessWidget {
   const FrostedBalanceText({
     required this.text,
@@ -179,100 +179,210 @@ class FrostedBalanceText extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.subberryTheme;
     final baseColor = style?.color ?? theme.colorScheme.onSurface;
-    final t = strength.clamp(0.0, 1.0);
-    // 0 → almost only contour/volume; 1 → fully readable fill.
-    final fillAlpha = 0.06 + t * 0.94;
-    final blurSigma = (1 - t) * 3.4;
-    final outlineAlpha = 0.42 + (1 - t) * 0.28;
-    final glassTint = Color.lerp(
-      palette.glassTint,
-      baseColor,
-      0.35 + t * 0.45,
-    )!;
-
-    return Stack(
-      alignment: Alignment.centerLeft,
-      children: <Widget>[
-        Text(
-          text,
-          textAlign: textAlign,
-          maxLines: maxLines,
-          overflow: overflow,
-          style: style?.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1.35 + (1 - t) * 0.55
-              ..color = Color.lerp(
-                palette.borderColor,
-                baseColor,
-                0.55,
-              )!.withValues(alpha: outlineAlpha),
-          ),
-        ),
-        ImageFiltered(
-          imageFilter: ui.ImageFilter.blur(
-            sigmaX: blurSigma,
-            sigmaY: blurSigma,
-            tileMode: TileMode.decal,
-          ),
-          child: ShaderMask(
-            blendMode: BlendMode.srcIn,
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[
-                  glassTint.withValues(alpha: fillAlpha * 0.72),
-                  baseColor.withValues(alpha: fillAlpha),
-                  Color.lerp(
-                    palette.primaryLight,
-                    baseColor,
-                    0.55,
-                  )!.withValues(alpha: fillAlpha * 0.88),
-                ],
-                stops: const <double>[0, 0.48, 1],
-              ).createShader(bounds);
-            },
-            child: Text(
-              text,
-              textAlign: textAlign,
-              maxLines: maxLines,
-              overflow: overflow,
-              style: style?.copyWith(color: Colors.white),
-            ),
-          ),
-        ),
-        IgnorePointer(
-          child: ShaderMask(
-            blendMode: BlendMode.srcATop,
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[
-                  Colors.white.withValues(
-                    alpha: theme.brightness == Brightness.dark
-                        ? 0.08 + (1 - t) * 0.06
-                        : 0.22 + (1 - t) * 0.12,
-                  ),
-                  Colors.transparent,
-                  palette.primary.withValues(alpha: 0.04 + (1 - t) * 0.05),
-                ],
-              ).createShader(bounds);
-            },
-            child: Text(
-              text,
-              textAlign: textAlign,
-              maxLines: maxLines,
-              overflow: overflow,
-              style: style?.copyWith(
-                color: Colors.white.withValues(alpha: 0.01),
-              ),
-            ),
-          ),
-        ),
-      ],
+    final resolvedStyle =
+        style ?? theme.textTheme.bodyLarge ?? const TextStyle();
+    return CustomPaint(
+      painter: _EngravedGlassTextPainter(
+        text: text,
+        style: resolvedStyle,
+        strength: strength.clamp(0.0, 1.0),
+        baseColor: baseColor,
+        highlightColor: Color.lerp(
+          Colors.white,
+          palette.primaryLight,
+          theme.brightness == Brightness.dark ? 0.62 : 0.28,
+        )!,
+        recessColor: Color.lerp(
+          theme.colorScheme.surface,
+          palette.primaryDark,
+          theme.brightness == Brightness.dark ? 0.55 : 0.2,
+        )!,
+        glowColor: palette.glowColor,
+        textAlign: textAlign ?? TextAlign.start,
+      ),
+      child: Text(
+        text,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        overflow: overflow,
+        style: resolvedStyle.copyWith(color: Colors.transparent),
+      ),
     );
+  }
+}
+
+class _EngravedGlassTextPainter extends CustomPainter {
+  const _EngravedGlassTextPainter({
+    required this.text,
+    required this.style,
+    required this.strength,
+    required this.baseColor,
+    required this.highlightColor,
+    required this.recessColor,
+    required this.glowColor,
+    required this.textAlign,
+  });
+
+  final String text;
+  final TextStyle style;
+  final double strength;
+  final Color baseColor;
+  final Color highlightColor;
+  final Color recessColor;
+  final Color glowColor;
+  final TextAlign textAlign;
+
+  TextPainter _painter(Paint foreground) {
+    return TextPainter(
+      text: TextSpan(
+        text: text,
+        style: style.copyWith(foreground: foreground),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: textAlign,
+      maxLines: 1,
+    );
+  }
+
+  void _paintText(Canvas canvas, Size size, Paint paint, Offset offset) {
+    final painter = _painter(paint)..layout(maxWidth: size.width);
+    final x = switch (textAlign) {
+      TextAlign.center => (size.width - painter.width) / 2,
+      TextAlign.right || TextAlign.end => size.width - painter.width,
+      _ => 0.0,
+    };
+    painter.paint(
+      canvas,
+      Offset(x, (size.height - painter.height) / 2) + offset,
+    );
+  }
+
+  void _paintDirectionalEdge({
+    required Canvas canvas,
+    required Size size,
+    required Offset offset,
+    required Color color,
+    required double blur,
+  }) {
+    canvas.saveLayer(Offset.zero & size, Paint());
+    _paintText(
+      canvas,
+      size,
+      Paint()
+        ..color = color
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
+      offset,
+    );
+    _paintText(
+      canvas,
+      size,
+      Paint()
+        ..color = Colors.black
+        ..blendMode = BlendMode.dstOut,
+      Offset.zero,
+    );
+    canvas.restore();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final glassAmount = 1 - strength;
+    final bounds = Offset.zero & size;
+
+    // A diffuse halo gives the engraving volume without a uniform outline.
+    _paintText(
+      canvas,
+      size,
+      Paint()
+        ..color = glowColor.withValues(alpha: 0.08 + glassAmount * 0.18)
+        ..maskFilter = MaskFilter.blur(
+          BlurStyle.normal,
+          2.2 + glassAmount * 3.8,
+        ),
+      Offset.zero,
+    );
+
+    // Recessed lower-right wall inside each glyph.
+    _paintText(
+      canvas,
+      size,
+      Paint()
+        ..color = recessColor.withValues(alpha: 0.2 + glassAmount * 0.42)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 0.5),
+      Offset(0.75 + glassAmount * 0.65, 1 + glassAmount * 0.8),
+    );
+
+    // The center is a non-uniform glass gradient, not a faded solid color.
+    _paintText(
+      canvas,
+      size,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          bounds.topLeft,
+          bounds.bottomRight,
+          <Color>[
+            highlightColor.withValues(alpha: 0.32 + strength * 0.68),
+            Color.lerp(
+              recessColor,
+              baseColor,
+              strength,
+            )!.withValues(alpha: 0.12 + strength * 0.88),
+            baseColor.withValues(alpha: 0.22 + strength * 0.78),
+            glowColor.withValues(alpha: 0.12 + strength * 0.58),
+          ],
+          const <double>[0, 0.34, 0.68, 1],
+        ),
+      Offset.zero,
+    );
+
+    // Differential masks leave bright and dark edges only where shifted
+    // glyphs do not overlap, producing an asymmetric engraved bevel.
+    _paintDirectionalEdge(
+      canvas: canvas,
+      size: size,
+      offset: Offset(-0.65 - glassAmount * 0.65, -0.7 - glassAmount * 0.55),
+      color: highlightColor.withValues(alpha: 0.42 + glassAmount * 0.42),
+      blur: 0.2 + glassAmount * 0.45,
+    );
+    _paintDirectionalEdge(
+      canvas: canvas,
+      size: size,
+      offset: Offset(0.65 + glassAmount * 0.5, 0.85 + glassAmount * 0.55),
+      color: recessColor.withValues(alpha: 0.28 + glassAmount * 0.38),
+      blur: 0.35 + glassAmount * 0.35,
+    );
+
+    // A narrow specular streak breaks edge intensity across the glyphs.
+    canvas.saveLayer(bounds, Paint());
+    _paintText(
+      canvas,
+      size,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          bounds.topLeft,
+          bounds.bottomRight,
+          <Color>[
+            Colors.transparent,
+            highlightColor.withValues(alpha: 0.1 + glassAmount * 0.28),
+            Colors.transparent,
+          ],
+          const <double>[0.2, 0.48, 0.72],
+        ),
+      Offset(-0.25, -0.35),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _EngravedGlassTextPainter oldDelegate) {
+    return oldDelegate.text != text ||
+        oldDelegate.style != style ||
+        oldDelegate.strength != strength ||
+        oldDelegate.baseColor != baseColor ||
+        oldDelegate.highlightColor != highlightColor ||
+        oldDelegate.recessColor != recessColor ||
+        oldDelegate.glowColor != glowColor ||
+        oldDelegate.textAlign != textAlign;
   }
 }
 

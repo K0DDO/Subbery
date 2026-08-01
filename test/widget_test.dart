@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:subberry/app/app.dart';
+import 'package:subberry/app/router/app_router.dart';
+import 'package:subberry/core/widgets/glass_card.dart';
 import 'package:subberry/features/profile/application/user_profile_controller.dart';
 import 'package:subberry/features/subscriptions/application/subscription_providers.dart';
 import 'package:subberry/features/subscriptions/domain/entities/payment.dart';
 import 'package:subberry/features/subscriptions/domain/entities/subscription.dart';
+import 'package:subberry/widgets/morphing_sheet/morphing_glass_sheet.dart';
 
 void main() {
   testWidgets('renders overview empty state', (tester) async {
@@ -205,6 +208,124 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Annual'), findsOneWidget);
+  });
+
+  testWidgets('monthly summary hints on tap and opens privacy on hold', (
+    tester,
+  ) async {
+    appRouter.go('/');
+    await tester.pumpWidget(
+      _emptyApp(
+        subscriptions: <Subscription>[
+          _subscription('Netflix', BillingCycle.monthly),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.edit_rounded), findsOneWidget);
+    final summaryTitle = find.text('Запланировано в этом месяце');
+    await tester.tap(summaryTitle);
+    await tester.pump();
+    expect(
+      find.text('Чтобы изменить настройки, удерживайте блок'),
+      findsOneWidget,
+    );
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
+
+    await tester.longPress(summaryTitle);
+    await tester.pumpAndSettle();
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+    expect(find.text('Прозрачный баланс'), findsOneWidget);
+  });
+
+  testWidgets('overview chart cards open their existing detail sheets', (
+    tester,
+  ) async {
+    appRouter.go('/');
+    await tester.pumpWidget(
+      _emptyApp(
+        subscriptions: <Subscription>[
+          _subscription('Netflix', BillingCycle.monthly),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final ringCard = find.byKey(
+      const ValueKey<String>('overview-payments-card'),
+    );
+    await tester.tapAt(tester.getTopLeft(ringCard) + const Offset(28, 28));
+    await tester.pumpAndSettle();
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+
+    final dynamicsCard = find.byKey(
+      const ValueKey<String>('overview-dynamics-card'),
+    );
+    await tester.dragUntilVisible(
+      dynamicsCard,
+      find.byType(ListView).hitTestable().first,
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    tester.widget<GlassCard>(dynamicsCard).onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsOneWidget);
+  });
+
+  testWidgets('analytics cards expose full-card detail callbacks', (
+    tester,
+  ) async {
+    appRouter.go('/analytics');
+    await tester.pumpWidget(
+      _emptyApp(
+        subscriptions: <Subscription>[
+          _subscription('Netflix', BillingCycle.monthly),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final key in <String>[
+      'analytics-month-card',
+      'analytics-year-card',
+      'analytics-total-card',
+    ]) {
+      final card = find.byKey(ValueKey<String>(key));
+      await tester.ensureVisible(card);
+      await tester.pump(const Duration(milliseconds: 350));
+      final glassCard = find.descendant(
+        of: card,
+        matching: find.byType(GlassCard),
+      );
+      expect(tester.widget<GlassCard>(glassCard).onTap, isNotNull, reason: key);
+    }
+
+    final list = find.byWidgetPredicate(
+      (widget) =>
+          widget is ListView &&
+          widget.key is ValueKey<String> &&
+          ((widget.key! as ValueKey<String>).value).startsWith('analytics-'),
+    );
+    final scrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    position.jumpTo(position.maxScrollExtent * 0.38);
+    await tester.pump(const Duration(milliseconds: 400));
+    final dynamics = find.byKey(
+      const ValueKey<String>('analytics-dynamics-card'),
+    );
+    expect(dynamics, findsOneWidget);
+    expect(tester.widget<GlassCard>(dynamics).onTap, isNotNull);
+
+    position.jumpTo(position.maxScrollExtent * 0.58);
+    await tester.pump(const Duration(milliseconds: 400));
+    final categories = find.byKey(
+      const ValueKey<String>('analytics-categories-card'),
+    );
+    expect(categories, findsOneWidget);
+    expect(tester.widget<GlassCard>(categories).onTap, isNotNull);
   });
 }
 
