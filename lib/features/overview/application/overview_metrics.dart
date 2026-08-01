@@ -81,7 +81,11 @@ class OverviewMetrics {
             .toList()
           ..sort((left, right) => left.date.compareTo(right.date));
 
-    final spendingByMonth = _lastSixMonths(payments: payments, now: now);
+    final spendingByMonth = buildSixMonthSpending(
+      subscriptions: activeSubscriptions,
+      payments: payments,
+      now: now,
+    );
     final dueThisMonthCount = upcoming
         .where(
           (occurrence) =>
@@ -230,23 +234,47 @@ class OverviewMetrics {
     return SubscriptionSchedule.safeDate(year, month, anchorDay);
   }
 
-  static List<MonthlySpendPoint> _lastSixMonths({
+  static List<MonthlySpendPoint> buildSixMonthSpending({
+    required List<Subscription> subscriptions,
     required List<Payment> payments,
     required DateTime now,
   }) {
     final currentMonth = DateTime(now.year, now.month);
+    final months = <DateTime>[
+      for (var offset = 5; offset >= 0; offset--)
+        _addMonths(currentMonth, -offset),
+    ];
+    final years = months.map((month) => month.year).toSet();
+    final plannedOccurrences = <PaymentOccurrence>[
+      for (final year in years) ...buildYearOccurrences(subscriptions, year),
+    ];
     final points = <MonthlySpendPoint>[];
-    for (var offset = 5; offset >= 0; offset--) {
-      final month = _addMonths(currentMonth, -offset);
+    for (final month in months) {
       final nextMonth = _addMonths(month, 1);
-      final amount = payments
+      final actual = payments
           .where(
             (payment) =>
                 !payment.date.isBefore(month) &&
                 payment.date.isBefore(nextMonth),
           )
           .fold<int>(0, (total, payment) => total + payment.amountInCents);
-      points.add(MonthlySpendPoint(month: month, amountInCents: amount));
+      final planned = plannedOccurrences
+          .where(
+            (occurrence) =>
+                occurrence.date.year == month.year &&
+                occurrence.date.month == month.month,
+          )
+          .fold<int>(
+            0,
+            (total, occurrence) => total + occurrence.subscription.priceInCents,
+          );
+      points.add(
+        MonthlySpendPoint(
+          month: month,
+          amountInCents: actual,
+          plannedAmountInCents: planned,
+        ),
+      );
     }
     return points;
   }

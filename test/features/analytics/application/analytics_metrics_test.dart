@@ -39,6 +39,7 @@ void main() {
     );
 
     expect(metrics.thisMonthInCents, 79900);
+    expect(metrics.plannedThisMonthInCents, 96800);
     expect(metrics.thisYearInCents, 96800);
     expect(metrics.totalSpentInCents, 96800);
     expect(
@@ -62,11 +63,11 @@ void main() {
       now: DateTime(2026, 7, 29),
     );
 
+    expect(metrics.thisMonthInCents, 0);
+    expect(metrics.plannedThisMonthInCents, 79900);
     expect(metrics.insights.first.title, contains('Месячная нагрузка'));
     expect(
-      metrics.insights.any(
-        (insight) => insight.title.contains('Netflix'),
-      ),
+      metrics.insights.any((insight) => insight.title.contains('Netflix')),
       isTrue,
     );
     expect(
@@ -104,8 +105,10 @@ void main() {
     );
 
     expect(july.thisMonthInCents, 0);
+    expect(july.plannedThisMonthInCents, 0);
     expect(july.categorySpending, isEmpty);
-    expect(august.thisMonthInCents, 50000);
+    expect(august.thisMonthInCents, 0);
+    expect(august.plannedThisMonthInCents, 50000);
     expect(august.categorySpending.single.amountInCents, 50000);
   });
 }

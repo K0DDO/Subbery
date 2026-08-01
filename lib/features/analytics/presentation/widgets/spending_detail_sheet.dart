@@ -5,6 +5,7 @@ import '../../../../core/models/monthly_spend_point.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_formatters.dart';
 import '../../../../core/widgets/glass_card.dart';
+import '../../../shell/presentation/app_shell.dart';
 import '../../../subscriptions/domain/entities/payment.dart';
 import '../../../subscriptions/domain/entities/subscription.dart';
 import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
@@ -12,12 +13,32 @@ import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/analytics_breakdown.dart';
 import '../../application/analytics_metrics.dart';
 
+Future<void> _showDropletSheet({
+  required BuildContext context,
+  required WidgetBuilder builder,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.42),
+    sheetAnimationStyle: const AnimationStyle(
+      duration: Duration(milliseconds: 520),
+      reverseDuration: Duration(milliseconds: 420),
+    ),
+    builder: builder,
+  );
+}
+
 Future<void> showPeriodSpendingSheet({
   required BuildContext context,
   required AnalyticsPeriod period,
   required List<Payment> payments,
   required List<Subscription> subscriptions,
   required DateTime now,
+  int? plannedInCents,
   String? footnote,
 }) {
   final rows = AnalyticsBreakdown.paymentRows(
@@ -31,6 +52,7 @@ Future<void> showPeriodSpendingSheet({
     title: AnalyticsBreakdown.periodTitle(period, now),
     subtitle: AppFormatters.money(AnalyticsBreakdown.sumRows(rows)),
     rows: rows,
+    plannedInCents: plannedInCents,
     footnote: footnote,
   );
 }
@@ -40,6 +62,7 @@ Future<void> showMonthSpendingSheet({
   required DateTime month,
   required List<Payment> payments,
   required List<Subscription> subscriptions,
+  int plannedInCents = 0,
 }) {
   final rows = AnalyticsBreakdown.rowsForMonth(
     payments: payments,
@@ -51,6 +74,7 @@ Future<void> showMonthSpendingSheet({
     title: AnalyticsBreakdown.monthLabel(month),
     subtitle: AppFormatters.money(AnalyticsBreakdown.sumRows(rows)),
     rows: rows,
+    plannedInCents: plannedInCents,
   );
 }
 
@@ -59,16 +83,17 @@ Future<void> showSpendingRowsSheet({
   required String title,
   required String subtitle,
   required List<PaymentSpendRow> rows,
+  int? plannedInCents,
   String? footnote,
 }) {
-  return showModalBottomSheet<void>(
+  final actualInCents = AnalyticsBreakdown.sumRows(rows);
+  return _showDropletSheet(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
     builder: (sheetContext) => _SpendingDetailSheet(
       title: title,
       subtitle: subtitle,
+      actualInCents: plannedInCents == null ? null : actualInCents,
+      plannedInCents: plannedInCents,
       footnote: footnote,
       child: rows.isEmpty
           ? const _EmptyDetail(message: 'За этот период платежей пока нет')
@@ -98,11 +123,8 @@ Future<void> showDynamicsDetailSheet({
   required List<Payment> payments,
   required List<Subscription> subscriptions,
 }) {
-  return showModalBottomSheet<void>(
+  return _showDropletSheet(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
     builder: (sheetContext) => _SpendingDetailSheet(
       title: 'Динамика расходов',
       subtitle: 'Последние ${points.length} месяцев',
@@ -115,8 +137,13 @@ Future<void> showDynamicsDetailSheet({
               ),
               title: Text(AnalyticsBreakdown.monthLabel(point.month)),
               trailing: Text(
-                AppFormatters.money(point.amountInCents),
-                style: Theme.of(sheetContext).textTheme.titleMedium,
+                'Факт ${AppFormatters.money(point.amountInCents)}\n'
+                'План ${AppFormatters.money(point.plannedAmountInCents)}',
+                textAlign: TextAlign.end,
+                style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  height: 1.45,
+                ),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -125,6 +152,7 @@ Future<void> showDynamicsDetailSheet({
                   month: point.month,
                   payments: payments,
                   subscriptions: subscriptions,
+                  plannedInCents: point.plannedAmountInCents,
                 );
               },
             ),
@@ -140,11 +168,8 @@ Future<void> showCategoriesDetailSheet({
   required List<Subscription> subscriptions,
   required DateTime now,
 }) {
-  return showModalBottomSheet<void>(
+  return _showDropletSheet(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
     builder: (sheetContext) {
       final total = categories.fold<int>(
         0,
@@ -210,11 +235,8 @@ Future<void> showCategorySubscriptionsSheet({
     category: category,
     now: now,
   );
-  return showModalBottomSheet<void>(
+  return _showDropletSheet(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
     builder: (sheetContext) => _SpendingDetailSheet(
       title: category.label,
       subtitle: 'Около ${AppFormatters.money(amountInCents)} в месяц',
@@ -254,11 +276,15 @@ class _SpendingDetailSheet extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.actualInCents,
+    this.plannedInCents,
     this.footnote,
   });
 
   final String title;
   final String subtitle;
+  final int? actualInCents;
+  final int? plannedInCents;
   final String? footnote;
   final Widget child;
 
@@ -272,55 +298,141 @@ class _SpendingDetailSheet extends StatelessWidget {
         AppSpacing.md,
         AppSpacing.md,
       ),
-      child: GlassCard(
-        strong: true,
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          AppSpacing.md,
-          AppSpacing.md,
-          AppSpacing.sm,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(99),
+      child: Hero(
+        tag: appShellMorphHeroTag,
+        transitionOnUserGestures: true,
+        createRectTween: (begin, end) =>
+            MaterialRectArcTween(begin: begin, end: end),
+        flightShuttleBuilder: buildAppShellMorphFlight,
+        child: Material(
+          type: MaterialType.transparency,
+          child: GlassCard(
+            strong: true,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              if (footnote != null) ...<Widget>[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  footnote!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  const SizedBox(height: AppSpacing.md),
+                  Text(title, style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
-              Flexible(child: SingleChildScrollView(child: child)),
-            ],
+                  if (actualInCents != null &&
+                      plannedInCents != null) ...<Widget>[
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: _AmountSummary(
+                            label: 'Фактически',
+                            amountInCents: actualInCents!,
+                            color: Theme.of(context).colorScheme.primary,
+                            filled: true,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _AmountSummary(
+                            label: 'По плану',
+                            amountInCents: plannedInCents!,
+                            color: Theme.of(context).colorScheme.secondary,
+                            filled: false,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (footnote != null) ...<Widget>[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      footnote!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Flexible(child: SingleChildScrollView(child: child)),
+                ],
+              ),
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AmountSummary extends StatelessWidget {
+  const _AmountSummary({
+    required this.label,
+    required this.amountInCents,
+    required this.color,
+    required this.filled,
+  });
+
+  final String label;
+  final int amountInCents;
+  final Color color;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: filled ? 0.16 : 0.07),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: color.withValues(alpha: filled ? 0.28 : 0.55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              AppFormatters.money(amountInCents),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

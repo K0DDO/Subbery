@@ -1,4 +1,5 @@
 import '../../../core/models/monthly_spend_point.dart';
+import '../../overview/application/overview_metrics.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
 
@@ -26,6 +27,7 @@ class AnalyticsInsight {
 class AnalyticsMetrics {
   const AnalyticsMetrics({
     required this.thisMonthInCents,
+    required this.plannedThisMonthInCents,
     required this.thisYearInCents,
     required this.totalSpentInCents,
     required this.monthlySpending,
@@ -41,10 +43,6 @@ class AnalyticsMetrics {
     final active = subscriptions
         .where((item) => item.status == SubscriptionStatus.active)
         .toList(growable: false);
-    final recurringMonthly = active.fold<int>(
-      0,
-      (total, item) => total + _monthlyEstimate(item, now),
-    );
     final startOfMonth = DateTime(now.year, now.month);
     final startOfNextMonth = _addMonths(startOfMonth, 1);
     final startOfYear = DateTime(now.year);
@@ -86,16 +84,15 @@ class AnalyticsMetrics {
             (left, right) => right.amountInCents.compareTo(left.amountInCents),
           );
 
-    final monthlySpending = _sixMonthSpending(
-      payments,
-      now,
-      fallback: recurringMonthly,
+    final monthlySpending = OverviewMetrics.buildSixMonthSpending(
+      subscriptions: active,
+      payments: payments,
+      now: now,
     );
-    final thisMonthInCents = thisMonthActual == 0
-        ? recurringMonthly
-        : thisMonthActual;
+    final plannedThisMonthInCents = monthlySpending.last.plannedAmountInCents;
     return AnalyticsMetrics(
-      thisMonthInCents: thisMonthInCents,
+      thisMonthInCents: thisMonthActual,
+      plannedThisMonthInCents: plannedThisMonthInCents,
       thisYearInCents: thisYear,
       totalSpentInCents: total,
       monthlySpending: monthlySpending,
@@ -105,13 +102,14 @@ class AnalyticsMetrics {
         totalSpentInCents: total,
         categories: categorySpending,
         monthlySpending: monthlySpending,
-        thisMonthInCents: thisMonthInCents,
+        thisMonthInCents: thisMonthActual,
         now: now,
       ),
     );
   }
 
   final int thisMonthInCents;
+  final int plannedThisMonthInCents;
   final int thisYearInCents;
   final int totalSpentInCents;
   final List<MonthlySpendPoint> monthlySpending;
@@ -132,29 +130,6 @@ class AnalyticsMetrics {
           : 0;
     }
     return (subscription.annualPlanInCents / 12).round();
-  }
-
-  static List<MonthlySpendPoint> _sixMonthSpending(
-    List<Payment> payments,
-    DateTime now, {
-    required int fallback,
-  }) {
-    final currentMonth = DateTime(now.year, now.month);
-    return <MonthlySpendPoint>[
-      for (var offset = 5; offset >= 0; offset--)
-        (() {
-          final month = _addMonths(currentMonth, -offset);
-          final amount = _sumPayments(
-            payments,
-            start: month,
-            end: _addMonths(month, 1),
-          );
-          return MonthlySpendPoint(
-            month: month,
-            amountInCents: amount == 0 && offset == 0 ? fallback : amount,
-          );
-        })(),
-    ];
   }
 
   static List<AnalyticsInsight> _buildInsights({
@@ -194,8 +169,10 @@ class AnalyticsMetrics {
 
       final pricey = List<Subscription>.from(active)
         ..sort(
-          (left, right) =>
-              _monthlyEstimate(right, now).compareTo(_monthlyEstimate(left, now)),
+          (left, right) => _monthlyEstimate(
+            right,
+            now,
+          ).compareTo(_monthlyEstimate(left, now)),
         );
       final topSub = pricey.first;
       final topShare = monthlyLoad == 0
@@ -220,8 +197,10 @@ class AnalyticsMetrics {
       );
     }
 
+    var addedDynamicsInsight = false;
     if (monthlySpending.length >= 2) {
-      final previous = monthlySpending[monthlySpending.length - 2].amountInCents;
+      final previous =
+          monthlySpending[monthlySpending.length - 2].amountInCents;
       final delta = thisMonthInCents - previous;
       if (previous > 0 || thisMonthInCents > 0) {
         final direction = delta > 0
@@ -236,11 +215,13 @@ class AnalyticsMetrics {
             detail: delta == 0
                 ? 'Сейчас ${_formatRubles(thisMonthInCents)} — как месяц назад'
                 : '${delta > 0 ? '+' : ''}${_formatRubles(delta)} '
-                    '(${_formatRubles(previous)} → ${_formatRubles(thisMonthInCents)})',
+                      '(${_formatRubles(previous)} → ${_formatRubles(thisMonthInCents)})',
           ),
         );
+        addedDynamicsInsight = true;
       }
-    } else if (categories.isNotEmpty) {
+    }
+    if (!addedDynamicsInsight && categories.isNotEmpty) {
       final top = categories.first;
       final share = categories.fold<int>(0, (s, c) => s + c.amountInCents);
       final percent = share == 0
@@ -255,7 +236,7 @@ class AnalyticsMetrics {
               'Всего по платежам ${_formatRubles(totalSpentInCents)}',
         ),
       );
-    } else if (totalSpentInCents > 0) {
+    } else if (!addedDynamicsInsight && totalSpentInCents > 0) {
       insights.add(
         AnalyticsInsight(
           type: AnalyticsInsightType.largestCategory,

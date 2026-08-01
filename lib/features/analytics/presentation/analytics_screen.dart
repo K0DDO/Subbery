@@ -69,8 +69,14 @@ class _AnalyticsContent extends ConsumerWidget {
   final List<Payment> payments;
   final int resetRevision;
 
-  void _openPeriod(BuildContext context, AnalyticsPeriod period, DateTime now) {
-    final hasMonthPayments = period == AnalyticsPeriod.month &&
+  void _openPeriod(
+    BuildContext context,
+    AnalyticsPeriod period,
+    DateTime now, {
+    int? plannedThisMonthInCents,
+  }) {
+    final hasMonthPayments =
+        period == AnalyticsPeriod.month &&
         AnalyticsBreakdown.paymentRows(
           payments: payments,
           subscriptions: subscriptions,
@@ -83,8 +89,11 @@ class _AnalyticsContent extends ConsumerWidget {
       payments: payments,
       subscriptions: subscriptions,
       now: now,
+      plannedInCents: period == AnalyticsPeriod.month
+          ? plannedThisMonthInCents
+          : null,
       footnote: hasMonthPayments
-          ? 'На карточке — оценка по активным подпискам: записанных платежей в этом месяце ещё нет'
+          ? 'Фактических списаний пока нет. План рассчитан по активным подпискам и их графику.'
           : null,
     );
   }
@@ -135,7 +144,12 @@ class _AnalyticsContent extends ConsumerWidget {
                 value: AppFormatters.money(metrics.thisMonthInCents),
                 icon: Icons.calendar_month_rounded,
                 color: accent.primary,
-                onTap: () => _openPeriod(context, AnalyticsPeriod.month, now),
+                onTap: () => _openPeriod(
+                  context,
+                  AnalyticsPeriod.month,
+                  now,
+                  plannedThisMonthInCents: metrics.plannedThisMonthInCents,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -162,7 +176,7 @@ class _AnalyticsContent extends ConsumerWidget {
         const SizedBox(height: AppSpacing.lg),
         _SectionTitle(
           title: 'Динамика расходов',
-          subtitle: 'Нажмите, чтобы разобрать месяцы',
+          subtitle: 'План и факт за последние 6 месяцев',
           onTap: () => showDynamicsDetailSheet(
             context: context,
             points: metrics.monthlySpending,
@@ -179,6 +193,7 @@ class _AnalyticsContent extends ConsumerWidget {
               month: point.month,
               payments: payments,
               subscriptions: subscriptions,
+              plannedInCents: point.plannedAmountInCents,
             ),
           ),
         ),

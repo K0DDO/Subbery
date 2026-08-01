@@ -6,10 +6,7 @@ import '../../subscriptions/presentation/subscription_ui_extensions.dart';
 enum AnalyticsPeriod { month, year, total }
 
 class PaymentSpendRow {
-  const PaymentSpendRow({
-    required this.payment,
-    required this.subscription,
-  });
+  const PaymentSpendRow({required this.payment, required this.subscription});
 
   final Payment payment;
   final Subscription? subscription;
@@ -142,9 +139,8 @@ class AnalyticsBreakdown {
       );
     }
     rows.sort(
-      (left, right) => right.monthlyEstimateInCents.compareTo(
-        left.monthlyEstimateInCents,
-      ),
+      (left, right) =>
+          right.monthlyEstimateInCents.compareTo(left.monthlyEstimateInCents),
     );
     return rows;
   }
@@ -209,7 +205,11 @@ class AnalyticsBreakdown {
       final estimate = monthlyEstimate(subscription, now);
       if (estimate <= 0) continue;
       final key = categoryLabel(subscription.category);
-      byCategory.update(key, (value) => value + estimate, ifAbsent: () => estimate);
+      byCategory.update(
+        key,
+        (value) => value + estimate,
+        ifAbsent: () => estimate,
+      );
     }
 
     return <String, Object?>{
@@ -221,10 +221,8 @@ class AnalyticsBreakdown {
       'thisMonthRub': thisMonthInCents / 100,
       'thisYearRub': thisYearInCents / 100,
       'totalSpentRub': totalSpentInCents / 100,
-      'monthlyLoadRub': active.fold<int>(
-            0,
-            (sum, item) => sum + monthlyEstimate(item, now),
-          ) /
+      'monthlyLoadRub':
+          active.fold<int>(0, (sum, item) => sum + monthlyEstimate(item, now)) /
           100,
       'topSubscriptions': <Map<String, Object?>>[
         for (final item
@@ -248,7 +246,8 @@ class AnalyticsBreakdown {
           <String, Object?>{
             'month':
                 '${point.month.year}-${point.month.month.toString().padLeft(2, '0')}',
-            'amountRub': point.amountInCents / 100,
+            'actualRub': point.amountInCents / 100,
+            'plannedRub': point.plannedAmountInCents / 100,
           },
       ],
       'paymentCount': payments.length,

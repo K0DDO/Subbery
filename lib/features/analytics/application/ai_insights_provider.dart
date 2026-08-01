@@ -72,7 +72,9 @@ AiInsightsRequest buildAiInsightsRequest({
     metrics.thisMonthInCents,
     metrics.thisYearInCents,
     metrics.totalSpentInCents,
-    metrics.monthlySpending.map((p) => p.amountInCents).join(','),
+    metrics.monthlySpending
+        .map((p) => '${p.amountInCents}/${p.plannedAmountInCents}')
+        .join(','),
     metrics.categorySpending
         .map((c) => '${c.category.name}:${c.amountInCents}')
         .join(','),

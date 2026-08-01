@@ -13,6 +13,55 @@ import '../../../core/widgets/app_background.dart';
 import '../../subscriptions/presentation/subscriptions_screen.dart';
 import '../application/tab_reset_provider.dart';
 
+const appShellMorphHeroTag = 'app-shell-hotbar-morph';
+
+Widget buildAppShellMorphFlight(
+  BuildContext flightContext,
+  Animation<double> animation,
+  HeroFlightDirection flightDirection,
+  BuildContext fromHeroContext,
+  BuildContext toHeroContext,
+) {
+  final glass = Theme.of(flightContext).extension<GlassTheme>()!;
+  final accent = flightContext.accentTheme.primary;
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, child) {
+      final progress = Curves.easeInOutCubic.transform(animation.value);
+      final radius = lerpDouble(AppRadius.pill, AppRadius.lg, progress)!;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: glass.strongSurface,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: glass.border),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: accent.withValues(alpha: 0.25 * (1 - progress * 0.5)),
+              blurRadius: 30 + 18 * progress,
+              offset: Offset(0, 12 - 6 * progress),
+            ),
+          ],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[
+              glass.highlight.withValues(alpha: 0.24),
+              accent.withValues(alpha: 0.08 + 0.05 * progress),
+              glass.strongSurface,
+            ],
+          ),
+        ),
+        child: Center(
+          child: Opacity(
+            opacity: (1 - progress * 1.7).clamp(0, 1),
+            child: Icon(Icons.auto_graph_rounded, color: accent, size: 24),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class AppShell extends ConsumerWidget {
   const AppShell({required this.navigationShell, super.key});
 
@@ -39,9 +88,16 @@ class AppShell extends ConsumerWidget {
               left: AppSpacing.md,
               right: AppSpacing.md,
               bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.sm,
-              child: _GlassNavigationBar(
-                currentIndex: navigationShell.currentIndex,
-                onSelected: (index) => _openBranch(ref, index),
+              child: Hero(
+                tag: appShellMorphHeroTag,
+                transitionOnUserGestures: true,
+                createRectTween: (begin, end) =>
+                    MaterialRectArcTween(begin: begin, end: end),
+                flightShuttleBuilder: buildAppShellMorphFlight,
+                child: _GlassNavigationBar(
+                  currentIndex: navigationShell.currentIndex,
+                  onSelected: (index) => _openBranch(ref, index),
+                ),
               ),
             ),
           ],

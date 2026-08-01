@@ -221,7 +221,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
         const SizedBox(height: AppSpacing.lg),
         _SectionTitle(
           title: 'Расходы за 6 месяцев',
-          subtitle: 'Нажмите столбец или заголовок',
+          subtitle: 'План и фактические списания',
           onTap: () => showDynamicsDetailSheet(
             context: context,
             points: metrics.spendingByMonth,
@@ -238,6 +238,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
               month: point.month,
               payments: payments,
               subscriptions: subscriptions,
+              plannedInCents: point.plannedAmountInCents,
             ),
           ),
         ),
