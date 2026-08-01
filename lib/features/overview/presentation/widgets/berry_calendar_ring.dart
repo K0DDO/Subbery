@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/color_palette.dart';
 import '../../../subscriptions/presentation/subscription_visuals.dart';
 import '../../../subscriptions/presentation/widgets/service_logo.dart';
@@ -195,6 +196,16 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     ).palette;
   }
 
+  ColorPalette get _themePulsePalette {
+    final theme = context.subberryTheme;
+    return ColorPalette(
+      primary: theme.primary,
+      light: theme.primaryLight,
+      dark: theme.primaryDark,
+      glow: theme.glowColor,
+    );
+  }
+
   Color _pulseColor(ColorPalette palette, double pulse) {
     if (pulse < 0.5) {
       return Color.lerp(palette.light, palette.primary, pulse * 2)!;
@@ -276,6 +287,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                               context,
                             ).dividerColor.withValues(alpha: 0.45),
                             accentColor: primary,
+                            pulsePalette: _themePulsePalette,
                             brandPalettes: brandPalettes,
                           ),
                           child: child,
@@ -453,8 +465,11 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
         center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
     const iconSize = 18.0;
     final isSoon = daysUntil <= 3;
-    final palette = _paletteFor(group.primary);
-    final pulsed = isSoon ? _pulseColor(palette, pulse) : palette.primary;
+    final brandPalette = _paletteFor(group.primary);
+    final pulsePalette = _themePulsePalette;
+    final pulsed = isSoon
+        ? _pulseColor(pulsePalette, pulse)
+        : brandPalette.primary;
     final borderColor = isSoon
         ? pulsed.withValues(alpha: 0.7 + pulse * 0.3)
         : Colors.white.withValues(alpha: 0.72);
@@ -483,7 +498,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                 boxShadow: isSoon
                     ? <BoxShadow>[
                         BoxShadow(
-                          color: palette.glow.withValues(
+                          color: pulsePalette.glow.withValues(
                             alpha: 0.25 + pulse * 0.35,
                           ),
                           blurRadius: 8 + pulse * 8,
@@ -562,6 +577,7 @@ class _CalendarRingPainter extends CustomPainter {
     required this.textColor,
     required this.trackColor,
     required this.accentColor,
+    required this.pulsePalette,
     required this.brandPalettes,
   });
 
@@ -576,6 +592,7 @@ class _CalendarRingPainter extends CustomPainter {
   final Color textColor;
   final Color trackColor;
   final Color accentColor;
+  final ColorPalette pulsePalette;
   final List<ColorPalette> brandPalettes;
 
   static const _shortMonths = <String>[
@@ -692,8 +709,16 @@ class _CalendarRingPainter extends CustomPainter {
       final isSoon = daysUntil <= 3;
       final color = isSoon
           ? (pulse < 0.5
-                ? Color.lerp(palette.light, palette.primary, pulse * 2)!
-                : Color.lerp(palette.primary, palette.dark, (pulse - 0.5) * 2)!)
+                ? Color.lerp(
+                    pulsePalette.light,
+                    pulsePalette.primary,
+                    pulse * 2,
+                  )!
+                : Color.lerp(
+                    pulsePalette.primary,
+                    pulsePalette.dark,
+                    (pulse - 0.5) * 2,
+                  )!)
           : palette.primary;
       final strokeWidth = isSoon ? 4.2 + pulse * 1.4 : 4.0;
 
@@ -728,6 +753,7 @@ class _CalendarRingPainter extends CustomPainter {
         oldDelegate.textColor != textColor ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.accentColor != accentColor ||
+        oldDelegate.pulsePalette != pulsePalette ||
         oldDelegate.brandPalettes != brandPalettes;
   }
 }
