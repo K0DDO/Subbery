@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../haptics/haptic_manager.dart';
 import '../theme/app_accent_theme.dart';
 import '../theme/app_spacing.dart';
 
@@ -33,7 +33,7 @@ class _GlassButtonState extends State<GlassButton> {
   }
 
   void _handleTap() {
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(HapticManager.instance.create());
     widget.onPressed?.call();
   }
 

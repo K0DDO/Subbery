@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/haptics/haptic_manager.dart';
 import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../application/privacy_settings_controller.dart';
@@ -33,7 +34,10 @@ class PrivacyControls extends ConsumerWidget {
             title: 'Приватный режим',
             subtitle: 'Скрывает числа и делает баланс матовым',
             value: privacy.privateMode,
-            onChanged: (value) => unawaited(notifier.setPrivateMode(value)),
+            onChanged: (value) {
+              unawaited(HapticManager.instance.toggle());
+              unawaited(notifier.setPrivateMode(value));
+            },
           ),
           SizedBox(height: gap),
           Divider(color: Theme.of(context).dividerColor),
@@ -44,8 +48,10 @@ class PrivacyControls extends ConsumerWidget {
           title: 'Прозрачный баланс',
           subtitle: 'Только главная: план и круг платежей',
           value: privacy.effectiveTransparentBalance,
-          onChanged: (value) =>
-              unawaited(notifier.setTransparentBalance(value)),
+          onChanged: (value) {
+            unawaited(HapticManager.instance.toggle());
+            unawaited(notifier.setTransparentBalance(value));
+          },
         ),
         AnimatedSize(
           duration: const Duration(milliseconds: 240),
@@ -58,8 +64,10 @@ class PrivacyControls extends ConsumerWidget {
                   padding: EdgeInsets.only(top: gap),
                   child: _TransparencySlider(
                     value: privacy.transparencyStrength,
-                    onChanged: (value) =>
-                        unawaited(notifier.setTransparencyStrength(value)),
+                    onChanged: (value) {
+                      unawaited(HapticManager.instance.sliderTick());
+                      unawaited(notifier.setTransparencyStrength(value));
+                    },
                   ),
                 ),
         ),
@@ -69,7 +77,10 @@ class PrivacyControls extends ConsumerWidget {
           title: 'Скрывать числа',
           subtitle: 'Живой спойлер поверх всех сумм',
           value: privacy.effectiveHideNumbers,
-          onChanged: (value) => unawaited(notifier.setHideNumbers(value)),
+          onChanged: (value) {
+            unawaited(HapticManager.instance.toggle());
+            unawaited(notifier.setHideNumbers(value));
+          },
         ),
         SizedBox(height: gap),
         _PrivacySwitchRow(
@@ -77,7 +88,10 @@ class PrivacyControls extends ConsumerWidget {
           title: 'Показывать копейки',
           subtitle: privacy.showKopecks ? '4 280,50 ₽' : '4 280 ₽',
           value: privacy.showKopecks,
-          onChanged: (value) => unawaited(notifier.setShowKopecks(value)),
+          onChanged: (value) {
+            unawaited(HapticManager.instance.toggle());
+            unawaited(notifier.setShowKopecks(value));
+          },
         ),
       ],
     );

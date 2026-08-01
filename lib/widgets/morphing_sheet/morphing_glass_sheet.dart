@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_accent_theme.dart';
+import '../../core/haptics/haptic_manager.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/glass_theme.dart';
+import '../../core/widgets/liquid_glass_material.dart';
 import 'sheet_animation.dart';
 import 'sheet_controller.dart';
 import 'sheet_gesture_handler.dart';
@@ -48,17 +49,22 @@ class MorphingGlassSheet<T> extends PopupRoute<T> {
         const MorphingSheetAnimationSettings(),
     bool useRootNavigator = true,
   }) {
-    return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
-      MorphingGlassSheet<T>(
-        startRect: startRect,
-        builder: builder,
-        endSize: endSize,
-        endPosition: endPosition,
-        maximumHeight: maximumHeight,
-        source: source,
-        animationSettings: animationSettings,
-      ),
-    );
+    unawaited(HapticManager.instance.sheetOpen());
+    return Navigator.of(context, rootNavigator: useRootNavigator)
+        .push<T>(
+          MorphingGlassSheet<T>(
+            startRect: startRect,
+            builder: builder,
+            endSize: endSize,
+            endPosition: endPosition,
+            maximumHeight: maximumHeight,
+            source: source,
+            animationSettings: animationSettings,
+          ),
+        )
+        .whenComplete(() {
+          unawaited(HapticManager.instance.sheetClose());
+        });
   }
 
   void _attachController() {
@@ -417,14 +423,6 @@ class _LiquidGlassSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final glass = theme.extension<GlassTheme>()!;
-    final palette = context.subberryTheme;
-    final luxurySurface = Color.alphaBlend(
-      palette.glassTint,
-      theme.colorScheme.surface.withValues(alpha: 0.95),
-    );
-    final surface = Color.lerp(glass.strongSurface, luxurySurface, progress)!;
     final radius =
         MorphingSheetGeometry.value(
           settings.startRadius,
@@ -432,122 +430,26 @@ class _LiquidGlassSurface extends StatelessWidget {
           progress,
         ) +
         geometryMorph * 2;
-    final blur =
-        MorphingSheetGeometry.value(
-          settings.startBlur,
-          settings.endBlur,
-          progress,
-        ) +
-        geometryMorph * 3;
-    final shadowBlur =
-        MorphingSheetGeometry.value(28, 52, progress) + geometryMorph * 10;
-    final shadowOffset = MorphingSheetGeometry.value(14, 20, progress);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color.lerp(glass.shadow, palette.glowColor, progress)!,
-            blurRadius: shadowBlur,
-            spreadRadius: 1 + progress * 3,
-            offset: Offset(0, shadowOffset),
-          ),
-          BoxShadow(
-            color: palette.primary.withValues(alpha: 0.1 * progress),
-            blurRadius: 36,
-            offset: const Offset(0, 8),
+    return LiquidGlassMaterial(
+      radius: radius,
+      strong: true,
+      progress: progress,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          if (source != null)
+            IgnorePointer(
+              child: Opacity(opacity: sourceOpacity, child: source),
+            ),
+          IgnorePointer(
+            ignoring: contentOpacity < 0.55,
+            child: Opacity(
+              opacity: contentOpacity,
+              child: Transform.translate(offset: contentSlide, child: child),
+            ),
           ),
         ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[
-                  Color.alphaBlend(
-                    palette.glassTint.withValues(
-                      alpha: palette.glassTint.a * progress,
-                    ),
-                    surface,
-                  ),
-                  Color.alphaBlend(
-                    Colors.white.withValues(
-                      alpha: theme.brightness == Brightness.dark
-                          ? 0.02 * progress
-                          : 0.18 * progress,
-                    ),
-                    surface,
-                  ),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: Color.lerp(
-                  glass.border,
-                  Color.lerp(
-                    Colors.white.withValues(
-                      alpha: theme.brightness == Brightness.dark ? 0.18 : 0.72,
-                    ),
-                    palette.borderColor,
-                    0.18,
-                  ),
-                  progress,
-                )!,
-              ),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                if (source != null)
-                  IgnorePointer(
-                    child: Opacity(opacity: sourceOpacity, child: source),
-                  ),
-                IgnorePointer(
-                  ignoring: contentOpacity < 0.55,
-                  child: Opacity(
-                    opacity: contentOpacity,
-                    child: Transform.translate(
-                      offset: contentSlide,
-                      child: child,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: IgnorePointer(
-                    child: Container(
-                      height: 1.2,
-                      margin: const EdgeInsets.fromLTRB(
-                        AppSpacing.xl,
-                        1,
-                        AppSpacing.xl,
-                        0,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: <Color>[
-                            Colors.transparent,
-                            glass.highlight.withValues(alpha: 0.9),
-                            palette.primaryLight.withValues(
-                              alpha: 0.35 * progress,
-                            ),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

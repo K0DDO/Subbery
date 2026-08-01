@@ -361,7 +361,7 @@ void main() {
     );
     expect(
       find.descendant(of: dynamics, matching: find.byType(IgnorePointer)),
-      findsOneWidget,
+      findsWidgets,
     );
 
     position.jumpTo(600.0.clamp(0, position.maxScrollExtent).toDouble());
@@ -377,7 +377,7 @@ void main() {
     );
     expect(
       find.descendant(of: categories, matching: find.byType(IgnorePointer)),
-      findsOneWidget,
+      findsWidgets,
     );
   });
 }

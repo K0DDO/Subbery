@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/haptics/haptic_manager.dart';
 import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/glass_theme.dart';
 import '../../../core/widgets/app_background.dart';
+import '../../../core/widgets/liquid_glass_material.dart';
 import '../../settings/application/privacy_settings_controller.dart';
 import '../../subscriptions/presentation/subscriptions_screen.dart';
 import '../application/tab_reset_provider.dart';
@@ -58,7 +57,7 @@ class AppShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   void _openBranch(WidgetRef ref, int index) {
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(HapticManager.instance.selection());
     ref.read(subscriptionFilterProvider.notifier).state =
         const SubscriptionFilterState();
     ref.read(moneyRevealEpochProvider.notifier).hideAll();
@@ -120,38 +119,17 @@ class _GlassNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final glass = Theme.of(context).extension<GlassTheme>()!;
-
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 430),
-        child: Container(
+        child: SizedBox(
           height: 72,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: glass.shadow,
-                blurRadius: 30,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: glass.blur, sigmaY: glass.blur),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: glass.strongSurface,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  border: Border.all(color: glass.border),
-                ),
-                child: AppHotbarContents(
-                  currentIndex: currentIndex,
-                  onSelected: onSelected,
-                ),
-              ),
+          child: LiquidGlassMaterial(
+            radius: AppRadius.pill,
+            strong: true,
+            child: AppHotbarContents(
+              currentIndex: currentIndex,
+              onSelected: onSelected,
             ),
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/widgets/liquid_glass_runtime_host.dart';
 import '../features/profile/presentation/user_name_gate.dart';
 import '../features/settings/application/accent_color_controller.dart';
 import '../features/settings/application/app_icon_controller.dart';
@@ -41,8 +42,12 @@ class SubberryApp extends ConsumerWidget {
                 : Brightness.dark,
             systemNavigationBarDividerColor: Colors.transparent,
           ),
-          child: AppIconLifecycleObserver(
-            child: PrivacyLifecycleObserver(child: UserNameGate(child: child!)),
+          child: LiquidGlassRuntimeHost(
+            child: AppIconLifecycleObserver(
+              child: PrivacyLifecycleObserver(
+                child: UserNameGate(child: child!),
+              ),
+            ),
           ),
         );
       },

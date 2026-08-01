@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/haptics/haptic_manager.dart';
 import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/glass_card.dart';
@@ -16,6 +17,8 @@ import '../../shell/presentation/hotbar_morph_sheet.dart';
 import '../application/accent_color_controller.dart';
 import '../application/app_icon_controller.dart';
 import '../application/background_pattern_controller.dart';
+import '../application/glass_effect_controller.dart';
+import '../application/haptic_settings_controller.dart';
 import '../application/theme_mode_controller.dart';
 import 'widgets/privacy_controls.dart';
 
@@ -143,6 +146,8 @@ class SettingsScreen extends ConsumerWidget {
     final appIconState = ref.watch(appIconProvider);
     final accentColor = ref.watch(accentColorProvider);
     final backgroundPattern = ref.watch(backgroundPatternProvider);
+    final glassEffect = ref.watch(glassEffectProvider);
+    final hapticSettings = ref.watch(hapticSettingsProvider);
     final profile = ref.watch(userProfileProvider);
     final resetRevision = ref.watch(tabResetRevisionProvider(3));
 
@@ -286,6 +291,135 @@ class SettingsScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 GlassCard(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Эффект стекла',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Матовый пластик ←→ Liquid Glass',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Slider(
+                        value: glassEffect,
+                        onChanged: (value) {
+                          unawaited(HapticManager.instance.sliderTick());
+                          unawaited(
+                            ref
+                                .read(glassEffectProvider.notifier)
+                                .setStrength(value),
+                          );
+                        },
+                      ),
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            'Матовый',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          const Spacer(),
+                          Text(
+                            'Liquid Glass',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      _SettingsRow(
+                        icon: Icons.vibration_rounded,
+                        title: 'Виброотдача',
+                        subtitle: hapticSettings.enabled
+                            ? 'Отклик на жесты и действия'
+                            : 'Выключена',
+                        trailing: Switch.adaptive(
+                          value: hapticSettings.enabled,
+                          onChanged: (value) {
+                            unawaited(HapticManager.instance.toggle());
+                            unawaited(
+                              ref
+                                  .read(hapticSettingsProvider.notifier)
+                                  .setEnabled(value),
+                            );
+                          },
+                        ),
+                      ),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 240),
+                        curve: Curves.easeInOutCubic,
+                        alignment: Alignment.topCenter,
+                        child: !hapticSettings.enabled
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(
+                                  top: AppSpacing.md,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Divider(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Сила вибрации',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    Slider(
+                                      value: hapticSettings.intensity,
+                                      onChanged: (value) {
+                                        unawaited(
+                                          HapticManager.instance.sliderTick(),
+                                        );
+                                        unawaited(
+                                          ref
+                                              .read(
+                                                hapticSettingsProvider.notifier,
+                                              )
+                                              .setIntensity(value),
+                                        );
+                                      },
+                                    ),
+                                    Row(
+                                      children: <Widget>[
+                                        Text(
+                                          'Мягкая',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall,
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          'Выраженная',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GlassCard(
+                  child: Column(
                     children: <Widget>[
                       _SettingsRow(
                         icon: Icons.notifications_active_rounded,
@@ -296,6 +430,7 @@ class SettingsScreen extends ConsumerWidget {
                           onChanged: notificationSettings.isBusy
                               ? null
                               : (value) {
+                                  unawaited(HapticManager.instance.toggle());
                                   unawaited(
                                     _setNotifications(context, ref, value),
                                   );
@@ -391,7 +526,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: _SettingsRow(
                     icon: Icons.favorite_rounded,
                     title: 'Subberry',
-                    subtitle: 'Версия 1.3.10',
+                    subtitle: 'Версия 1.4.0',
                   ),
                 ),
               ],

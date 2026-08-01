@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/haptics/haptic_manager.dart';
 import '../../../core/theme/app_accent_theme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_formatters.dart';
@@ -91,6 +92,7 @@ class SubscriptionDetailsScreen extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
+    unawaited(HapticManager.instance.destructive());
     final deleted = await ref
         .read(subscriptionDetailsControllerProvider(subscriptionId).notifier)
         .deleteSubscription();
