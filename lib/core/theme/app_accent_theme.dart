@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 enum AppAccentChoice {
-  coral(label: 'Коралловый', seed: Color(0xFFFF7665)),
-  emerald(label: 'Зелёный', seed: Color(0xFF65D46E)),
-  blue(label: 'Синий', seed: Color(0xFF4D8DFF)),
-  violet(label: 'Фиолетовый', seed: Color(0xFFA855F7)),
-  peach(label: 'Персиково-оранжевый', seed: Color(0xFFFFB894)),
-  gold(label: 'Оранжевый', seed: Color(0xFFFF9F43));
+  coral(label: 'Коралловый', seed: Color(0xFFE67F73)),
+  emerald(label: 'Мятно-зелёный', seed: Color(0xFF63B887)),
+  blue(label: 'Небесно-синий', seed: Color(0xFF6696C8)),
+  violet(label: 'Лавандовый', seed: Color(0xFF9878C4)),
+  peach(label: 'Персиково-оранжевый', seed: Color(0xFFEC9564)),
+  gold(label: 'Тёплая охра', seed: Color(0xFFD7A14F));
 
   const AppAccentChoice({required this.label, required this.seed});
 
@@ -14,8 +14,8 @@ enum AppAccentChoice {
   final Color seed;
 
   Color get primary => seed;
-  Color get secondary => _shiftLightness(seed, 0.14);
-  Color get tertiary => _shiftLightness(seed, -0.2);
+  Color get secondary => _shiftLightness(seed, 0.12);
+  Color get tertiary => _shiftLightness(seed, -0.14);
 }
 
 @immutable
@@ -47,17 +47,17 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
   factory SubberryTheme.fromSeed(Color seed, Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final primary = seed;
-    final primaryLight = _shiftLightness(primary, 0.14);
-    final primaryDark = _shiftLightness(primary, -0.2);
+    final primaryLight = _shiftLightness(primary, 0.12);
+    final primaryDark = _shiftLightness(primary, -0.14);
     final neutralStart = isDark
-        ? const Color(0xFF141416)
-        : const Color(0xFFF7F3F2);
+        ? const Color(0xFF171519)
+        : const Color(0xFFDCC2B8);
     final neutralEnd = isDark
-        ? const Color(0xFF1D1B1F)
-        : const Color(0xFFF9F6F3);
+        ? const Color(0xFF211B22)
+        : const Color(0xFFE2CBC1);
     final mutedBase = isDark
-        ? const Color(0xFFBCAFB0)
-        : const Color(0xFF796765);
+        ? const Color(0xFFBAAFB0)
+        : const Color(0xFF665A58);
     final categories = <Color>[
       primary,
       primaryLight,
@@ -72,29 +72,29 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
       primary: primary,
       primaryLight: primaryLight,
       primaryDark: primaryDark,
-      glowColor: primary.withValues(alpha: 0.35),
-      glassTint: primary.withValues(alpha: isDark ? 0.13 : 0.09),
+      glowColor: primary.withValues(alpha: 0.4),
+      glassTint: primary.withValues(alpha: isDark ? 0.14 : 0.12),
       softBackgroundTint: Color.lerp(
         neutralStart,
         primary,
-        isDark ? 0.11 : 0.15,
+        isDark ? 0.1 : 0.16,
       )!,
-      borderColor: primary.withValues(alpha: isDark ? 0.28 : 0.2),
-      mutedTextColor: Color.lerp(mutedBase, primary, isDark ? 0.1 : 0.08)!,
-      success: _semantic(const Color(0xFF65D46E), brightness),
-      warning: _semantic(const Color(0xFFFFB24A), brightness),
-      error: _semantic(const Color(0xFFE75D6C), brightness),
+      borderColor: primary.withValues(alpha: isDark ? 0.34 : 0.34),
+      mutedTextColor: Color.lerp(mutedBase, primary, isDark ? 0.08 : 0.06)!,
+      success: _semantic(const Color(0xFF6F9F7C), brightness),
+      warning: _semantic(const Color(0xFFC3975B), brightness),
+      error: _semantic(const Color(0xFFC56F75), brightness),
       info: primaryLight,
       backgroundStart: Color.lerp(
         neutralStart,
         primaryDark,
-        isDark ? 0.09 : 0.06,
+        isDark ? 0.1 : 0.1,
       )!,
-      backgroundEnd: Color.lerp(neutralEnd, primary, isDark ? 0.12 : 0.16)!,
+      backgroundEnd: Color.lerp(neutralEnd, primary, isDark ? 0.13 : 0.18)!,
       backgroundAccent: Color.lerp(
         neutralEnd,
         primaryLight,
-        isDark ? 0.09 : 0.2,
+        isDark ? 0.1 : 0.14,
       )!,
       categoryColors: categories,
     );

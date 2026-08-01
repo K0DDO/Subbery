@@ -26,27 +26,27 @@ abstract final class AppTheme {
     final muted = accent.mutedTextColor;
     final glassTheme = GlassTheme(
       surface: Color.lerp(
-        isDark ? const Color(0x14FFFFFF) : const Color(0x73FFFFFF),
+        isDark ? const Color(0x14FFFFFF) : const Color(0xCCE7DAD6),
         accent.glassTint,
-        isDark ? 0.42 : 0.32,
+        isDark ? 0.42 : 0.22,
       )!,
       strongSurface: Color.lerp(
-        isDark ? const Color(0x24FFFFFF) : const Color(0xA6FFFFFF),
+        isDark ? const Color(0x24FFFFFF) : const Color(0xE8F0E5E2),
         accent.glassTint,
-        isDark ? 0.5 : 0.28,
+        isDark ? 0.5 : 0.18,
       )!,
       border: Color.lerp(
-        isDark ? const Color(0x29FFFFFF) : const Color(0x99FFFFFF),
+        isDark ? const Color(0x29FFFFFF) : const Color(0xB89F8580),
         accent.borderColor,
-        isDark ? 0.7 : 0.46,
+        isDark ? 0.7 : 0.42,
       )!,
       highlight: Color.lerp(
-        isDark ? const Color(0x38FFFFFF) : const Color(0xCCFFFFFF),
-        accent.primaryLight.withValues(alpha: isDark ? 0.24 : 0.4),
-        0.28,
+        isDark ? const Color(0x38FFFFFF) : const Color(0x8CFFFFFF),
+        accent.primaryLight.withValues(alpha: isDark ? 0.24 : 0.32),
+        isDark ? 0.28 : 0.3,
       )!,
       shadow: Color.lerp(
-        isDark ? const Color(0x66000000) : const Color(0x267D3E45),
+        isDark ? const Color(0x66000000) : const Color(0x4D59464A),
         accent.glowColor,
         isDark ? 0.42 : 0.32,
       )!,

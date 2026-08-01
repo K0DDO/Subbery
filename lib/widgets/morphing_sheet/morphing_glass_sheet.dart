@@ -281,9 +281,12 @@ class _MeasuredMorphingGlassSheetState<T>
         );
         final overlayProgress = Curves.easeOut.transform(rawProgress);
         final sourceOpacity = (1 - rawProgress / 0.34).clamp(0.0, 1.0);
+        // Content stays fully visible while the sheet is mostly open, then
+        // fades/slides with the shell for the last ~30% of close progress.
         final contentOpacity = Curves.easeInOut.transform(
-          ((rawProgress - 0.20) / 0.62).clamp(0.0, 1.0),
+          (progress / 0.30).clamp(0.0, 1.0),
         );
+        final contentSlide = Offset(0, (1 - contentOpacity) * 18);
 
         return Stack(
           children: <Widget>[
@@ -321,6 +324,7 @@ class _MeasuredMorphingGlassSheetState<T>
                 progress: progress,
                 sourceOpacity: sourceOpacity,
                 contentOpacity: contentOpacity,
+                contentSlide: contentSlide,
                 settings: widget.route.animationSettings,
                 source: widget.route.source,
                 child: SheetGestureHandler(
@@ -347,12 +351,14 @@ class _LiquidGlassSurface extends StatelessWidget {
     required this.settings,
     required this.source,
     required this.child,
+    this.contentSlide = Offset.zero,
     super.key,
   });
 
   final double progress;
   final double sourceOpacity;
   final double contentOpacity;
+  final Offset contentSlide;
   final MorphingSheetAnimationSettings settings;
   final Widget? source;
   final Widget child;
@@ -446,8 +452,14 @@ class _LiquidGlassSurface extends StatelessWidget {
                     child: Opacity(opacity: sourceOpacity, child: source),
                   ),
                 IgnorePointer(
-                  ignoring: contentOpacity < 0.82,
-                  child: Opacity(opacity: contentOpacity, child: child),
+                  ignoring: contentOpacity < 0.55,
+                  child: Opacity(
+                    opacity: contentOpacity,
+                    child: Transform.translate(
+                      offset: contentSlide,
+                      child: child,
+                    ),
+                  ),
                 ),
                 Align(
                   alignment: Alignment.topCenter,

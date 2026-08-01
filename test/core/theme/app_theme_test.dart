@@ -27,10 +27,10 @@ void main() {
       expect(lightPalette.primary, choice.seed);
       expect(lightPalette.primaryLight, isNot(choice.seed));
       expect(lightPalette.primaryDark, isNot(choice.seed));
-      expect(lightPalette.glowColor.a, closeTo(0.35, 0.01));
+      expect(lightPalette.glowColor.a, closeTo(0.4, 0.01));
       expect(lightPalette.categoryColors, hasLength(8));
       expect(lightPalette.categoryColors.toSet().length, greaterThan(4));
-      expect(lightPalette.borderColor.a, closeTo(0.2, 0.01));
+      expect(lightPalette.borderColor.a, closeTo(0.34, 0.01));
       expect(darkPalette.primary, choice.seed);
       expect(
         darkPalette.softBackgroundTint,
@@ -48,11 +48,53 @@ void main() {
     final coralGlass = coral.extension<GlassTheme>()!;
     final purpleGlass = purple.extension<GlassTheme>()!;
 
-    expect(coral.colorScheme.primary, const Color(0xFFFF7665));
-    expect(purple.colorScheme.primary, const Color(0xFFA855F7));
+    expect(coral.colorScheme.primary, const Color(0xFFE67F73));
+    expect(purple.colorScheme.primary, const Color(0xFF9878C4));
     expect(coralPalette.glassTint, isNot(purplePalette.glassTint));
     expect(coralPalette.backgroundEnd, isNot(purplePalette.backgroundEnd));
     expect(coralGlass.border, isNot(purpleGlass.border));
     expect(coral.dividerColor, isNot(purple.dividerColor));
   });
+
+  test('keeps the default light peach palette warm and subdued', () {
+    final theme = AppTheme.light;
+    final palette = theme.extension<SubberryTheme>()!;
+    final glass = theme.extension<GlassTheme>()!;
+
+    expect(theme.colorScheme.primary, const Color(0xFFEC9564));
+    expect(palette.backgroundStart.computeLuminance(), lessThan(0.65));
+    expect(palette.backgroundEnd.computeLuminance(), lessThan(0.65));
+
+    final surface = Color.alphaBlend(glass.surface, palette.backgroundStart);
+    final strongSurface = Color.alphaBlend(
+      glass.strongSurface,
+      palette.backgroundStart,
+    );
+    expect(
+      (surface.computeLuminance() - palette.backgroundStart.computeLuminance())
+          .abs(),
+      greaterThan(0.04),
+    );
+    expect(
+      (strongSurface.computeLuminance() -
+              palette.backgroundStart.computeLuminance())
+          .abs(),
+      greaterThan(0.08),
+    );
+  });
+
+  test(
+    'keeps green blue and violet accents lively without neon saturation',
+    () {
+      for (final choice in <AppAccentChoice>[
+        AppAccentChoice.emerald,
+        AppAccentChoice.blue,
+        AppAccentChoice.violet,
+      ]) {
+        final saturation = HSLColor.fromColor(choice.seed).saturation;
+        expect(saturation, greaterThan(0.3), reason: choice.label);
+        expect(saturation, lessThan(0.7), reason: choice.label);
+      }
+    },
+  );
 }

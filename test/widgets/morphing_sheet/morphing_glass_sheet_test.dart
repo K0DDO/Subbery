@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:subberry/core/theme/app_theme.dart';
 import 'package:subberry/widgets/morphing_sheet/morphing_glass_sheet.dart';
 import 'package:subberry/widgets/morphing_sheet/sheet_animation.dart';
+import 'package:subberry/widgets/morphing_sheet/sheet_page_navigator.dart';
 
 void main() {
   test('adaptive duration respects configured limits', () {
@@ -129,6 +130,82 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('keeps content visible while sheet is mostly open during close', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const _Harness(themeMode: ThemeMode.light, contentHeight: 240),
+    );
+    await _open(tester);
+
+    final handle = find.byKey(
+      const ValueKey<String>('morphing-sheet-drag-handle'),
+    );
+    final gesture = await tester.startGesture(tester.getCenter(handle));
+    await gesture.moveBy(const Offset(0, 40));
+    await tester.pump();
+
+    final opacity = tester.widget<Opacity>(
+      find
+          .descendant(
+            of: find.byKey(MorphingGlassSheetKeys.surface),
+            matching: find.byType(Opacity),
+          )
+          .last,
+    );
+    expect(opacity.opacity, greaterThan(0.95));
+    expect(find.text('Содержимое окна'), findsOneWidget);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('supports internal page navigation with back', (tester) async {
+    await tester.pumpWidget(const _NavigatorHarness());
+    await tester.tap(find.text('Открыть'));
+    await tester.pumpAndSettle();
+
+    final surface = find.byKey(MorphingGlassSheetKeys.surface);
+    expect(
+      find.descendant(of: surface, matching: find.text('Динамика')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(of: surface, matching: find.text('Открыть месяц')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: surface, matching: find.text('Август')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: surface,
+        matching: find.byKey(const ValueKey<String>('morphing-sheet-back')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: surface,
+        matching: find.byKey(const ValueKey<String>('morphing-sheet-back')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: surface, matching: find.text('Динамика')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: surface, matching: find.text('Август')),
+      findsNothing,
+    );
+    expect(surface, findsOneWidget);
+  });
 }
 
 Future<void> _open(WidgetTester tester) async {
@@ -180,6 +257,71 @@ class _Harness extends StatelessWidget {
                                 ListTile(title: Text('Строка $index')),
                           )
                         : const Center(child: Text('Содержимое окна')),
+                  ),
+                );
+              },
+              child: const Text('Открыть'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigatorHarness extends StatelessWidget {
+  const _NavigatorHarness();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: FilledButton(
+              onPressed: () {
+                final size = MediaQuery.sizeOf(context);
+                MorphingGlassSheet.show<void>(
+                  context: context,
+                  startRect: Rect.fromLTWH(
+                    16,
+                    size.height - 88,
+                    size.width - 32,
+                    72,
+                  ),
+                  endSize: Size(size.width - 32, 320),
+                  builder: (_) => MorphingSheetNavigator(
+                    home: Builder(
+                      builder: (navContext) => ListView(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
+                        children: <Widget>[
+                          const Text('Динамика'),
+                          TextButton(
+                            onPressed: () {
+                              MorphingSheetNavigator.of(navContext).push(
+                                ListView(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    56,
+                                    16,
+                                    16,
+                                  ),
+                                  children: const <Widget>[
+                                    MorphingSheetBackButton(),
+                                    Text('Август'),
+                                  ],
+                                ),
+                                title: 'По месяцам',
+                              );
+                            },
+                            child: const Text('Открыть месяц'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },

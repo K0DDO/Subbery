@@ -8,6 +8,7 @@ import '../../../../core/theme/app_accent_theme.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/glass_theme.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../widgets/morphing_sheet/sheet_page_navigator.dart';
 import '../../../overview/presentation/widgets/spending_bar_chart.dart';
 import '../../../shell/presentation/hotbar_morph_sheet.dart';
 import '../../../subscriptions/domain/entities/payment.dart';
@@ -22,7 +23,76 @@ Future<void> _showDropletSheet({
   required BuildContext context,
   required WidgetBuilder builder,
 }) {
-  return showHotbarMorphSheet<void>(context: context, builder: builder);
+  return showHotbarMorphSheet<void>(
+    context: context,
+    builder: (sheetContext) =>
+        MorphingSheetNavigator(home: builder(sheetContext)),
+  );
+}
+
+Widget _monthPage({
+  required BuildContext hostContext,
+  required BuildContext sheetContext,
+  required DateTime month,
+  required List<Payment> payments,
+  required List<Subscription> subscriptions,
+  required int plannedInCents,
+  DateTime? now,
+  String? footnote,
+}) {
+  final rows = AnalyticsBreakdown.rowsForMonth(
+    payments: payments,
+    subscriptions: subscriptions,
+    month: month,
+  );
+  return _MonthAnalyticsSheet(
+    now: now ?? DateTime.now(),
+    month: month,
+    rows: rows,
+    plannedInCents: plannedInCents,
+    footnote: footnote,
+    onPaymentTap: (row) => _openSubscription(hostContext, sheetContext, row),
+  );
+}
+
+Widget _categoryPage({
+  required BuildContext hostContext,
+  required BuildContext sheetContext,
+  required SubscriptionCategory category,
+  required int amountInCents,
+  required List<Subscription> subscriptions,
+  required DateTime now,
+}) {
+  final rows = AnalyticsBreakdown.activeInCategory(
+    subscriptions: subscriptions,
+    category: category,
+    now: now,
+  );
+  return _SheetScaffold(
+    title: category.label,
+    subtitle: 'Около ${AppFormatters.money(amountInCents)} в месяц',
+    accent: category.color(sheetContext),
+    children: <Widget>[
+      if (rows.isEmpty)
+        const _EmptyDetail(message: 'В категории пока пусто')
+      else
+        for (final row in rows)
+          _GlassPaymentRow(
+            leading: ServiceLogo(
+              name: row.subscription.name,
+              logoKey: row.subscription.logo,
+              category: row.subscription.category,
+              size: 40,
+            ),
+            title: row.subscription.name,
+            trailing: AppFormatters.money(row.monthlyEstimateInCents),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              hostContext.push('/subscriptions/${row.subscription.id}');
+            },
+          ),
+    ],
+  );
 }
 
 Future<void> showPeriodSpendingSheet({
@@ -61,14 +131,18 @@ Future<void> showPeriodSpendingSheet({
           payments: payments,
           year: now.year,
         ),
-        onMonthTap: (point) {
-          Navigator.pop(sheetContext);
-          showMonthSpendingSheet(
-            context: context,
-            month: point.month,
-            payments: payments,
-            subscriptions: subscriptions,
-            plannedInCents: point.plannedAmountInCents,
+        onMonthTap: (navContext, point) {
+          MorphingSheetNavigator.of(navContext).push(
+            _monthPage(
+              hostContext: context,
+              sheetContext: sheetContext,
+              month: point.month,
+              payments: payments,
+              subscriptions: subscriptions,
+              plannedInCents: point.plannedAmountInCents,
+              now: now,
+            ),
+            title: 'Динамика расходов по месяцам',
           );
         },
       ),
@@ -90,20 +164,15 @@ Future<void> showMonthSpendingSheet({
   required List<Subscription> subscriptions,
   int plannedInCents = 0,
 }) {
-  final rows = AnalyticsBreakdown.rowsForMonth(
-    payments: payments,
-    subscriptions: subscriptions,
-    month: month,
-  );
-  final now = DateTime.now();
   return _showDropletSheet(
     context: context,
-    builder: (sheetContext) => _MonthAnalyticsSheet(
-      now: now,
+    builder: (sheetContext) => _monthPage(
+      hostContext: context,
+      sheetContext: sheetContext,
       month: month,
-      rows: rows,
+      payments: payments,
+      subscriptions: subscriptions,
       plannedInCents: plannedInCents,
-      onPaymentTap: (row) => _openSubscription(context, sheetContext, row),
     ),
   );
 }
@@ -118,14 +187,17 @@ Future<void> showDynamicsDetailSheet({
     context: context,
     builder: (sheetContext) => _DynamicsAnalyticsSheet(
       points: points,
-      onPointSelected: (point) {
-        Navigator.pop(sheetContext);
-        showMonthSpendingSheet(
-          context: context,
-          month: point.month,
-          payments: payments,
-          subscriptions: subscriptions,
-          plannedInCents: point.plannedAmountInCents,
+      onPointSelected: (navContext, point) {
+        MorphingSheetNavigator.of(navContext).push(
+          _monthPage(
+            hostContext: context,
+            sheetContext: sheetContext,
+            month: point.month,
+            payments: payments,
+            subscriptions: subscriptions,
+            plannedInCents: point.plannedAmountInCents,
+          ),
+          title: 'Динамика расходов по месяцам',
         );
       },
     ),
@@ -142,14 +214,17 @@ Future<void> showCategoriesDetailSheet({
     context: context,
     builder: (sheetContext) => _CategoriesAnalyticsSheet(
       categories: categories,
-      onCategorySelected: (category) {
-        Navigator.pop(sheetContext);
-        showCategorySubscriptionsSheet(
-          context: context,
-          category: category.category,
-          amountInCents: category.amountInCents,
-          subscriptions: subscriptions,
-          now: now,
+      onCategorySelected: (navContext, category) {
+        MorphingSheetNavigator.of(navContext).push(
+          _categoryPage(
+            hostContext: context,
+            sheetContext: sheetContext,
+            category: category.category,
+            amountInCents: category.amountInCents,
+            subscriptions: subscriptions,
+            now: now,
+          ),
+          title: 'По категориям',
         );
       },
     ),
@@ -163,37 +238,15 @@ Future<void> showCategorySubscriptionsSheet({
   required List<Subscription> subscriptions,
   required DateTime now,
 }) {
-  final rows = AnalyticsBreakdown.activeInCategory(
-    subscriptions: subscriptions,
-    category: category,
-    now: now,
-  );
   return _showDropletSheet(
     context: context,
-    builder: (sheetContext) => _SheetScaffold(
-      title: category.label,
-      subtitle: 'Около ${AppFormatters.money(amountInCents)} в месяц',
-      accent: category.color(context),
-      children: <Widget>[
-        if (rows.isEmpty)
-          const _EmptyDetail(message: 'В категории пока пусто')
-        else
-          for (final row in rows)
-            _GlassPaymentRow(
-              leading: ServiceLogo(
-                name: row.subscription.name,
-                logoKey: row.subscription.logo,
-                category: row.subscription.category,
-                size: 40,
-              ),
-              title: row.subscription.name,
-              trailing: AppFormatters.money(row.monthlyEstimateInCents),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.push('/subscriptions/${row.subscription.id}');
-              },
-            ),
-      ],
+    builder: (sheetContext) => _categoryPage(
+      hostContext: context,
+      sheetContext: sheetContext,
+      category: category,
+      amountInCents: amountInCents,
+      subscriptions: subscriptions,
+      now: now,
     ),
   );
 }
@@ -216,6 +269,17 @@ _MonthKind _monthKind(DateTime month, DateTime now) {
   if (target.isBefore(current)) return _MonthKind.past;
   if (target.isAfter(current)) return _MonthKind.future;
   return _MonthKind.current;
+}
+
+Color _spendStatusColor({
+  required SubberryTheme palette,
+  required int actualInCents,
+  required int plannedInCents,
+}) {
+  if (plannedInCents <= 0) return palette.primary;
+  if (actualInCents > plannedInCents) return palette.error;
+  if (actualInCents == plannedInCents) return palette.warning;
+  return palette.success;
 }
 
 class _SheetScaffold extends StatelessWidget {
@@ -245,6 +309,7 @@ class _SheetScaffold extends StatelessWidget {
         AppSpacing.md,
       ),
       children: <Widget>[
+        const MorphingSheetBackButton(),
         Text(
           title,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -295,13 +360,17 @@ class _MonthAnalyticsSheet extends StatelessWidget {
     final kind = _monthKind(target, now);
     final actual = AnalyticsBreakdown.sumRows(rows);
     final expected = math.max(0, plannedInCents - actual);
-    final forecast = actual + expected;
+    final actualStatusColor = _spendStatusColor(
+      palette: palette,
+      actualInCents: actual,
+      plannedInCents: plannedInCents,
+    );
 
     return _SheetScaffold(
       title: AnalyticsBreakdown.monthLabel(target),
       subtitle: switch (kind) {
         _MonthKind.past => 'Фактические расходы',
-        _MonthKind.current => 'Факт, ожидание и прогноз',
+        _MonthKind.current => 'Факт и ожидаемые платежи',
         _MonthKind.future => 'Ожидаемые расходы',
       },
       accent: kind == _MonthKind.future
@@ -311,17 +380,19 @@ class _MonthAnalyticsSheet extends StatelessWidget {
         _MonthKind.past => _SpendHeroCard(
           label: 'Фактически',
           amountInCents: actual,
-          color: palette.primary,
+          color: actualStatusColor,
+          icon: Icons.payments_rounded,
         ),
         _MonthKind.current => _CurrentMonthHero(
           actualInCents: actual,
           expectedInCents: expected,
-          forecastInCents: forecast,
+          plannedInCents: plannedInCents,
         ),
         _MonthKind.future => _SpendHeroCard(
           label: 'Ожидается',
           amountInCents: plannedInCents,
           color: palette.primaryLight,
+          icon: Icons.schedule_rounded,
         ),
       },
       children: <Widget>[
@@ -374,7 +445,7 @@ class _YearAnalyticsSheet extends StatelessWidget {
   final int year;
   final DateTime now;
   final List<MonthlySpendPoint> points;
-  final ValueChanged<MonthlySpendPoint> onMonthTap;
+  final void Function(BuildContext context, MonthlySpendPoint point) onMonthTap;
 
   @override
   Widget build(BuildContext context) {
@@ -422,7 +493,7 @@ class _YearAnalyticsSheet extends StatelessWidget {
               point: point,
               now: now,
               maxAmountInCents: math.max(maxValue, 1),
-              onTap: () => onMonthTap(point),
+              onTap: () => onMonthTap(context, point),
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
@@ -669,7 +740,8 @@ class _DynamicsAnalyticsSheet extends StatefulWidget {
   });
 
   final List<MonthlySpendPoint> points;
-  final ValueChanged<MonthlySpendPoint> onPointSelected;
+  final void Function(BuildContext context, MonthlySpendPoint point)
+  onPointSelected;
 
   @override
   State<_DynamicsAnalyticsSheet> createState() =>
@@ -689,7 +761,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
         ? visible[visible.length - 2].amountInCents
         : latest;
     final difference = latest - previous;
-    final differenceColor = difference <= 0 ? palette.success : palette.primary;
+    final differenceColor = difference <= 0 ? palette.success : palette.error;
 
     return _SheetScaffold(
       title: 'Динамика расходов',
@@ -729,7 +801,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
             child: SpendingBarChart(
               points: visible,
               height: 260,
-              onBarSelected: widget.onPointSelected,
+              onBarSelected: (point) => widget.onPointSelected(context, point),
             ),
           ),
         ),
@@ -777,7 +849,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
                 'Факт ${AppFormatters.money(point.amountInCents)} · '
                 'План ${AppFormatters.money(point.plannedAmountInCents)}',
             trailing: '',
-            onTap: () => widget.onPointSelected(point),
+            onTap: () => widget.onPointSelected(context, point),
           ),
       ],
     );
@@ -791,7 +863,8 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
   });
 
   final List<CategorySpend> categories;
-  final ValueChanged<CategorySpend> onCategorySelected;
+  final void Function(BuildContext context, CategorySpend category)
+  onCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -809,7 +882,8 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
         else ...<Widget>[
           CategorySpendingChart(
             categories: categories,
-            onCategorySelected: onCategorySelected,
+            onCategorySelected: (category) =>
+                onCategorySelected(context, category),
           ),
           const SizedBox(height: AppSpacing.md),
           for (final category in categories)
@@ -836,7 +910,7 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
                   : '${((category.amountInCents / total) * 100).round()}% нагрузки',
               trailing: AppFormatters.money(category.amountInCents),
               trailingColor: category.category.color(context),
-              onTap: () => onCategorySelected(category),
+              onTap: () => onCategorySelected(context, category),
             ),
         ],
       ],
@@ -848,42 +922,39 @@ class _CurrentMonthHero extends StatelessWidget {
   const _CurrentMonthHero({
     required this.actualInCents,
     required this.expectedInCents,
-    required this.forecastInCents,
+    required this.plannedInCents,
   });
 
   final int actualInCents;
   final int expectedInCents;
-  final int forecastInCents;
+  final int plannedInCents;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.subberryTheme;
-    return Column(
+    final actualColor = _spendStatusColor(
+      palette: palette,
+      actualInCents: actualInCents,
+      plannedInCents: plannedInCents,
+    );
+    return Row(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _SpendHeroCard(
-                label: 'Фактически',
-                amountInCents: actualInCents,
-                color: palette.primary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SpendHeroCard(
-                label: 'Ожидается',
-                amountInCents: expectedInCents,
-                color: palette.primaryLight,
-              ),
-            ),
-          ],
+        Expanded(
+          child: _SpendHeroCard(
+            label: 'Фактически',
+            amountInCents: actualInCents,
+            color: actualColor,
+            icon: Icons.payments_rounded,
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        _SpendHeroCard(
-          label: 'Прогноз',
-          amountInCents: forecastInCents,
-          color: Color.lerp(palette.primary, palette.primaryLight, 0.35)!,
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _SpendHeroCard(
+            label: 'Ожидается',
+            amountInCents: expectedInCents,
+            color: palette.primaryLight,
+            icon: Icons.schedule_rounded,
+          ),
         ),
       ],
     );
@@ -895,11 +966,13 @@ class _SpendHeroCard extends StatelessWidget {
     required this.label,
     required this.amountInCents,
     required this.color,
+    this.icon,
   });
 
   final String label;
   final int amountInCents;
   final Color color;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -916,16 +989,33 @@ class _SpendHeroCard extends StatelessWidget {
           ],
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
+        border: Border.all(color: color.withValues(alpha: 0.34)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: color.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+          Row(
+            children: <Widget>[
+              if (icon != null) ...<Widget>[
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           FittedBox(
