@@ -8,6 +8,7 @@ import '../../core/theme/glass_theme.dart';
 import 'sheet_animation.dart';
 import 'sheet_controller.dart';
 import 'sheet_gesture_handler.dart';
+import 'sheet_page_navigator.dart';
 
 abstract final class MorphingGlassSheetKeys {
   static const barrier = ValueKey<String>('morphing-glass-sheet-barrier');
@@ -140,6 +141,18 @@ class _MeasuredMorphingGlassSheetState<T>
   final GlobalKey _measurementKey = GlobalKey();
   double? _contentHeight;
 
+  void _updateContentHeight(double height, double maximumHeight) {
+    if (!mounted) return;
+    final nextHeight = height.clamp(
+      widget.route.startRect.height,
+      maximumHeight,
+    );
+    if (_contentHeight != null && (nextHeight - _contentHeight!).abs() < 0.5) {
+      return;
+    }
+    setState(() => _contentHeight = nextHeight);
+  }
+
   void _measure(double maximumHeight) {
     if (_contentHeight != null || !mounted) return;
     final box =
@@ -170,10 +183,7 @@ class _MeasuredMorphingGlassSheetState<T>
     final maximumHeight = route.maximumHeight == null
         ? availableHeight
         : route.maximumHeight!.clamp(route.startRect.height, availableHeight);
-    final height = (route.endSize?.height ?? contentHeight).clamp(
-      route.startRect.height,
-      maximumHeight,
-    );
+    final height = contentHeight.clamp(route.startRect.height, maximumHeight);
     final width = (route.endSize?.width ?? screenSize.width - AppSpacing.md * 2)
         .clamp(route.startRect.width, screenSize.width);
     final defaultLeft = (screenSize.width - width) / 2;
@@ -253,8 +263,8 @@ class _MeasuredMorphingGlassSheetState<T>
       safePadding: safePadding,
       keyboardHeight: keyboardHeight,
       contentHeight:
-          widget.route.endSize?.height ??
           _contentHeight ??
+          widget.route.endSize?.height ??
           widget.route.startRect.height,
     );
     widget.route.sheetController.configure(
@@ -317,30 +327,57 @@ class _MeasuredMorphingGlassSheetState<T>
                 ),
               ),
             ),
-            Positioned.fromRect(
-              rect: currentRect,
-              child: _LiquidGlassSurface(
-                key: MorphingGlassSheetKeys.surface,
-                progress: progress,
-                sourceOpacity: sourceOpacity,
-                contentOpacity: contentOpacity,
-                contentSlide: contentSlide,
-                settings: widget.route.animationSettings,
-                source: widget.route.source,
-                child: SheetGestureHandler(
-                  controller: widget.route.sheetController,
-                  child: KeyedSubtree(
-                    key: MorphingGlassSheetKeys.content,
-                    child: widget.child,
+            TweenAnimationBuilder<Rect>(
+              tween: _SheetRectTween(end: currentRect),
+              duration:
+                  rawProgress >= 0.999 &&
+                      !widget.route.sheetController.isClosing
+                  ? const Duration(milliseconds: 320)
+                  : Duration.zero,
+              curve: Curves.easeInOutCubic,
+              builder: (context, animatedRect, _) {
+                final geometryMorph =
+                    ((animatedRect.height - currentRect.height).abs() / 120)
+                        .clamp(0.0, 1.0);
+                return Positioned.fromRect(
+                  rect: animatedRect,
+                  child: _LiquidGlassSurface(
+                    key: MorphingGlassSheetKeys.surface,
+                    progress: progress,
+                    geometryMorph: geometryMorph,
+                    sourceOpacity: sourceOpacity,
+                    contentOpacity: contentOpacity,
+                    contentSlide: contentSlide,
+                    settings: widget.route.animationSettings,
+                    source: widget.route.source,
+                    child: SheetGestureHandler(
+                      controller: widget.route.sheetController,
+                      child: KeyedSubtree(
+                        key: MorphingGlassSheetKeys.content,
+                        child: MorphingSheetGeometryScope(
+                          maximumHeight: maximumHeight,
+                          onHeightChanged: (height) =>
+                              _updateContentHeight(height, maximumHeight),
+                          child: widget.child,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ],
         );
       },
     );
   }
+}
+
+class _SheetRectTween extends Tween<Rect> {
+  _SheetRectTween({required Rect end}) : super(end: end);
+
+  @override
+  Rect lerp(double t) => Rect.lerp(begin, end, t)!;
 }
 
 class _LiquidGlassSurface extends StatelessWidget {
@@ -352,10 +389,12 @@ class _LiquidGlassSurface extends StatelessWidget {
     required this.source,
     required this.child,
     this.contentSlide = Offset.zero,
+    this.geometryMorph = 0,
     super.key,
   });
 
   final double progress;
+  final double geometryMorph;
   final double sourceOpacity;
   final double contentOpacity;
   final Offset contentSlide;
@@ -373,17 +412,22 @@ class _LiquidGlassSurface extends StatelessWidget {
       theme.colorScheme.surface.withValues(alpha: 0.95),
     );
     final surface = Color.lerp(glass.strongSurface, luxurySurface, progress)!;
-    final radius = MorphingSheetGeometry.value(
-      settings.startRadius,
-      settings.endRadius,
-      progress,
-    );
-    final blur = MorphingSheetGeometry.value(
-      settings.startBlur,
-      settings.endBlur,
-      progress,
-    );
-    final shadowBlur = MorphingSheetGeometry.value(28, 52, progress);
+    final radius =
+        MorphingSheetGeometry.value(
+          settings.startRadius,
+          settings.endRadius,
+          progress,
+        ) +
+        geometryMorph * 2;
+    final blur =
+        MorphingSheetGeometry.value(
+          settings.startBlur,
+          settings.endBlur,
+          progress,
+        ) +
+        geometryMorph * 3;
+    final shadowBlur =
+        MorphingSheetGeometry.value(28, 52, progress) + geometryMorph * 10;
     final shadowOffset = MorphingSheetGeometry.value(14, 20, progress);
 
     return DecoratedBox(

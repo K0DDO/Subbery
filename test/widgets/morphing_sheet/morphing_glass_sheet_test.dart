@@ -167,6 +167,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final surface = find.byKey(MorphingGlassSheetKeys.surface);
+    expect(tester.getSize(surface).height, closeTo(320, 0.5));
     expect(
       find.descendant(of: surface, matching: find.text('Динамика')),
       findsOneWidget,
@@ -174,12 +175,20 @@ void main() {
     await tester.tap(
       find.descendant(of: surface, matching: find.text('Открыть месяц')),
     );
+    await tester.pump(const Duration(milliseconds: 160));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 160));
+
+    final resizingHeight = tester.getSize(surface).height;
+    expect(resizingHeight, greaterThan(180));
+    expect(resizingHeight, lessThan(320));
     await tester.pumpAndSettle();
 
     expect(
       find.descendant(of: surface, matching: find.text('Август')),
       findsOneWidget,
     );
+    expect(tester.getSize(surface).height, closeTo(180, 0.5));
     expect(
       find.descendant(
         of: surface,
@@ -204,6 +213,7 @@ void main() {
       find.descendant(of: surface, matching: find.text('Август')),
       findsNothing,
     );
+    expect(tester.getSize(surface).height, closeTo(320, 0.5));
     expect(surface, findsOneWidget);
   });
 }
@@ -293,33 +303,41 @@ class _NavigatorHarness extends StatelessWidget {
                   endSize: Size(size.width - 32, 320),
                   builder: (_) => MorphingSheetNavigator(
                     home: Builder(
-                      builder: (navContext) => ListView(
-                        shrinkWrap: true,
-                        padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
-                        children: <Widget>[
-                          const Text('Динамика'),
-                          TextButton(
-                            onPressed: () {
-                              MorphingSheetNavigator.of(navContext).push(
-                                ListView(
-                                  shrinkWrap: true,
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    56,
-                                    16,
-                                    16,
+                      builder: (navContext) => SizedBox(
+                        height: 320,
+                        child: ListView(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
+                          children: <Widget>[
+                            const Text('Динамика'),
+                            TextButton(
+                              onPressed: () {
+                                MorphingSheetNavigator.of(navContext).push(
+                                  const SizedBox(
+                                    height: 180,
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        16,
+                                        56,
+                                        16,
+                                        16,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          MorphingSheetBackButton(),
+                                          Text('Август'),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  children: const <Widget>[
-                                    MorphingSheetBackButton(),
-                                    Text('Август'),
-                                  ],
-                                ),
-                                title: 'По месяцам',
-                              );
-                            },
-                            child: const Text('Открыть месяц'),
-                          ),
-                        ],
+                                  title: 'По месяцам',
+                                );
+                              },
+                              child: const Text('Открыть месяц'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

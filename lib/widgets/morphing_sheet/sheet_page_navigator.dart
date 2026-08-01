@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../core/theme/app_accent_theme.dart';
 import '../../core/theme/app_spacing.dart';
@@ -29,22 +32,41 @@ class MorphingSheetNavigatorState extends State<MorphingSheetNavigator> {
   late final List<_SheetPageEntry> _stack = <_SheetPageEntry>[
     _SheetPageEntry(child: widget.home),
   ];
+  bool _pageVisible = true;
+  bool _transitioning = false;
 
   bool get canPop => _stack.length > 1;
 
   String? get currentTitle => _stack.last.title;
 
   void push(Widget page, {String? title}) {
-    setState(() {
-      _stack.add(_SheetPageEntry(child: page, title: title));
-    });
+    if (_transitioning) return;
+    unawaited(
+      _transitionTo(
+        () => _stack.add(_SheetPageEntry(child: page, title: title)),
+      ),
+    );
   }
 
   void pop() {
-    if (!canPop) return;
-    setState(() {
-      _stack.removeLast();
-    });
+    if (!canPop || _transitioning) return;
+    unawaited(_transitionTo(_stack.removeLast));
+  }
+
+  Future<void> _transitionTo(VoidCallback updateStack) async {
+    _transitioning = true;
+    setState(() => _pageVisible = false);
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+
+    setState(updateStack);
+    // Keep the new page invisible while it reports its intrinsic height and
+    // the shared glass surface animates to that geometry.
+    await Future<void>.delayed(const Duration(milliseconds: 340));
+    if (!mounted) return;
+
+    setState(() => _pageVisible = true);
+    _transitioning = false;
   }
 
   @override
@@ -57,28 +79,66 @@ class MorphingSheetNavigatorState extends State<MorphingSheetNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    return _MorphingSheetNavigatorScope(
+    final page = _MorphingSheetNavigatorScope(
       state: this,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final offset = Tween<Offset>(
-            begin: const Offset(0.06, 0.02),
-            end: Offset.zero,
-          ).animate(animation);
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(position: offset, child: child),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_stack.length),
-          child: _stack.last.child,
+      child: AnimatedSlide(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        offset: _pageVisible ? Offset.zero : const Offset(-0.03, 0),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeInOut,
+          opacity: _pageVisible ? 1 : 0,
+          child: KeyedSubtree(
+            key: ValueKey<int>(_stack.length),
+            child: _stack.last.child,
+          ),
         ),
       ),
     );
+    final geometry = MorphingSheetGeometryScope.maybeOf(context);
+    if (geometry == null) return page;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return OverflowBox(
+          alignment: Alignment.topCenter,
+          minWidth: width,
+          maxWidth: width,
+          minHeight: 0,
+          maxHeight: geometry.maximumHeight,
+          child: _SizeReporter(
+            onSizeChanged: (size) => geometry.reportHeight(size.height),
+            child: SizedBox(width: width, child: page),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MorphingSheetGeometryScope extends InheritedWidget {
+  const MorphingSheetGeometryScope({
+    required this.maximumHeight,
+    required this.onHeightChanged,
+    required super.child,
+    super.key,
+  });
+
+  final double maximumHeight;
+  final ValueChanged<double> onHeightChanged;
+
+  static MorphingSheetGeometryScope? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<MorphingSheetGeometryScope>();
+  }
+
+  void reportHeight(double height) => onHeightChanged(height);
+
+  @override
+  bool updateShouldNotify(MorphingSheetGeometryScope oldWidget) {
+    return maximumHeight != oldWidget.maximumHeight;
   }
 }
 
@@ -137,5 +197,43 @@ class _MorphingSheetNavigatorScope extends InheritedWidget {
   @override
   bool updateShouldNotify(_MorphingSheetNavigatorScope oldWidget) {
     return state != oldWidget.state;
+  }
+}
+
+class _SizeReporter extends SingleChildRenderObjectWidget {
+  const _SizeReporter({required this.onSizeChanged, required super.child});
+
+  final ValueChanged<Size> onSizeChanged;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _SizeReporterRenderObject(onSizeChanged);
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _SizeReporterRenderObject renderObject,
+  ) {
+    renderObject.onSizeChanged = onSizeChanged;
+  }
+}
+
+class _SizeReporterRenderObject extends RenderProxyBox {
+  _SizeReporterRenderObject(this.onSizeChanged);
+
+  ValueChanged<Size> onSizeChanged;
+  Size? _reportedSize;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (_reportedSize == size) return;
+    _reportedSize = size;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (attached && _reportedSize == size) {
+        onSizeChanged(size);
+      }
+    });
   }
 }
