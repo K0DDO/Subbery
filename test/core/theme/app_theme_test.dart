@@ -28,8 +28,6 @@ void main() {
       expect(lightPalette.primaryLight, isNot(choice.seed));
       expect(lightPalette.primaryDark, isNot(choice.seed));
       expect(lightPalette.glowColor.a, closeTo(0.4, 0.01));
-      expect(lightPalette.categoryColors, hasLength(8));
-      expect(lightPalette.categoryColors.toSet().length, greaterThan(4));
       expect(lightPalette.borderColor.a, closeTo(0.34, 0.01));
       expect(darkPalette.primary, choice.seed);
       expect(

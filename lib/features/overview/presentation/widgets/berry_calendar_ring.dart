@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_accent_theme.dart';
+import '../../../../core/theme/color_palette.dart';
+import '../../../subscriptions/presentation/subscription_visuals.dart';
 import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/overview_metrics.dart';
 
@@ -95,6 +96,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     with TickerProviderStateMixin {
   late final AnimationController _animationController;
   late final AnimationController _pulseController;
+  bool _animationsDisabled = false;
 
   static const _monthNames = <String>[
     'январь',
@@ -123,8 +125,19 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     )..forward();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 1100),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final animationsDisabled = MediaQuery.disableAnimationsOf(context);
+    if (_animationsDisabled == animationsDisabled) {
+      _syncPulseAnimation();
+      return;
+    }
+    _animationsDisabled = animationsDisabled;
     _syncPulseAnimation();
   }
 
@@ -147,13 +160,15 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     final today = DateTime(widget.now.year, widget.now.month, widget.now.day);
     final hasSoonPayment =
         widget.showPeriodArcs &&
+        !_animationsDisabled &&
         _periodArcOccurrences.any((occurrence) {
           final days = occurrence.date.difference(today).inDays;
           return days >= 0 && days <= 3;
         });
     if (hasSoonPayment && !_pulseController.isAnimating) {
       _pulseController.repeat(reverse: true);
-    } else if (!hasSoonPayment && _pulseController.isAnimating) {
+    } else if (!hasSoonPayment &&
+        (_pulseController.isAnimating || _pulseController.value != 0)) {
       _pulseController
         ..stop()
         ..value = 0;
@@ -165,6 +180,26 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
     _animationController.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  @visibleForTesting
+  bool get debugPulseAnimating => _pulseController.isAnimating;
+
+  ColorPalette _paletteFor(PaymentOccurrence occurrence) {
+    final subscription = occurrence.subscription;
+    return resolveSubscriptionVisual(
+      name: subscription.name,
+      logoKey: subscription.logo,
+      category: subscription.category,
+      brightness: Theme.of(context).brightness,
+    ).palette;
+  }
+
+  Color _pulseColor(ColorPalette palette, double pulse) {
+    if (pulse < 0.5) {
+      return Color.lerp(palette.light, palette.primary, pulse * 2)!;
+    }
+    return Color.lerp(palette.primary, palette.dark, (pulse - 0.5) * 2)!;
   }
 
   void _handleTap(TapUpDetails details, Size size) {
@@ -207,8 +242,19 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                 children: <Widget>[
                   Positioned.fill(
                     child: AnimatedBuilder(
-                      animation: _animationController,
+                      animation: Listenable.merge(<Listenable>[
+                        _animationController,
+                        _pulseController,
+                      ]),
                       builder: (context, child) {
+                        final periodGroups = buildPeriodArcGroups(
+                          _periodArcOccurrences,
+                          widget.now,
+                        );
+                        final brandPalettes = <ColorPalette>[
+                          for (final group in periodGroups)
+                            _paletteFor(group.primary),
+                        ];
                         return CustomPaint(
                           painter: _CalendarRingPainter(
                             year: widget.year,
@@ -220,6 +266,9 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                             progress: Curves.easeOutCubic.transform(
                               _animationController.value,
                             ),
+                            pulse: _animationsDisabled
+                                ? 0.5
+                                : _pulseController.value,
                             textColor: Theme.of(
                               context,
                             ).colorScheme.onSurfaceVariant,
@@ -227,8 +276,7 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
                               context,
                             ).dividerColor.withValues(alpha: 0.45),
                             accentColor: primary,
-                            categoryColors:
-                                context.subberryTheme.categoryColors,
+                            brandPalettes: brandPalettes,
                           ),
                           child: child,
                         );
@@ -405,12 +453,10 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
         center + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
     const iconSize = 18.0;
     final isSoon = daysUntil <= 3;
+    final palette = _paletteFor(group.primary);
+    final pulsed = isSoon ? _pulseColor(palette, pulse) : palette.primary;
     final borderColor = isSoon
-        ? Color.lerp(
-            context.subberryTheme.error.withValues(alpha: 0.62),
-            context.subberryTheme.error,
-            pulse,
-          )!
+        ? pulsed.withValues(alpha: 0.7 + pulse * 0.3)
         : Colors.white.withValues(alpha: 0.72);
     final subscription = group.primary.subscription;
     return Positioned(
@@ -420,18 +466,29 @@ class _BerryCalendarRingState extends State<BerryCalendarRing>
         child: Opacity(
           opacity: progress,
           child: Transform.scale(
-            scale: 0.65 + progress * 0.35,
+            scale: 0.65 + progress * 0.35 + (isSoon ? pulse * 0.04 : 0),
             child: Container(
               width: iconSize,
               height: iconSize,
               padding: const EdgeInsets.all(1.5),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: borderColor, width: isSoon ? 1.8 : 1),
+                border: Border.all(
+                  color: borderColor,
+                  width: isSoon ? 1.4 + pulse * 0.8 : 1,
+                ),
                 color: group.count > 1
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.92)
+                    ? pulsed.withValues(alpha: 0.92)
+                    : null,
+                boxShadow: isSoon
+                    ? <BoxShadow>[
+                        BoxShadow(
+                          color: palette.glow.withValues(
+                            alpha: 0.25 + pulse * 0.35,
+                          ),
+                          blurRadius: 8 + pulse * 8,
+                        ),
+                      ]
                     : null,
               ),
               child: group.count > 1
@@ -501,10 +558,11 @@ class _CalendarRingPainter extends CustomPainter {
     required this.now,
     required this.showPeriodArcs,
     required this.progress,
+    required this.pulse,
     required this.textColor,
     required this.trackColor,
     required this.accentColor,
-    required this.categoryColors,
+    required this.brandPalettes,
   });
 
   final int year;
@@ -514,10 +572,11 @@ class _CalendarRingPainter extends CustomPainter {
   final DateTime now;
   final bool showPeriodArcs;
   final double progress;
+  final double pulse;
   final Color textColor;
   final Color trackColor;
   final Color accentColor;
-  final List<Color> categoryColors;
+  final List<ColorPalette> brandPalettes;
 
   static const _shortMonths = <String>[
     'янв',
@@ -627,10 +686,16 @@ class _CalendarRingPainter extends CustomPainter {
           .inDays
           .clamp(0, daysInYear);
       final sweep = -daysUntil / daysInYear * math.pi * 2;
-      final color = group.count > 1
-          ? accentColor
-          : categoryColors[group.primary.subscription.category.index %
-                categoryColors.length];
+      final palette = index < brandPalettes.length
+          ? brandPalettes[index]
+          : ColorPalette.fromSeed(accentColor);
+      final isSoon = daysUntil <= 3;
+      final color = isSoon
+          ? (pulse < 0.5
+                ? Color.lerp(palette.light, palette.primary, pulse * 2)!
+                : Color.lerp(palette.primary, palette.dark, (pulse - 0.5) * 2)!)
+          : palette.primary;
+      final strokeWidth = isSoon ? 4.2 + pulse * 1.4 : 4.0;
 
       canvas.drawArc(
         rect,
@@ -639,9 +704,14 @@ class _CalendarRingPainter extends CustomPainter {
         false,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 4
+          ..strokeWidth = strokeWidth
           ..strokeCap = StrokeCap.round
-          ..color = color.withValues(alpha: 0.82 * progress),
+          ..color = color.withValues(
+            alpha: (isSoon ? 0.72 + pulse * 0.2 : 0.82) * progress,
+          )
+          ..maskFilter = isSoon
+              ? MaskFilter.blur(BlurStyle.normal, 1.5 + pulse * 2.5)
+              : null,
       );
     }
   }
@@ -649,6 +719,7 @@ class _CalendarRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CalendarRingPainter oldDelegate) {
     return oldDelegate.progress != progress ||
+        oldDelegate.pulse != pulse ||
         oldDelegate.selectedMonth != selectedMonth ||
         oldDelegate.occurrences != occurrences ||
         oldDelegate.periodArcOccurrences != periodArcOccurrences ||
@@ -657,6 +728,6 @@ class _CalendarRingPainter extends CustomPainter {
         oldDelegate.textColor != textColor ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.accentColor != accentColor ||
-        oldDelegate.categoryColors != categoryColors;
+        oldDelegate.brandPalettes != brandPalettes;
   }
 }

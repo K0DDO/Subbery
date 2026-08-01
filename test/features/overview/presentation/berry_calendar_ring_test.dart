@@ -178,6 +178,42 @@ void main() {
     expect(find.byType(ServiceLogo), findsOneWidget);
   });
 
+  testWidgets('does not pulse when animations are disabled', (tester) async {
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 340,
+                child: BerryCalendarRing(
+                  year: 2026,
+                  now: DateTime(2026, 7, 29),
+                  occurrences: <PaymentOccurrence>[
+                    PaymentOccurrence(
+                      subscription: _subscription('soon'),
+                      date: DateTime(2026, 7, 30),
+                    ),
+                  ],
+                  selectedMonth: 7,
+                  showPeriodArcs: true,
+                  showCalendarLogos: false,
+                  onMonthSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final state = tester.state(find.byType(BerryCalendarRing));
+    expect((state as dynamic).debugPulseAnimating, isFalse);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect((state as dynamic).debugPulseAnimating, isFalse);
+  });
+
   testWidgets('uses separate sources for calendar logos and period arcs', (
     tester,
   ) async {

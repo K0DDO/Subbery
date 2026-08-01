@@ -161,6 +161,57 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('handle and content drags keep content opacity aligned', (
+    tester,
+  ) async {
+    Future<double> opacityAfterDrag(Finder target) async {
+      await tester.pumpWidget(
+        const _Harness(themeMode: ThemeMode.light, contentHeight: 240),
+      );
+      await _open(tester);
+      final gesture = await tester.startGesture(tester.getCenter(target));
+      await gesture.moveBy(const Offset(0, 70));
+      await tester.pump();
+      final opacity = tester.widget<Opacity>(
+        find
+            .descendant(
+              of: find.byKey(MorphingGlassSheetKeys.surface),
+              matching: find.byType(Opacity),
+            )
+            .last,
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+      return opacity.opacity;
+    }
+
+    final handleOpacity = await opacityAfterDrag(
+      find.byKey(const ValueKey<String>('morphing-sheet-drag-handle')),
+    );
+    final contentOpacity = await opacityAfterDrag(
+      find.byKey(MorphingGlassSheetKeys.content),
+    );
+
+    expect(handleOpacity, greaterThan(0.95));
+    expect(contentOpacity, closeTo(handleOpacity, 0.05));
+  });
+
+  testWidgets('fast content swipe dismisses the sheet', (tester) async {
+    await tester.pumpWidget(
+      const _Harness(themeMode: ThemeMode.light, contentHeight: 240),
+    );
+    await _open(tester);
+
+    await tester.fling(
+      find.byKey(MorphingGlassSheetKeys.content),
+      const Offset(0, 400),
+      1800,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(MorphingGlassSheetKeys.surface), findsNothing);
+  });
+
   testWidgets('supports internal page navigation with back', (tester) async {
     await tester.pumpWidget(const _NavigatorHarness());
     await tester.tap(find.text('Открыть'));

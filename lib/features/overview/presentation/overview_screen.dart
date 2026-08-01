@@ -14,6 +14,8 @@ import '../../shell/application/tab_reset_provider.dart';
 import '../../subscriptions/application/subscription_providers.dart';
 import '../../subscriptions/domain/entities/payment.dart';
 import '../../subscriptions/domain/entities/subscription.dart';
+import '../../subscriptions/presentation/subscription_visuals.dart';
+import '../../subscriptions/presentation/widgets/glass_payment_row.dart';
 import '../../subscriptions/presentation/widgets/service_logo.dart';
 import '../application/overview_metrics.dart';
 import 'widgets/berry_calendar_ring.dart';
@@ -610,26 +612,34 @@ class _SelectedMonthPaymentsState extends State<_SelectedMonthPayments> {
     }
 
     final visible = _expanded ? widget.occurrences : widget.occurrences.take(3);
+    final brightness = Theme.of(context).brightness;
     return Column(
       children: <Widget>[
         for (final occurrence in visible)
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-            ),
-            leading: ServiceLogo(
-              name: occurrence.subscription.name,
-              logoKey: occurrence.subscription.logo,
-              category: occurrence.subscription.category,
-              size: 40,
-            ),
-            title: Text(occurrence.subscription.name),
-            subtitle: Text(AppFormatters.shortDate(occurrence.date)),
-            trailing: Text(
-              AppFormatters.money(occurrence.subscription.priceInCents),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            onTap: () => widget.onTap(occurrence.subscription),
+          Builder(
+            builder: (context) {
+              final subscription = occurrence.subscription;
+              final visual = resolveSubscriptionVisual(
+                name: subscription.name,
+                logoKey: subscription.logo,
+                category: subscription.category,
+                brightness: brightness,
+              );
+              return GlassPaymentRow(
+                leading: ServiceLogo(
+                  name: subscription.name,
+                  logoKey: subscription.logo,
+                  category: subscription.category,
+                  size: 40,
+                ),
+                title: subscription.name,
+                subtitle: AppFormatters.shortDate(occurrence.date),
+                trailing: AppFormatters.money(subscription.priceInCents),
+                trailingColor: visual.primary,
+                accentColor: visual.glow,
+                onTap: () => widget.onTap(subscription),
+              );
+            },
           ),
         if (widget.occurrences.length > 3)
           TextButton.icon(

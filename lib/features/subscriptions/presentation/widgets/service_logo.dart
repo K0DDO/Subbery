@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../data/catalog/known_services.dart';
 import '../../domain/entities/subscription.dart';
-import '../subscription_ui_extensions.dart';
+import '../subscription_visuals.dart';
 
 const Set<String> _paddedLogoKeys = <String>{
   'contabo',
@@ -43,17 +42,13 @@ class ServiceLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    KnownService? knownService;
-    for (final service in KnownServices.all) {
-      if (service.logoKey == logoKey) {
-        knownService = service;
-        break;
-      }
-    }
-
-    final color = knownService == null
-        ? category.color(context)
-        : Color(knownService.brandColorValue);
+    final visual = resolveSubscriptionVisual(
+      name: name,
+      logoKey: logoKey,
+      category: category,
+      brightness: Theme.of(context).brightness,
+    );
+    final knownService = visual.knownService;
     final monogram =
         knownService?.monogram ??
         (name.trim().isEmpty ? 'S' : name.trim().substring(0, 1).toUpperCase());
@@ -65,7 +60,10 @@ class ServiceLogo extends StatelessWidget {
         resolvedLogoKey != null && !_paddedLogoKeys.contains(resolvedLogoKey);
     final cardColor = resolvedLogoKey == 'discord_boost'
         ? const Color(0xFF28123D)
-        : color;
+        : visual.primary;
+    final gradientEnd = resolvedLogoKey == 'discord_boost'
+        ? const Color(0xFF1A0B28)
+        : visual.dark;
     final monogramText = Text(
       monogram,
       style: TextStyle(
@@ -91,13 +89,13 @@ class ServiceLogo extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: <Color>[
               cardColor.withValues(alpha: 0.96),
-              Color.lerp(cardColor, Colors.black, 0.22)!,
+              gradientEnd,
             ],
           ),
           border: Border.all(color: Colors.white.withValues(alpha: 0.42)),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: cardColor.withValues(alpha: 0.28),
+              color: visual.glow.withValues(alpha: 0.34),
               blurRadius: size * 0.4,
               offset: Offset(0, size * 0.14),
             ),

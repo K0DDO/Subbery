@@ -77,8 +77,10 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
     }
     final velocity = _velocityTracker?.getVelocity().pixelsPerSecond.dy ?? 0;
     _velocityTracker = null;
+    final wasPointerDriven = _pointerDrivenSheet;
     _pointerDrivenSheet = false;
-    if (!widget.controller.isClosing) {
+    if (!widget.controller.isClosing &&
+        (wasPointerDriven || widget.controller.sheetDragging.value)) {
       widget.controller.endDrag(velocity);
     }
   }
@@ -86,9 +88,16 @@ class _SheetGestureHandlerState extends State<SheetGestureHandler> {
   bool _handleScroll(ScrollNotification notification) {
     if (notification.metrics.axis != Axis.vertical) return false;
     if (widget.controller.isClosing) return false;
-    if (_pointerDrivenSheet) return true;
+
+    // When the pointer path already owns the sheet drag, only pin/lock the
+    // scrollable so content cannot translate independently of the shell.
+    if (_pointerDrivenSheet) {
+      _resetScrollPosition();
+      return true;
+    }
 
     if (notification is OverscrollNotification && notification.overscroll < 0) {
+      _resetScrollPosition();
       widget.controller.updateDrag(-notification.overscroll);
       return true;
     }

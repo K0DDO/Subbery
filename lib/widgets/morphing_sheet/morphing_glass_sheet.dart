@@ -291,10 +291,10 @@ class _MeasuredMorphingGlassSheetState<T>
         );
         final overlayProgress = Curves.easeOut.transform(rawProgress);
         final sourceOpacity = (1 - rawProgress / 0.34).clamp(0.0, 1.0);
-        // Content stays fully visible while the sheet is mostly open, then
-        // fades/slides with the shell for the last ~30% of close progress.
+        // Content stays fully attached through the first half of dismissal,
+        // then fades/slides with the shell as progress moves from 0.5 to 0.
         final contentOpacity = Curves.easeInOut.transform(
-          (progress / 0.30).clamp(0.0, 1.0),
+          (progress / 0.5).clamp(0.0, 1.0),
         );
         final contentSlide = Offset(0, (1 - contentOpacity) * 18);
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_accent_theme.dart';
+import '../../../core/theme/color_palette.dart';
 import '../domain/entities/subscription.dart';
+import 'colors/category_colors.dart';
 
 extension SubscriptionCategoryUi on SubscriptionCategory {
   String get label => switch (this) {
@@ -26,8 +27,12 @@ extension SubscriptionCategoryUi on SubscriptionCategory {
     SubscriptionCategory.other => '📦',
   };
 
-  Color color(BuildContext context) =>
-      context.subberryTheme.categoryColor(index);
+  ColorPalette palette(BuildContext context) =>
+      CategoryColors.palette(this, brightness: Theme.of(context).brightness);
+
+  Color color(BuildContext context) => palette(context).primary;
+
+  Color glow(BuildContext context) => palette(context).glow;
 }
 
 extension BillingCycleUi on BillingCycle {

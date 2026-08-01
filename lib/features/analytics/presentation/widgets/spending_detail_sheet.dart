@@ -14,6 +14,7 @@ import '../../../shell/presentation/hotbar_morph_sheet.dart';
 import '../../../subscriptions/domain/entities/payment.dart';
 import '../../../subscriptions/domain/entities/subscription.dart';
 import '../../../subscriptions/presentation/subscription_ui_extensions.dart';
+import '../../../subscriptions/presentation/widgets/glass_payment_row.dart';
 import '../../../subscriptions/presentation/widgets/service_logo.dart';
 import '../../application/analytics_breakdown.dart';
 import '../../application/analytics_metrics.dart';
@@ -77,7 +78,7 @@ Widget _categoryPage({
         const _EmptyDetail(message: 'В категории пока пусто')
       else
         for (final row in rows)
-          _GlassPaymentRow(
+          GlassPaymentRow(
             leading: ServiceLogo(
               name: row.subscription.name,
               logoKey: row.subscription.logo,
@@ -416,7 +417,7 @@ class _MonthAnalyticsSheet extends StatelessWidget {
           const _EmptyDetail(message: 'За этот период платежей пока нет')
         else
           for (final row in rows)
-            _GlassPaymentRow(
+            GlassPaymentRow(
               leading: ServiceLogo(
                 name: row.name,
                 logoKey: row.logoKey,
@@ -697,7 +698,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
           const _EmptyDetail(message: 'История платежей пока пуста')
         else
           for (final item in top.take(5))
-            _GlassPaymentRow(
+            GlassPaymentRow(
               leading: ServiceLogo(
                 name: item.row.name,
                 logoKey: item.row.logoKey,
@@ -715,7 +716,7 @@ class _TotalAnalyticsSheet extends StatelessWidget {
         _SectionLabel('История платежей'),
         const SizedBox(height: AppSpacing.sm),
         for (final row in rows.take(20))
-          _GlassPaymentRow(
+          GlassPaymentRow(
             leading: ServiceLogo(
               name: row.name,
               logoKey: row.logoKey,
@@ -839,7 +840,7 @@ class _DynamicsAnalyticsSheetState extends State<_DynamicsAnalyticsSheet> {
         ),
         const SizedBox(height: AppSpacing.md),
         for (final point in visible.reversed)
-          _GlassPaymentRow(
+          GlassPaymentRow(
             leading: Icon(
               Icons.calendar_month_rounded,
               color: palette.primary.withValues(alpha: 0.9),
@@ -887,7 +888,7 @@ class _CategoriesAnalyticsSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           for (final category in categories)
-            _GlassPaymentRow(
+            GlassPaymentRow(
               leading: Container(
                 width: 14,
                 height: 14,
@@ -1085,84 +1086,6 @@ class _PaymentCategoryChips extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _GlassPaymentRow extends StatelessWidget {
-  const _GlassPaymentRow({
-    required this.leading,
-    required this.title,
-    required this.trailing,
-    this.subtitle,
-    this.trailingColor,
-    this.onTap,
-  });
-
-  final Widget leading;
-  final String title;
-  final String? subtitle;
-  final String trailing;
-  final Color? trailingColor;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final glass = Theme.of(context).extension<GlassTheme>()!;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: Ink(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: glass.surface,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: glass.border),
-            ),
-            child: Row(
-              children: <Widget>[
-                leading,
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (subtitle != null)
-                        Text(
-                          subtitle!,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (trailing.isNotEmpty)
-                  Text(
-                    trailing,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: trailingColor,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

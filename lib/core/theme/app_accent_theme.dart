@@ -36,7 +36,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
     required this.backgroundStart,
     required this.backgroundEnd,
     required this.backgroundAccent,
-    required this.categoryColors,
   });
 
   factory SubberryTheme.fromChoice(
@@ -58,16 +57,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
     final mutedBase = isDark
         ? const Color(0xFFBAAFB0)
         : const Color(0xFF665A58);
-    final categories = <Color>[
-      primary,
-      primaryLight,
-      primaryDark,
-      Color.lerp(primary, primaryLight, 0.48)!,
-      Color.lerp(primary, primaryDark, 0.36)!,
-      _shiftSaturation(primaryLight, -0.18),
-      _shiftSaturation(primary, -0.28),
-      _shiftLightness(primaryDark, isDark ? 0.08 : 0.14),
-    ];
     return SubberryTheme(
       primary: primary,
       primaryLight: primaryLight,
@@ -96,7 +85,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
         primaryLight,
         isDark ? 0.1 : 0.14,
       )!,
-      categoryColors: categories,
     );
   }
 
@@ -115,7 +103,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
   final Color backgroundStart;
   final Color backgroundEnd;
   final Color backgroundAccent;
-  final List<Color> categoryColors;
 
   Color get secondary => primaryLight;
   Color get tertiary => primaryDark;
@@ -125,9 +112,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
     end: Alignment.bottomRight,
     colors: <Color>[primaryLight, primary, primaryDark],
   );
-
-  Color categoryColor(int index) =>
-      categoryColors[index % categoryColors.length];
 
   @override
   SubberryTheme copyWith({
@@ -146,7 +130,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
     Color? backgroundStart,
     Color? backgroundEnd,
     Color? backgroundAccent,
-    List<Color>? categoryColors,
   }) {
     return SubberryTheme(
       primary: primary ?? this.primary,
@@ -164,7 +147,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
       backgroundStart: backgroundStart ?? this.backgroundStart,
       backgroundEnd: backgroundEnd ?? this.backgroundEnd,
       backgroundAccent: backgroundAccent ?? this.backgroundAccent,
-      categoryColors: categoryColors ?? this.categoryColors,
     );
   }
 
@@ -195,10 +177,6 @@ class SubberryTheme extends ThemeExtension<SubberryTheme> {
         other.backgroundAccent,
         t,
       )!,
-      categoryColors: <Color>[
-        for (var index = 0; index < categoryColors.length; index++)
-          Color.lerp(categoryColors[index], other.categoryColors[index], t)!,
-      ],
     );
   }
 }
@@ -219,13 +197,6 @@ Color _shiftLightness(Color color, double amount) {
   final hsl = HSLColor.fromColor(color);
   return hsl
       .withLightness((hsl.lightness + amount).clamp(0.08, 0.94))
-      .toColor();
-}
-
-Color _shiftSaturation(Color color, double amount) {
-  final hsl = HSLColor.fromColor(color);
-  return hsl
-      .withSaturation((hsl.saturation + amount).clamp(0.18, 1.0))
       .toColor();
 }
 
